@@ -122,7 +122,7 @@ try {
     step("Keeper progress saved; home offers the next island", !!saved?.islands?.["waking-stones"] && /Emerald Canopy/.test(text), JSON.stringify({ islands: Object.keys(saved?.islands ?? {}), lumins: Object.keys(saved?.lumins ?? {}), dust: saved?.wallet?.prismDust }));
     await home.screenshot({ path: `${outDir}/06-home.png` });
     // every meta screen renders with real state
-    const screens = [["/realms", /Waking Stones/], ["/sanctuary", /Heart Altar/], ["/archive", /Mossling/], ["/profile", /Chronicles/i], ["/duties", /Story/i], ["/trials", /Realm Trials/], ["/pass", /Crystal Pass/], ["/exchange", /Realm Exchange/]];
+    const screens = [["/realms", /Waking Stones/], ["/sanctuary", /Heart Altar/], ["/archive", /Mossling/], ["/profile", /Chronicles/i], ["/duties", /Story/i], ["/trials", /Realm Trials/], ["/pass", /Crystal Pass/], ["/exchange", /Realm Exchange/], ["/sanctuary-view?autoplace=1", /Sanctuary/]];
     for (const [route, expect] of screens) {
       await home.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
       await sleep(1500);

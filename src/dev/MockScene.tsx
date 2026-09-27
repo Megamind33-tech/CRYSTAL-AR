@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { ViroCamera, ViroQuad, ViroScene } from "@reactvision/react-viro";
 import { GameWorld } from "../render/GameWorld";
+import { SanctuaryWorld } from "../render/SanctuaryWorld";
 import { registerMaterials } from "../render/registry";
 import { MOCK_CAMERA } from "./mockPicking";
 import { arSession } from "../state/arSession";
@@ -15,6 +16,7 @@ registerMaterials();
  */
 export default function MockScene() {
   const phase = useStore(arSession, (s) => s.phase);
+  const world = useStore(arSession, (s) => s.world);
 
   useEffect(() => {
     arSession.set({ tracking: "mock", planes: 1 });
@@ -29,7 +31,7 @@ export default function MockScene() {
       {/* the simulated table surface */}
       <ViroQuad position={[0, -0.001, 0]} rotation={[-90, 0, 0]} width={2.2} height={1.5} materials={["tableMock"]} />
       <ViroQuad position={[0, -0.75, 0]} rotation={[-90, 0, 0]} width={8} height={8} materials={["floorMock"]} />
-      {phase === "placed" && <GameWorld ambientIntensity={1100} ambientColor="#ffffff" />}
+      {phase === "placed" && (world === "sanctuary" ? <SanctuaryWorld ambientIntensity={1100} ambientColor="#ffffff" /> : <GameWorld ambientIntensity={1100} ambientColor="#ffffff" />)}
     </ViroScene>
   );
 }

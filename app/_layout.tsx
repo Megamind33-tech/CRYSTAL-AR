@@ -24,6 +24,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg }, animation: "fade" }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="play" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="sanctuary-view" options={{ gestureEnabled: false }} />
         <Stack.Screen name="settings" />
       </Stack>
       <StatusBar style="light" />

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { ViroARPlaneSelector, ViroARScene, ViroAmbientLight } from "@reactvision/react-viro";
 import type { ViroAnchor } from "@reactvision/react-viro/dist/components/Types/ViroEvents";
 import { GameWorld } from "../render/GameWorld";
+import { SanctuaryWorld } from "../render/SanctuaryWorld";
 import { registerMaterials } from "../render/registry";
 import { arSession } from "../state/arSession";
 import { gameEvents } from "../state/game";
@@ -23,6 +24,7 @@ export default function ARGameScene() {
   const resetRequest = useStore(arSession, (s) => s.resetRequest);
   const lightIntensity = useStore(arSession, (s) => s.lightIntensity);
   const lightColor = useStore(arSession, (s) => s.lightColor);
+  const world = useStore(arSession, (s) => s.world);
 
   useEffect(() => {
     if (resetRequest > 0) selectorRef.current?.reset();
@@ -96,7 +98,11 @@ export default function ARGameScene() {
           if (id === selected) arSession.set({ phase: "scanning", anchorId: null });
         }}
       >
-        <GameWorld ambientIntensity={lightIntensity} ambientColor={lightColor} />
+        {world === "sanctuary" ? (
+          <SanctuaryWorld ambientIntensity={lightIntensity} ambientColor={lightColor} />
+        ) : (
+          <GameWorld ambientIntensity={lightIntensity} ambientColor={lightColor} />
+        )}
       </ViroARPlaneSelector>
     </ViroARScene>
   );

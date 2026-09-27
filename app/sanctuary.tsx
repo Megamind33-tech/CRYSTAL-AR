@@ -8,11 +8,13 @@ import { collectSanctuary, feedLumin, houseLumin, pendingSanctuaryResonance, san
 import { act, metaStore } from "@/src/state/meta";
 import { useStore } from "@/src/state/store";
 import { Bar, Card, ErrorLine, Pill, Row, Screen, Section, T, Wallet } from "@/src/ui/kit";
+import { useRouter } from "expo-router";
 import { C } from "@/src/ui/theme";
 
 export default function Sanctuary() {
   const p = useStore(metaStore, (m) => m.player);
   const [err, setErr] = useState<string | null>(null);
+  const router = useRouter();
   if (!p) return null;
   const now = Date.now();
   const rating = sanctuaryRating(p);
@@ -23,6 +25,7 @@ export default function Sanctuary() {
   return (
     <Screen title="Sanctuary" subtitle={`Rating ${rating.rating} · ${rating.pct}% restored`} right={<Wallet />}>
       <ErrorLine msg={err} />
+      <Pill testID="sanctuary-ar" label="VIEW IN AR" tone="portal" onPress={() => router.push("/sanctuary-view")} />
       <Card>
         {T.h("The Heart Altar")}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginVertical: 4 }}>

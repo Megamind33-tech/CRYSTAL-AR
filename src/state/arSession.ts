@@ -16,6 +16,8 @@ export interface ArSessionState {
   resetRequest: number;
   lastError: string;
   fps: number;
+  /** what the anchored diorama shows: the puzzle island or the Keeper's Sanctuary */
+  world: "game" | "sanctuary";
 }
 
 export const arSession = createStore<ArSessionState>({
@@ -31,6 +33,7 @@ export const arSession = createStore<ArSessionState>({
   resetRequest: 0,
   lastError: "",
   fps: 0,
+  world: "game",
 });
 
 export const WORLD_SCALE_MIN = 0.7;
