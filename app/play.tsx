@@ -83,7 +83,7 @@ export default function Play() {
       {phase === "placed" && <RelicTray ranked={!!trial} />}
       {phase === "placed" && !trial && <Coach />}
       <PlacementGuide mock={viewMode !== "ar"} cameraView={viewMode === "camera"} onPlaceMock={placeMock} />
-      <Diagnostics mock={DEV_AR_MOCK} />
+      <Diagnostics mock={viewMode !== "ar"} />
       <RunResult
         ranked={!!trial}
         onNext={nextIsland ? () => router.replace({ pathname: "/play", params: { island: nextIsland.id, autoplace: params.autoplace } }) : null}

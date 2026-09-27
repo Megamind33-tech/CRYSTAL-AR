@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from "react";
-import { Viro3DObject, ViroNode } from "@reactvision/react-viro";
+import { ViroNode } from "@reactvision/react-viro";
 import type { CrystalView } from "../state/game";
-import { MODELS } from "./assets";
+import { GEM_NAMES, GemMesh } from "./GemMesh";
 import { cellToLocal, GEM_SCALE, GEM_TILT_DEG } from "./layout";
 import { moveAnim } from "./registry";
 
@@ -62,21 +62,10 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
     <ViroNode position={position} scale={scale} animation={animation}>
       {/* rotation flips between two values so that stopping a spin re-applies a clean facing */}
       <ViroNode position={[0, lift, 0]} rotation={[0, spin ? 0 : 0.001, 0]} animation={spin ? { name: spin, run: true, loop: true } : undefined}>
-        <Viro3DObject
-          source={isPrism ? MODELS.prism : MODELS.gems[type]}
-          type="GLB"
-          scale={[GEM_SCALE, GEM_SCALE, GEM_SCALE]}
-          rotation={[isPrism ? 0 : GEM_TILT_DEG, 0, 0]}
-        />
+        <GemMesh name={isPrism ? "gem_prism" : GEM_NAMES[type]} scale={[GEM_SCALE, GEM_SCALE, GEM_SCALE]} rotation={[isPrism ? 0 : GEM_TILT_DEG, 0, 0]} />
       </ViroNode>
       {isSurge && (
-        <Viro3DObject
-          source={MODELS.surgeAura}
-          type="GLB"
-          scale={[GEM_SCALE * 0.9, GEM_SCALE * 0.9, GEM_SCALE * 0.9]}
-          position={[0, lift, 0]}
-          rotation={[0, special === "surgeV" ? 90 : 0, 0]}
-        />
+        <GemMesh name="surge_aura" scale={[GEM_SCALE * 0.9, GEM_SCALE * 0.9, GEM_SCALE * 0.9]} position={[0, lift, 0]} rotation={[0, special === "surgeV" ? 90 : 0, 0]} />
       )}
     </ViroNode>
   );

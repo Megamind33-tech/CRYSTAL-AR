@@ -31,12 +31,12 @@ export function PlacementGuide({ mock, onPlaceMock, cameraView = false }: { mock
   if (phase === "placed") return null;
 
   const title =
-    phase === "scanning" ? (resuming ? "Find your table again" : "Find a table or floor") : cameraView ? "Camera View" : mock ? "Mock table ready" : "Surface found";
+    phase === "scanning" ? (resuming ? "Find your table again" : "Find a table or floor") : cameraView ? "Tabletop View" : mock ? "Mock table ready" : "Surface found";
   const body =
     phase === "scanning"
       ? reason || "Move your phone slowly across a flat, textured surface."
       : cameraView
-        ? "This phone can’t use Google’s AR tracking, so the world appears over your camera. Point at your table, then place it. Turn it with ⟲ ⟳."
+        ? "This phone can’t use Google’s AR tracking, so the Forest Ruins rest on a virtual table. Turn them with ⟲ ⟳ and resize with − +."
         : mock
         ? "DEV_AR_MOCK: a simulated table stands in for AR."
         : resuming

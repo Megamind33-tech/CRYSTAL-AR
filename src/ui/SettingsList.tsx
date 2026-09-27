@@ -7,7 +7,7 @@ const ROWS: { key: keyof Settings; label: string; hint: string }[] = [
   { key: "music", label: "Music", hint: "Forest ambience while playing" },
   { key: "sfx", label: "Sound effects", hint: "Crystal chimes and world sounds" },
   { key: "haptics", label: "Haptics", hint: "Vibration on swaps and matches" },
-  { key: "cameraView", label: "Camera View", hint: "Show the world over your camera without AR tracking. Use this if AR crashes or can’t find surfaces." },
+  { key: "cameraView", label: "Tabletop View", hint: "Play on a virtual table without AR tracking. Use this if AR crashes or can’t find surfaces." },
   { key: "diagnostics", label: "Diagnostics", hint: "Developer overlay (FPS, tracking, board)" },
 ];
 

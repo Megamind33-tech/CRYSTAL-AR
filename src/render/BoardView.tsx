@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { Viro3DObject, ViroNode, ViroParticleEmitter, ViroQuad } from "@reactvision/react-viro";
 import { DEV_AR_MOCK, JS_PICKING } from "../config";
 import { gameStore, pressCell, releaseCell, type Burst } from "../state/game";
@@ -39,21 +39,38 @@ const CellPads = memo(function CellPads({ selKey, hintKey }: { selKey: string; h
   return <>{pads}</>;
 });
 
-const BurstFx = memo(function BurstFx({ burst }: { burst: Burst }) {
-  const [x, y, z] = cellToLocal(burst.x, burst.y);
-  const color = CRYSTAL_COLORS[burst.type];
+/**
+ * Spark bursts come from a fixed pool of emitters mounted once. Creating an emitter loads its
+ * texture on a Viro background task; doing that on every match raced Viro's task scheduler on
+ * mid-range phones. Each slot is re-aimed at a new cell and switched on briefly.
+ */
+const POOL = 8;
+const EMIT_MS = 240;
+
+const PooledEmitter = memo(function PooledEmitter({ burst }: { burst: Burst | undefined }) {
+  const [on, setOn] = useState(false);
+  const [last, setLast] = useState<Burst | undefined>(burst);
+  useEffect(() => {
+    if (!burst) return;
+    setLast(burst);
+    setOn(true);
+    const t = setTimeout(() => setOn(false), EMIT_MS);
+    return () => clearTimeout(t);
+  }, [burst]);
+  const b = last;
+  const [x, y, z] = b ? cellToLocal(b.x, b.y) : [0, -1, 0];
+  const color = CRYSTAL_COLORS[b?.type ?? 0];
   return (
     <ViroParticleEmitter
       position={[x, y, z]}
-      duration={220}
-      run
-      loop={false}
+      run={on}
+      loop
       fixedToEmitter={false}
       image={{ source: TEXTURES.spark, height: 0.012, width: 0.012, bloomThreshold: 0.0 }}
       spawnBehavior={{
         particleLifetime: [450, 850],
-        emissionRatePerSecond: burst.big ? [140, 180] : [60, 80],
-        maxParticles: burst.big ? 36 : 16,
+        emissionRatePerSecond: b?.big ? [140, 180] : [60, 80],
+        maxParticles: b?.big ? 36 : 16,
         spawnVolume: { shape: "sphere", params: [0.01], spawnOnSurface: false },
       }}
       particleAppearance={{
@@ -68,6 +85,18 @@ const BurstFx = memo(function BurstFx({ burst }: { burst: Burst }) {
     />
   );
 });
+
+function BurstPool({ bursts }: { bursts: Burst[] }) {
+  const slots: (Burst | undefined)[] = Array.from({ length: POOL });
+  for (const b of bursts) slots[b.id % POOL] = b; // newest burst wins its slot
+  return (
+    <>
+      {slots.map((b, i) => (
+        <PooledEmitter key={i} burst={b} />
+      ))}
+    </>
+  );
+}
 
 export function BoardView() {
   const crystals = useStore(gameStore, (s) => s.crystals);
@@ -86,9 +115,7 @@ export function BoardView() {
           <CrystalNode crystal={c} selected={!!selected && selected.x === c.x && selected.y === c.y} />
         </ViroNode>
       ))}
-      {bursts.map((b) => (
-        <BurstFx key={b.id} burst={b} />
-      ))}
+      <BurstPool bursts={bursts} />
     </ViroNode>
   );
 }

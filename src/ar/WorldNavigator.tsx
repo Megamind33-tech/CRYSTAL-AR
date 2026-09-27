@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ActivityIndicator, PermissionsAndroid, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Viro3DSceneNavigator, ViroARSceneNavigator } from "@reactvision/react-viro";
 import { DEV_AR_MOCK } from "../config";
@@ -34,12 +34,6 @@ export function WorldNavigator() {
     }
   }, [mode, phase]);
 
-  // Camera View shows the live feed without ARCore, so it asks for the camera itself.
-  useEffect(() => {
-    if (mode === "camera" && Platform.OS === "android") {
-      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA).catch(() => {});
-    }
-  }, [mode]);
 
   if (mode === "checking") {
     return (

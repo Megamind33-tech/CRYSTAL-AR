@@ -39,7 +39,7 @@ export function Diagnostics({ mock }: { mock: boolean }) {
 
   if (!enabled) return null;
   const lines = [
-    `mode ${mock ? "DEV_AR_MOCK" : "AR"}  js-fps ${fps}`,
+    `mode ${mock ? (ar.tracking === "camera" ? "TABLETOP" : "DEV_AR_MOCK") : "AR"}  js-fps ${fps}`,
     `tracking ${ar.tracking}${ar.trackingReason ? ` (${ar.trackingReason})` : ""}  planes ${ar.planes}`,
     `anchor ${ar.anchorId ?? "-"}  yaw ${ar.yaw.toFixed(0)}°  scale ${ar.worldScale}`,
     `objects ${crystals + STATIC_OBJECTS}  gems ${crystals}  bursts ${bursts}`,
@@ -60,6 +60,6 @@ export function Diagnostics({ mock }: { mock: boolean }) {
 }
 
 const s = StyleSheet.create({
-  box: { position: "absolute", left: 8, bottom: 8, padding: 8, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.55)" },
+  box: { position: "absolute", left: 8, bottom: 84, padding: 8, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.55)" },
   t: { color: "#9cf29c", fontSize: 10, fontFamily: "monospace" },
 });

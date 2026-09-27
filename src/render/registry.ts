@@ -32,7 +32,6 @@ export function registerMaterials() {
       blendMode: "Alpha",
       writesToDepthBuffer: false,
     },
-    cameraFeed: { lightingModel: "Constant", writesToDepthBuffer: false },
     tableMock: { lightingModel: "Lambert", diffuseColor: "#8a6a4f" },
     floorMock: { lightingModel: "Lambert", diffuseColor: "#3a3f47" },
     backdropMock: { lightingModel: "Constant", diffuseColor: "#1c2127" },
