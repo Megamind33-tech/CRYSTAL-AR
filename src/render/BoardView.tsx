@@ -18,7 +18,7 @@ const onCell = (x: number, y: number) => (state: number, position?: number[]) =>
 };
 
 /** Invisible per-cell touch pads: native hit-testing resolves which cell a finger is on. */
-const CellPads = memo(function CellPads({ selKey }: { selKey: string }) {
+const CellPads = memo(function CellPads({ selKey, hintKey }: { selKey: string; hintKey: string }) {
   const pads = [];
   for (let y = 0; y < BOARD_SIZE; y++)
     for (let x = 0; x < BOARD_SIZE; x++) {
@@ -31,7 +31,7 @@ const CellPads = memo(function CellPads({ selKey }: { selKey: string }) {
           rotation={[-90, 0, 0]}
           width={CELL * 0.98}
           height={CELL * 0.98}
-          materials={selKey === `${x}_${y}` ? ["cellSelected"] : ["cellPad"]}
+          materials={selKey === `${x}_${y}` ? ["cellSelected"] : hintKey.includes(`|${x}_${y}|`) ? ["cellHint"] : ["cellPad"]}
           onClickState={JS_PICKING ? undefined : onCell(x, y)}
         />,
       );
@@ -73,12 +73,14 @@ export function BoardView() {
   const crystals = useStore(gameStore, (s) => s.crystals);
   const selected = useStore(gameStore, (s) => s.selected);
   const bursts = useStore(gameStore, (s) => s.bursts);
+  const hint = useStore(gameStore, (s) => s.hint);
+  const hintKey = hint ? `|${hint[0].x}_${hint[0].y}|${hint[1].x}_${hint[1].y}|` : "";
   const selKey = selected ? `${selected.x}_${selected.y}` : "";
 
   return (
     <ViroNode position={BOARD_OFFSET} rotation={[BOARD_TILT_DEG, 0, 0]}>
       <Viro3DObject source={MODELS.platform} type="GLB" ignoreEventHandling />
-      <CellPads selKey={selKey} />
+      <CellPads selKey={selKey} hintKey={hintKey} />
       {crystals.map((c) => (
         <ViroNode key={c.id} onClickState={JS_PICKING ? undefined : onCell(c.x, c.y)}>
           <CrystalNode crystal={c} selected={!!selected && selected.x === c.x && selected.y === c.y} />

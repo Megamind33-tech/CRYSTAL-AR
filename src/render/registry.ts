@@ -20,6 +20,12 @@ export function registerMaterials() {
       blendMode: "Add",
       writesToDepthBuffer: false,
     },
+    cellHint: {
+      lightingModel: "Constant",
+      diffuseColor: "rgba(255,214,120,0.30)",
+      blendMode: "Add",
+      writesToDepthBuffer: false,
+    },
     placementGlow: {
       lightingModel: "Constant",
       diffuseColor: "rgba(150,235,255,0.22)",

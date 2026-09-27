@@ -17,9 +17,9 @@ export interface LevelDef {
 }
 
 export const LEVELS: LevelDef[] = [
-  { id: 1, name: "Waking Stones", seed: 1101, moves: 20, objective: { kind: "power", target: 100 } },
-  { id: 2, name: "Emerald Canopy", seed: 2207, moves: 18, objective: { kind: "collect", crystal: 2, target: 24 } },
-  { id: 3, name: "Heart of the Falls", seed: 3313, moves: 18, objective: { kind: "score", target: 4200 } },
+  { id: 1, name: "Waking Stones", seed: 1101, moves: 20, objective: { kind: "power", target: 170 } },
+  { id: 2, name: "Emerald Canopy", seed: 2207, moves: 16, objective: { kind: "collect", crystal: 2, target: 32 } },
+  { id: 3, name: "Heart of the Falls", seed: 3313, moves: 18, objective: { kind: "score", target: 5600 } },
 ];
 
 export type SessionStatus = "playing" | "won" | "lost";

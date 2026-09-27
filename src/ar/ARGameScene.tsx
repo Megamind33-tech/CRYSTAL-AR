@@ -6,6 +6,7 @@ import { registerMaterials } from "../render/registry";
 import { arSession } from "../state/arSession";
 import { gameEvents } from "../state/game";
 import { useStore } from "../state/store";
+import { arLog } from "../dev/log";
 
 registerMaterials();
 
@@ -40,8 +41,10 @@ export default function ARGameScene() {
       }
     } catch (e) {
       arSession.set({ lastError: `yaw: ${String(e)}` });
+      arLog("error", { where: "yaw", error: String(e) });
     }
     arSession.set({ phase: "placed", anchorId: plane.anchorId, yaw });
+    arLog("placed", { anchor: plane.anchorId, yaw: Math.round(yaw), tap: tapPosition, planeW: plane.width, planeH: plane.height });
     gameEvents.emit({ type: "sfx", name: "place" });
     gameEvents.emit({ type: "haptic", kind: "success" });
   };
@@ -53,6 +56,7 @@ export default function ARGameScene() {
       onAnchorFound={(a) => {
         selectorRef.current?.handleAnchorFound(a);
         if (a.type === "plane") {
+          arLog("planeFound", { id: a.anchorId, w: a.width, h: a.height, alignment: a.alignment });
           arSession.set((s) => ({ planes: s.planes + 1, phase: s.phase === "scanning" ? "surfaceFound" : s.phase }));
         }
       }}
@@ -62,12 +66,13 @@ export default function ARGameScene() {
         selectorRef.current?.handleAnchorRemoved(a);
         arSession.set((s) => ({ planes: Math.max(0, s.planes - 1) }));
       }}
-      onTrackingUpdated={(state, reason) =>
+      onTrackingUpdated={(state, reason) => {
+        arLog("tracking", { state: TRACKING[state as 1 | 2 | 3], reason: REASON[reason as 1 | 2 | 3] });
         arSession.set({
           tracking: TRACKING[state as 1 | 2 | 3] ?? "unavailable",
           trackingReason: REASON[reason as 1 | 2 | 3] ?? "",
-        })
-      }
+        });
+      }}
       onAmbientLightUpdate={(info) => {
         // throttle: only store meaningful changes to avoid re-rendering the world every frame
         const s = arSession.get();
@@ -84,7 +89,12 @@ export default function ARGameScene() {
         minHeight={0.2}
         material="placementGlow"
         onPlaneSelected={onPlaneSelected}
-        onPlaneRemoved={() => arSession.set({ phase: "scanning", anchorId: null })}
+        onPlaneRemoved={(id) => {
+          // ARCore removes planes it merges into others; only the selected one matters
+          const selected = arSession.get().anchorId;
+          arLog("planeRemoved", { id, selected: id === selected });
+          if (id === selected) arSession.set({ phase: "scanning", anchorId: null });
+        }}
       >
         <GameWorld ambientIntensity={lightIntensity} ambientColor={lightColor} />
       </ViroARPlaneSelector>

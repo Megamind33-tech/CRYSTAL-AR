@@ -15,6 +15,7 @@ export function PlacementGuide({ mock, onPlaceMock }: { mock: boolean; onPlaceMo
   const phase = useStore(arSession, (s) => s.phase);
   const reason = useStore(arSession, (s) => s.trackingReason);
   const scale = useStore(arSession, (s) => s.worldScale);
+  const resuming = useStore(gameStore, (s) => !!s.session);
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -28,13 +29,16 @@ export function PlacementGuide({ mock, onPlaceMock }: { mock: boolean; onPlaceMo
   }, [pulse]);
   if (phase === "placed") return null;
 
-  const title = phase === "scanning" ? "Find a table or floor" : mock ? "Mock table ready" : "Surface found";
+  const title =
+    phase === "scanning" ? (resuming ? "Find your table again" : "Find a table or floor") : mock ? "Mock table ready" : "Surface found";
   const body =
     phase === "scanning"
       ? reason || "Move your phone slowly across a flat, textured surface."
       : mock
         ? "DEV_AR_MOCK: a simulated table stands in for AR."
-        : "Tap the glowing area to raise the Forest Ruins.";
+        : resuming
+          ? "Tap the glowing area – your puzzle is waiting."
+          : "Tap the glowing area to raise the Forest Ruins.";
 
   return (
     <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { justifyContent: "flex-end", paddingBottom: insets.bottom + 28 }]}>

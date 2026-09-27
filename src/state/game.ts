@@ -1,6 +1,6 @@
 // Game controller: runs the pure engine, then plays its ResolveSteps back as timed view states.
 // Renderers (AR and mock) only read `gameStore`; audio/haptics subscribe to `gameEvents`.
-import { boardHash, isAdjacent } from "../game/board.ts";
+import { boardHash, findValidMoves, isAdjacent } from "../game/board.ts";
 import { chargeForStep, LEVELS, objectiveProgress, playMove, startSession, starsFor, type Session } from "../game/level.ts";
 import { eventsForStep, stageForProgress, type WorldEvent, type WorldStage } from "../game/reactions.ts";
 import type { CrystalType, Pos, ResolveStep, Special } from "../game/types.ts";
@@ -52,6 +52,8 @@ export interface GameState {
   result: { won: boolean; stars: number } | null;
   lastMatch: string;
   moveCount: number;
+  /** idle hint: two cells of a valid swap, glowing */
+  hint: [Pos, Pos] | null;
 }
 
 const emptyReactions = (): Record<WorldEvent, number> => ({
@@ -74,6 +76,7 @@ export const gameStore = createStore<GameState>({
   result: null,
   lastMatch: "-",
   moveCount: 0,
+  hint: null,
 });
 
 // ---- side-effect channel (audio, haptics, analytics) -----------------------
@@ -136,7 +139,9 @@ export function startLevel(levelIndex: number, seedOverride?: number) {
     result: null,
     lastMatch: "-",
     moveCount: 0,
+    hint: null,
   });
+  scheduleHint();
 }
 
 export const restartLevel = () => startLevel(gameStore.get().levelIndex);
@@ -152,11 +157,13 @@ export function respawnView() {
 /** Leaving the level: drop the session so the next play starts clean. */
 export function endSession() {
   generation++;
+  clearHint();
   gameStore.set({ session: null, crystals: [], selected: null, busy: false, result: null, bursts: [] });
 }
 
 /** CLICK_DOWN on a cell: select it (or complete a tap-tap swap). */
 export function pressCell(p: Pos) {
+  clearHint();
   const s = gameStore.get();
   if (s.busy || !s.session || s.result) return;
   if (s.selected && isAdjacent(s.selected, p)) {
@@ -206,6 +213,7 @@ export async function attemptSwap(a: Pos, b: Pos) {
     }
     gameEvents.emit({ type: "levelEnd", won: result.won, stars: result.stars, level: session.level.id });
   }
+  scheduleHint();
   gameStore.set({
     session,
     busy: false,
@@ -339,6 +347,25 @@ async function playSteps(steps: ResolveStep[], gen: number) {
       }
     }
   }
+}
+
+// ---- idle hint -------------------------------------------------------------
+export const HINT_DELAY_MS = 5000;
+let hintTimer: ReturnType<typeof setTimeout> | null = null;
+function clearHint() {
+  if (hintTimer) clearTimeout(hintTimer);
+  hintTimer = null;
+  if (gameStore.get().hint) gameStore.set({ hint: null });
+}
+function scheduleHint() {
+  if (hintTimer) clearTimeout(hintTimer);
+  const gen = generation;
+  hintTimer = setTimeout(() => {
+    const s = gameStore.get();
+    if (gen !== generation || s.busy || s.result || !s.session || s.selected) return;
+    const moves = findValidMoves(s.session.engine.board);
+    if (moves.length) gameStore.set({ hint: moves[Math.floor(moves.length / 2)] });
+  }, HINT_DELAY_MS);
 }
 
 /** Diagnostics helper. */

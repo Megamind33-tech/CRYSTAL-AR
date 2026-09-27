@@ -28,7 +28,9 @@ const GEM_COLORS = {
   gold: [1.0, 0.72, 0.1],
 };
 const gemMaterial = (m, name, c) =>
-  m.material(name, { color: c, metallic: 0.15, roughness: 0.16, emissive: c.map((v) => v * 0.32) });
+  m.material(name, { color: c, metallic: 0.35, roughness: 0.07, emissive: c.map((v) => v * 0.22), alpha: 0.82 });
+const coreMaterial = (m, name, c) =>
+  m.material(name + "_core", { color: c.map((v) => Math.min(1, v * 0.6 + 0.4)), roughness: 0.3, emissive: c.map((v) => Math.min(1, v * 0.9 + 0.25)) });
 
 const outline = (n, f) => Array.from({ length: n }, (_, i) => f((i / n) * Math.PI * 2));
 const heart = outline(30, (t) => [
@@ -70,7 +72,15 @@ const gems = {
 const colorOf = { gem_red: "red", gem_blue: "blue", gem_green: "green", gem_purple: "purple", gem_gold: "gold" };
 for (const [name, build] of Object.entries(gems)) {
   const m = new Model();
-  build(m, gemMaterial(m, name, GEM_COLORS[colorOf[name]]));
+  const c = GEM_COLORS[colorOf[name]];
+  // inner core first: a shrunken copy of the same cut, glowing through the translucent shell
+  const core = coreMaterial(m, name, c);
+  const shell = gemMaterial(m, name, c);
+  const tris = m.tris.bind(m);
+  m.tris = (mat, t, f) => tris(core, t, (p) => { const q = f ? f(p) : p; return [q[0] * 0.55, q[1] * 0.55, q[2] * 0.55]; });
+  build(m, shell);
+  m.tris = tris;
+  build(m, shell);
   out(name, m);
 }
 
@@ -285,7 +295,8 @@ const inStream = (x, z) => x < -0.19 && x > -0.3 && z > -0.1;
   for (let i = 0; i < NV; i++) {
     const a = (i / NV) * Math.PI * 2 + Math.PI / 2;
     const px = PC[0] + Math.cos(a) * PR, py = PC[1] + Math.sin(a) * PR;
-    m.tris(i % 4 === 0 ? rune : portalStone, box(0.036, 0.026, 0.03), xf({ r: [0, 0, a + Math.PI / 2], t: [px, py, PC[2]] }));
+    m.tris(portalStone, box(0.036, 0.026, 0.03), xf({ r: [0, 0, a + Math.PI / 2], t: [px, py, PC[2]] }));
+    if (i % 3 === 0) m.tris(rune, blob(0.005, R, 0), xf({ s: [1, 1, 0.4], t: [px, py, PC[2] + 0.016] }));
   }
 
   // Trees: pines behind/right, broadleaf on the flanks. Kept off the player-facing side.
@@ -314,6 +325,25 @@ const inStream = (x, z) => x < -0.19 && x > -0.3 && z > -0.1;
   roundTree(0.24, 0.24, 0.1);
 
   route = "terrain";
+  // Foreground: stepping-stone path to the platform, grass tufts and wildflowers.
+  const tuft = m.material("tuft", { color: [0.3, 0.52, 0.17], roughness: 1 });
+  const tuftLight = m.material("tuftLight", { color: [0.45, 0.62, 0.22], roughness: 1 });
+  const flowerW = m.material("flowerW", { color: [0.97, 0.95, 0.88], emissive: [0.12, 0.12, 0.1], roughness: 0.8 });
+  const flowerY = m.material("flowerY", { color: [1.0, 0.82, 0.3], emissive: [0.15, 0.1, 0.02], roughness: 0.8 });
+  const flowerP = m.material("flowerP", { color: [0.78, 0.55, 0.95], emissive: [0.1, 0.06, 0.12], roughness: 0.8 });
+  for (let i = 0; i < 4; i++) {
+    const z = 0.235 + i * 0.016, x = Math.sin(i * 1.7) * 0.02;
+    m.tris(i % 2 ? rock : ruin, slab(0.026 + R() * 0.008, 0.004, 0.014, 0.0015), xf({ t: [x, SURFACE_Y - 0.001, z], r: [0, (R() - 0.5) * 0.6, 0] }));
+  }
+  for (let i = 0; i < 170; i++) {
+    const a = R() * Math.PI * 2, f = 0.35 + R() * 0.57;
+    const x = Math.cos(a) * ISLAND_RX * f, z = Math.sin(a) * ISLAND_RZ * f;
+    if (inStream(x, z) || (Math.abs(x) < 0.2 && z > -0.16 && z < 0.24) || (Math.abs(x) < 0.035 && z > 0.22)) continue;
+    const blades = 3 + Math.floor(R() * 3);
+    for (let k = 0; k < blades; k++)
+      m.tris(k % 2 ? tuftLight : tuft, cone(3, 0.0026, 0.014 + R() * 0.012, R() * 3), xf({ t: [x + (R() - 0.5) * 0.008, SURFACE_Y - 0.001, z + (R() - 0.5) * 0.008], r: [(R() - 0.5) * 0.5, 0, (R() - 0.5) * 0.5] }));
+    if (R() < 0.35) m.tris([flowerW, flowerY, flowerP][Math.floor(R() * 3)], blob(0.0028, R, 0.1, 0), xf({ s: [1, 0.6, 1], t: [x, SURFACE_Y + 0.012, z] }));
+  }
   // Mushrooms and pebbles for miniature detail.
   for (const [x, z] of [[0.22, 0.05], [0.235, 0.07], [-0.18, 0.25], [0.12, -0.3], [-0.2, -0.26]]) {
     const h = 0.01 + R() * 0.008;
@@ -464,3 +494,44 @@ png("ring_glow", 128, 128, (x, y) => {
   const ring = Math.exp(-(((d - 0.8) / 0.08) ** 2)) + 0.25 * Math.exp(-(((d - 0.55) / 0.05) ** 2));
   return [255, 255, 255, Math.round(Math.min(1, ring) * 255)];
 });
+
+// ---------------------------------------------------------- lighting (IBL) --
+// Radiance .hdr environment: warm sky, dark ground, a sun and two soft "windows" so crystal
+// facets pick up crisp glints. Uncompressed RGBE scanlines.
+{
+  const W = 256, H = 128;
+  const px = Buffer.alloc(W * H * 4);
+  const rgbe = (r, g, b) => {
+    const m = Math.max(r, g, b);
+    if (m < 1e-32) return [0, 0, 0, 0];
+    const e = Math.ceil(Math.log2(m));
+    const s = 256 / 2 ** e;
+    return [Math.min(255, r * s), Math.min(255, g * s), Math.min(255, b * s), e + 128].map(Math.floor);
+  };
+  const sun = [Math.cos(0.9) * Math.cos(-2.2), Math.sin(0.9), Math.cos(0.9) * Math.sin(-2.2)];
+  for (let y = 0; y < H; y++) {
+    const el = (0.5 - (y + 0.5) / H) * Math.PI; // +pi/2 top
+    for (let x = 0; x < W; x++) {
+      const az = ((x + 0.5) / W) * Math.PI * 2 - Math.PI;
+      const d = [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)];
+      let c;
+      if (el > 0) {
+        const t = el / (Math.PI / 2);
+        c = [1.35 - 0.45 * t, 1.3 - 0.3 * t, 1.2 - 0.05 * t];
+      } else {
+        c = [0.28, 0.22, 0.17];
+      }
+      const sd = d[0] * sun[0] + d[1] * sun[1] + d[2] * sun[2];
+      if (sd > 0.995) c = c.map((v, i) => v + [40, 36, 30][i]);
+      else if (sd > 0.96) c = c.map((v) => v + 3 * ((sd - 0.96) / 0.035));
+      // softboxes
+      const box = (a0, a1, e0, e1, k) => az > a0 && az < a1 && el > e0 && el < e1 && (c = c.map((v) => v + k));
+      box(0.3, 0.9, 0.25, 0.7, 7);
+      box(2.2, 2.6, 0.1, 0.45, 4);
+      px.set(rgbe(...c), (y * W + x) * 4);
+    }
+  }
+  const header = Buffer.from(`#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${H} +X ${W}\n`, "ascii");
+  writeFileSync(new URL("studio_forest.hdr", TEX), Buffer.concat([header, px]));
+  console.log("studio_forest.hdr".padEnd(16), ((header.length + px.length) / 1024).toFixed(0).padStart(12), "KB");
+}

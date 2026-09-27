@@ -1186,11 +1186,6 @@
     anser "^1.4.9"
     stacktrace-parser "^0.1.10"
 
-"@expo/material-symbols@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@expo/material-symbols/-/material-symbols-0.1.1.tgz#ee86c79e5eebed9c0eccaf7341ba61791b9e6ebd"
-  integrity sha512-ruA6hZATOPKxo1qSd1NE3HI9FrmEDwcMDhsvzTAdMkP9AapdHfJ/0tKmBMWFJir85voxs1twYxLVrGW9OLGaOg==
-
 "@expo/metro-config@~57.0.12":
   version "57.0.12"
   resolved "https://registry.yarnpkg.com/@expo/metro-config/-/metro-config-57.0.12.tgz#8955eb416ac07c86c5b9f0bd1de7bc2cf1486bab"
@@ -1345,7 +1340,7 @@
   resolved "https://registry.npmjs.org/@expo/sudo-prompt/-/sudo-prompt-9.3.2.tgz"
   integrity sha512-HHQigo3rQWKMDzYDLkubN5WQOYXJJE2eNqIQC2axC2iO3mHdwnIR7FgZVvHWtBwAdzBgAP0ECp8KqS8TiMKvgw==
 
-"@expo/ui@^57.0.19", "@expo/ui@~57.0.19":
+"@expo/ui@^57.0.19":
   version "57.0.19"
   resolved "https://registry.yarnpkg.com/@expo/ui/-/ui-57.0.19.tgz#b86804de7241da2cd578ab62c0912fdc5eab199f"
   integrity sha512-WB95zQPge5nb04zgY3O2NmMtxg6G+qFH3yOAHcBkTUrJXoBReQoyY3cfp/8N5Q/azcfHJcBE3Jy0Rwq9OoRrfA==
@@ -3375,13 +3370,6 @@ expo-linking@~57.0.10:
   dependencies:
     expo-constants "~57.0.18"
     invariant "^2.2.4"
-
-expo-location@~57.0.19:
-  version "57.0.19"
-  resolved "https://registry.yarnpkg.com/expo-location/-/expo-location-57.0.19.tgz#3843e222d9422f67a0cdc4d8bfd38814fc4e17ae"
-  integrity sha512-eNX8D74Aav4Go0jmNQIuIP3ioV6QLNDsKuEXE24rtqoG80UgqgD0gjnwwWqkC5fs7yGUToXcy4BLqlwCqrX5pQ==
-  dependencies:
-    "@expo/image-utils" "^0.11.5"
 
 expo-modules-autolinking@~57.0.13:
   version "57.0.13"

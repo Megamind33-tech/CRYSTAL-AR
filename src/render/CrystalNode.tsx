@@ -60,7 +60,8 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
 
   return (
     <ViroNode position={position} scale={scale} animation={animation}>
-      <ViroNode position={[0, lift, 0]} animation={spin ? { name: spin, run: true, loop: true } : undefined}>
+      {/* rotation flips between two values so that stopping a spin re-applies a clean facing */}
+      <ViroNode position={[0, lift, 0]} rotation={[0, spin ? 0 : 0.001, 0]} animation={spin ? { name: spin, run: true, loop: true } : undefined}>
         <Viro3DObject
           source={isPrism ? MODELS.prism : MODELS.gems[type]}
           type="GLB"

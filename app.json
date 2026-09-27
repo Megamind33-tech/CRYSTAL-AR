@@ -58,7 +58,14 @@
           }
         }
       ],
-      "expo-audio"
+      [
+        "expo-audio",
+        {
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      "./plugins/withAndroidBuildTweaks"
     ],
     "experiments": {
       "typedRoutes": true,

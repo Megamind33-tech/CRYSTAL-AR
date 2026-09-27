@@ -22,6 +22,19 @@ try {
   await sleep(2500);
   await page.screenshot({ path: `${outDir}/01-placed.png` });
 
+  await sleep(3500); // idle → hint
+  const hint = await page.evaluate(() => globalThis.__crystals.gameStore.get().hint);
+  step("idle hint highlights a valid swap", !!hint, JSON.stringify(hint));
+  await page.screenshot({ path: `${outDir}/01b-hint.png` });
+
+  // Pause → resume through the real UI
+  await page.click("[aria-label=Pause]");
+  await page.waitForSelector("[data-testid=resume]", { timeout: 5000 });
+  await page.screenshot({ path: `${outDir}/01c-pause.png` });
+  await page.click("[data-testid=resume]");
+  await sleep(300);
+  step("pause menu opens and resumes", !(await page.$("[data-testid=resume]")));
+
   const st = () => page.evaluate(() => {
     const s = globalThis.__crystals.gameStore.get();
     return { selected: s.selected, moves: s.hud.movesLeft, score: s.hud.score, busy: s.busy, progress: s.progress, stage: s.stage, result: s.result, crystals: s.crystals.length, bursts: s.bursts.length, lastMatch: s.lastMatch, moveCount: s.moveCount };
@@ -96,6 +109,15 @@ try {
   step("level reaches an end state", !!s.result, JSON.stringify(s));
   await sleep(2200);
   await page.screenshot({ path: `${outDir}/05-result.png` });
+  // Save: progress persisted (level 2 unlocked) and visible on the menu after a reload.
+  if (s.result?.won) {
+    await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
+    await sleep(2500);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("crystals.progress.v1") || "null"));
+    const unlocked = await page.$("[aria-label^=\"Play level 2\"]");
+    step("progress saved and level 2 unlocked after reload", saved?.unlocked >= 1 && !!unlocked, JSON.stringify(saved));
+    await page.screenshot({ path: `${outDir}/06-menu.png` });
+  }
   const errors = report.logs.filter((l) => /\[(error|pageerror)\]/.test(l));
   step("no runtime errors in console", errors.length === 0, errors.slice(0, 5).join(" | "));
 } catch (e) {

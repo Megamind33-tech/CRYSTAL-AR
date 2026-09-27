@@ -25,6 +25,7 @@ export const MODELS = {
 export const TEXTURES = {
   spark: require("../../assets/textures/spark.png"),
   ringGlow: require("../../assets/textures/ring_glow.png"),
+  environment: require("../../assets/textures/studio_forest.hdr"),
 };
 
 /** Display colours per crystal kind (particles, UI accents). Index = CrystalType. */
