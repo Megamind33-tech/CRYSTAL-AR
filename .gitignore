@@ -39,3 +39,12 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# generated copy of the Viro WASM renderer
+public/viro/
+
+# build outputs
+dist/
+e2e-out/
+android/
+ios/

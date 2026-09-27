@@ -1,5 +1,5 @@
 {
-  "name": "expo-start-kit",
+  "name": "crystals-ar",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -7,15 +7,24 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "node --test \"src/tests/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "gen:assets": "node scripts/gen-models.mjs && node scripts/gen-audio.mjs",
+    "postinstall": "node scripts/copy-viro-web.mjs",
+    "web:mock": "expo start --web"
   },
   "dependencies": {
     "@expo/material-symbols": "^0.1.1",
     "@expo/ui": "~57.0.19",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@reactvision/react-viro": "^3.0.0",
+    "@reactvision/viro-web-renderer": "1.0.0",
     "expo": "^57.0.24",
+    "expo-audio": "~57.0.5",
     "expo-build-properties": "~57.0.21",
     "expo-constants": "~57.0.19",
+    "expo-haptics": "~57.0.3",
     "expo-linking": "~57.0.10",
     "expo-location": "~57.0.19",
     "expo-router": "~57.0.22",
@@ -35,6 +44,7 @@
     "@types/react": "~19.2.10",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~57.0.2",
+    "puppeteer-core": "25.12.0",
     "typescript": "~6.0.3"
   },
   "resolutions": {

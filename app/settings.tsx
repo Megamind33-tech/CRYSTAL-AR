@@ -1,36 +1,37 @@
-import { Host, List, ListItem, Switch } from "@expo/ui";
-import { StatusBar } from "expo-status-bar";
-import { useSettings } from "@/contexts/SettingsContext";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { arSession, requestResetPlacement } from "@/src/state/arSession";
+import { useStore } from "@/src/state/store";
+import { Button } from "@/src/ui/Button";
+import { SettingsList } from "@/src/ui/SettingsList";
+import { C, font } from "@/src/ui/theme";
 
 export default function Settings() {
-  const { occlusionEnabled, setOcclusionEnabled, occlusionSupported } =
-    useSettings();
-
-  const occlusionUnsupported = occlusionSupported === false;
-
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const placed = useStore(arSession, (s) => s.phase === "placed");
   return (
-    <>
-      <StatusBar style="auto" />
-      <Host style={{ flex: 1 }} useViewportSizeMeasurement>
-        <List>
-          <ListItem
-            supportingText={
-              occlusionUnsupported
-                ? "Depth-based occlusion is not supported on this device"
-                : "Enable depth-based occlusion for AR objects"
-            }
-            trailing={
-              <Switch
-                value={occlusionEnabled}
-                onValueChange={setOcclusionEnabled}
-                disabled={occlusionUnsupported}
-              />
-            }
-          >
-            Occlusion
-          </ListItem>
-        </List>
-      </Host>
-    </>
+    <ScrollView style={{ backgroundColor: C.bg }} contentContainerStyle={[s.root, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+      <Text style={s.title}>Settings</Text>
+      <SettingsList />
+      <View style={{ gap: 10, marginTop: 24 }}>
+        {placed && (
+          <Button
+            label="RESET AR POSITION"
+            onPress={() => {
+              requestResetPlacement();
+              router.back();
+            }}
+          />
+        )}
+        <Button testID="settings-back" label="BACK" variant="primary" onPress={() => router.back()} />
+      </View>
+    </ScrollView>
   );
 }
+
+const s = StyleSheet.create({
+  root: { paddingHorizontal: 22 },
+  title: { color: C.ink, fontSize: 32, fontFamily: font.display, fontWeight: "700", marginBottom: 12 },
+});

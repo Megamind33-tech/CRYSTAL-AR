@@ -1,35 +1,30 @@
-import {
-  Stack,
-  ThemeProvider,
-  DarkTheme,
-  DefaultTheme,
-} from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
-import 'react-native-reanimated';
-import { SettingsProvider } from '@/contexts/SettingsContext';
+import { useEffect } from "react";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
+import { initAudio } from "@/src/audio/AudioManager";
+import { loadPersisted } from "@/src/state/settings";
+import { C } from "@/src/ui/theme";
+
+// Web mock mode: the Viro WASM renderer assets are served from public/viro (see scripts/copy-viro-web.mjs).
+if (typeof window !== "undefined") {
+  (globalThis as Record<string, unknown>).VIRO_WEB_ASSET_BASE = "/viro/";
+}
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  useEffect(() => {
+    loadPersisted();
+    initAudio();
+  }, []);
 
   return (
-    <SettingsProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen
-            name="settings"
-            options={{
-              headerShown: true,
-              title: 'Settings',
-              headerBackTitle: 'Back',
-            }}
-          />
-        </Stack>
-        {/* Light status bar for the full-screen AR camera home; the Settings
-            screen overrides this with style="auto". */}
-        <StatusBar style="light" />
-      </ThemeProvider>
-    </SettingsProvider>
+    <>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg }, animation: "fade" }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="play" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="settings" />
+      </Stack>
+      <StatusBar style="light" />
+    </>
   );
 }
