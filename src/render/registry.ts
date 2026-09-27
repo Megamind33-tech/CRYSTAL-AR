@@ -32,9 +32,9 @@ export function registerMaterials() {
       blendMode: "Alpha",
       writesToDepthBuffer: false,
     },
-    tableMock: { lightingModel: "Lambert", diffuseColor: "#8a6a4f" },
+    tableMock: { lightingModel: "Lambert", diffuseTexture: TEXTURES.tableWood, diffuseColor: "#ffffff" },
     floorMock: { lightingModel: "Lambert", diffuseColor: "#3a3f47" },
-    backdropMock: { lightingModel: "Constant", diffuseColor: "#1c2127" },
+    backdropMock: { lightingModel: "Constant", diffuseTexture: TEXTURES.roomBackdrop, diffuseColor: "#ffffff" },
     shockRing: {
       lightingModel: "Constant",
       diffuseTexture: TEXTURES.ringGlow,

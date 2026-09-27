@@ -1,4 +1,5 @@
-import { Viro3DObject, ViroAmbientLight, ViroDirectionalLight, ViroLightingEnvironment, ViroNode } from "@reactvision/react-viro";
+import { ViroAmbientLight, ViroDirectionalLight, ViroNode } from "@reactvision/react-viro";
+import { Model, LightingEnvironment } from "./LoadQueue";
 import { arSession } from "../state/arSession";
 import { useStore } from "../state/store";
 import { MODELS, TEXTURES } from "./assets";
@@ -19,7 +20,7 @@ export function GameWorld({ ambientIntensity, ambientColor }: { ambientIntensity
   return (
     <ViroNode rotation={[0, yaw, 0]} scale={[worldScale, worldScale, worldScale]}>
       {/* image-based lighting: gives crystal facets their glints */}
-      <ViroLightingEnvironment source={TEXTURES.environment} />
+      <LightingEnvironment source={TEXTURES.environment} />
       <ViroAmbientLight color={ambientColor} intensity={ambient} />
       <ViroDirectionalLight
         color="#fff1d8"
@@ -35,7 +36,7 @@ export function GameWorld({ ambientIntensity, ambientColor }: { ambientIntensity
         shadowBias={0.0015}
       />
       <ViroNode scale={[0.02, 0.02, 0.02]} animation={{ name: "materialize", run: true }}>
-        <Viro3DObject source={MODELS.groundShadow} type="GLB" position={[0.02, 0.001, 0.02]} renderingOrder={-1} ignoreEventHandling />
+        <Model source={MODELS.groundShadow} position={[0.02, 0.001, 0.02]} renderingOrder={-1} ignoreEventHandling />
         <ForestWorld />
         <BoardView />
       </ViroNode>

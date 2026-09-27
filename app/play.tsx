@@ -17,6 +17,7 @@ import { PauseMenu, PlacementGuide } from "@/src/ui/Overlays";
 import { RunResult } from "@/src/ui/RunResult";
 import { RelicTray } from "@/src/ui/RelicTray";
 import { Coach } from "@/src/ui/Coach";
+import { RisingOverlay } from "@/src/ui/RisingOverlay";
 import { trialDef, trialInstances } from "@/src/meta/competition";
 import { ISLANDS } from "@/src/meta/config/world";
 import { islandStatus } from "@/src/meta/progression";
@@ -82,6 +83,7 @@ export default function Play() {
       {phase === "placed" && <HUD onPause={() => setPaused(true)} />}
       {phase === "placed" && <RelicTray ranked={!!trial} />}
       {phase === "placed" && !trial && <Coach />}
+      <RisingOverlay />
       <PlacementGuide mock={viewMode !== "ar"} cameraView={viewMode === "camera"} onPlaceMock={placeMock} />
       <Diagnostics mock={viewMode !== "ar"} />
       <RunResult

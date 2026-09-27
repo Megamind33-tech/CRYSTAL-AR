@@ -10,7 +10,8 @@ const STATIC_OBJECTS = 20;
 
 /** Developer overlay – hidden unless Settings › Diagnostics is on. */
 export function Diagnostics({ mock }: { mock: boolean }) {
-  const enabled = useStore(settingsStore, (s) => s.diagnostics);
+  // release builds never show the developer overlay, whatever an older debug build saved
+  const enabled = useStore(settingsStore, (s) => __DEV__ && s.diagnostics);
   const ar = useStore(arSession, (s) => s);
   const crystals = useStore(gameStore, (s) => s.crystals.length);
   const bursts = useStore(gameStore, (s) => s.bursts.length);

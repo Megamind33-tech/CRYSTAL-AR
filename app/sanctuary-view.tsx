@@ -10,6 +10,7 @@ import { gameEvents } from "@/src/state/game";
 import { metaStore } from "@/src/state/meta";
 import { useStore } from "@/src/state/store";
 import { PlacementGuide } from "@/src/ui/Overlays";
+import { RisingOverlay } from "@/src/ui/RisingOverlay";
 import { C, font, ui } from "@/src/ui/theme";
 
 /** The Keeper's Sanctuary placed on a real table – same placement flow as the puzzle islands. */
@@ -46,6 +47,7 @@ export default function SanctuaryView() {
           )}
         </View>
       </View>
+      <RisingOverlay label="Your Sanctuary is gathering…" />
       <PlacementGuide mock={viewMode !== "ar"} cameraView={viewMode === "camera"} onPlaceMock={() => { arSession.set({ phase: "placed", anchorId: "mock-table" }); gameEvents.emit({ type: "sfx", name: "place" }); }} />
     </View>
   );

@@ -26,6 +26,8 @@ export const TEXTURES = {
   spark: require("../../assets/textures/spark.png"),
   ringGlow: require("../../assets/textures/ring_glow.png"),
   environment: require("../../assets/textures/studio_forest.hdr"),
+  tableWood: require("../../assets/textures/table_wood.png"),
+  roomBackdrop: require("../../assets/textures/room_backdrop.png"),
 };
 
 /** Display colours per crystal kind (particles, UI accents). Index = CrystalType. */

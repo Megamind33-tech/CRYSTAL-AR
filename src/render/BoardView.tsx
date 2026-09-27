@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from "react";
-import { Viro3DObject, ViroNode, ViroParticleEmitter, ViroQuad } from "@reactvision/react-viro";
+import { ViroNode, ViroParticleEmitter, ViroQuad } from "@reactvision/react-viro";
+import { Model, Gated } from "./LoadQueue";
 import { DEV_AR_MOCK, JS_PICKING } from "../config";
 import { gameStore, pressCell, releaseCell, type Burst } from "../state/game";
 import { useStore } from "../state/store";
@@ -61,7 +62,8 @@ const PooledEmitter = memo(function PooledEmitter({ burst }: { burst: Burst | un
   const [x, y, z] = b ? cellToLocal(b.x, b.y) : [0, -1, 0];
   const color = CRYSTAL_COLORS[b?.type ?? 0];
   return (
-    <ViroParticleEmitter
+    <Gated>
+<ViroParticleEmitter
       position={[x, y, z]}
       run={on}
       loop
@@ -83,6 +85,7 @@ const PooledEmitter = memo(function PooledEmitter({ burst }: { burst: Burst | un
         acceleration: { initialRange: [[0, -0.45, 0], [0, -0.45, 0]] },
       }}
     />
+</Gated>
   );
 });
 
@@ -108,7 +111,7 @@ export function BoardView() {
 
   return (
     <ViroNode position={BOARD_OFFSET} rotation={[BOARD_TILT_DEG, 0, 0]}>
-      <Viro3DObject source={MODELS.platform} type="GLB" ignoreEventHandling />
+      <Model source={MODELS.platform} ignoreEventHandling />
       <CellPads selKey={selKey} hintKey={hintKey} />
       {crystals.map((c) => (
         <ViroNode key={c.id} onClickState={JS_PICKING ? undefined : onCell(c.x, c.y)}>

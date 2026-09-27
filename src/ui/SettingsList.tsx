@@ -15,7 +15,7 @@ export function SettingsList() {
   const s = useStore(settingsStore, (x) => x);
   return (
     <View style={{ gap: 4 }}>
-      {ROWS.map((r) => (
+      {ROWS.filter((r) => __DEV__ || r.key !== "diagnostics").map((r) => (
         <View key={r.key} style={st.row}>
           <View style={{ flex: 1 }}>
             <Text style={st.label}>{r.label}</Text>

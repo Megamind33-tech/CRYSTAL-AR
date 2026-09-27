@@ -26,12 +26,17 @@ function registerGemMaterials() {
     for (const p of parts) {
       const rgb = p.color.map((c) => Math.round(Math.min(1, c) * 255));
       const glow = p.emissive.some((e) => e > 0.4);
+      const cull = p.doubleSided ? { cullMode: "None" } : {};
+      const solid = `rgb(${rgb.join(",")})`;
+      const clear = `rgba(${rgb.join(",")},${p.alpha})`;
+      // crystal shells keep their glassy PBR; small props are matte
+      const gem = p.material.startsWith("gem_") || p.material.startsWith("prism_") || p.material === "surge";
       defs["gm_" + p.material] =
         p.alpha < 1
-          ? { lightingModel: "PBR", diffuseColor: `rgba(${rgb.join(",")},${p.alpha})`, blendMode: "Alpha", roughness: 0.1, metalness: 0.3 }
+          ? { lightingModel: glow ? "Constant" : "PBR", diffuseColor: clear, blendMode: "Alpha", roughness: 0.1, metalness: 0.3, writesToDepthBuffer: !glow, ...cull }
           : glow
-            ? { lightingModel: "Constant", diffuseColor: `rgb(${rgb.join(",")})` }
-            : { lightingModel: "PBR", diffuseColor: `rgb(${rgb.join(",")})`, roughness: 0.2, metalness: 0.3 };
+            ? { lightingModel: "Constant", diffuseColor: solid, ...cull }
+            : { lightingModel: "PBR", diffuseColor: solid, roughness: gem ? 0.2 : 0.8, metalness: gem ? 0.3 : 0.02, ...cull };
     }
   }
   ViroMaterials.createMaterials(defs as never);
@@ -54,7 +59,7 @@ function parts(name: string): Part[] {
 }
 
 /** name: gem_red | gem_blue | gem_green | gem_purple | gem_gold | gem_prism | surge_aura */
-export const GemMesh = memo(function GemMesh({ name, scale, rotation, position }: { name: string; scale: V3; rotation?: V3; position?: V3 }) {
+export const GemMesh = memo(function GemMesh({ name, scale = [1, 1, 1], rotation, position }: { name: string; scale?: V3; rotation?: V3; position?: V3 }) {
   registerGemMaterials();
   return (
     <ViroNode scale={scale} rotation={rotation} position={position}>

@@ -1,8 +1,10 @@
 import { memo, useEffect, useRef, useState, type ReactNode } from "react";
-import { Viro3DObject, ViroNode, ViroParticleEmitter, ViroQuad } from "@reactvision/react-viro";
+import { ViroNode, ViroParticleEmitter, ViroQuad } from "@reactvision/react-viro";
+import { Model, Gated } from "./LoadQueue";
 import type { WorldStage } from "../game/reactions";
 import { gameStore } from "../state/game";
 import { useStore } from "../state/store";
+import { GemMesh } from "./GemMesh";
 import { MODELS, TEXTURES } from "./assets";
 import { SURFACE_Y } from "./layout";
 import { scale3Anim } from "./registry";
@@ -114,16 +116,17 @@ export function ForestWorld() {
 
   return (
     <>
-      <Viro3DObject source={MODELS.terrain} type="GLB" ignoreEventHandling />
-      <Viro3DObject source={MODELS.propsBack} type="GLB" ignoreEventHandling />
-      <Viro3DObject source={MODELS.propsLeft} type="GLB" ignoreEventHandling />
-      <Viro3DObject source={MODELS.propsRight} type="GLB" ignoreEventHandling />
+      <Model source={MODELS.terrain} ignoreEventHandling />
+      <Model source={MODELS.propsBack} ignoreEventHandling />
+      <Model source={MODELS.propsLeft} ignoreEventHandling />
+      <Model source={MODELS.propsRight} ignoreEventHandling />
 
       {/* waterfall off the back-left cliff */}
       <Reactive position={[-0.25, SURFACE_Y + 0.17, -0.155]} base={[1, fallBase, 1]} trigger={waterPulse} peak={[1.5, 1.1, 1.6]}>
-        <Viro3DObject source={MODELS.waterfall} type="GLB" ignoreEventHandling />
+        <Model source={MODELS.waterfall} ignoreEventHandling />
       </Reactive>
-      <ViroParticleEmitter
+      <Gated>
+<ViroParticleEmitter
         position={[-0.25, SURFACE_Y + 0.005, -0.13]}
         run
         loop
@@ -132,15 +135,17 @@ export function ForestWorld() {
         particleAppearance={{ opacity: { initialRange: [0.7, 0.9], factor: "Time", interpolation: [{ endValue: 0, interval: [300, 1100] }] }, color: { initialRange: ["#e8fbff", "#bfefff"] } }}
         particlePhysics={{ velocity: { initialRange: [[-0.01, 0.02, 0], [0.01, 0.05, 0.02]] } }}
       />
+</Gated>
 
       {/* portal: dormant → awakening → open */}
       <Reactive position={PORTAL_CENTER} base={[portalBase, portalBase, 1]} trigger={portalPulse} peak={[1.25, 1.25, 1]}>
         <ViroNode animation={{ name: stage >= 4 ? "spinPortalFast" : "spinPortal", run: true, loop: true }}>
-          <Viro3DObject source={MODELS.portalCore} type="GLB" ignoreEventHandling />
+          <GemMesh name="portal_core" />
         </ViroNode>
       </Reactive>
       {stage >= 2 && (
-        <ViroParticleEmitter
+        <Gated>
+<ViroParticleEmitter
           position={PORTAL_CENTER}
           run
           loop
@@ -149,32 +154,34 @@ export function ForestWorld() {
           particleAppearance={{ opacity: { initialRange: [0.9, 1], factor: "Time", interpolation: [{ endValue: 0, interval: [500, 1600] }] }, color: { initialRange: ["#9ff0ff", "#ffffff"] } }}
           particlePhysics={{ velocity: { initialRange: stage >= 4 ? [[-0.08, 0.05, 0.02], [0.08, 0.2, 0.12]] : [[-0.01, 0.01, 0.0], [0.01, 0.04, 0.02]] } }}
         />
+</Gated>
       )}
 
       {/* vines on the tall pillar and the wall fragment */}
       <Reactive position={[-0.14, SURFACE_Y + 0.17, -0.214]} base={[1, vineBase, 1]} trigger={vinePulse} peak={[1.1, 1.3, 1.1]}>
-        <Viro3DObject source={MODELS.vines} type="GLB" ignoreEventHandling />
+        <GemMesh name="vines" />
       </Reactive>
       <Reactive position={[-0.1, SURFACE_Y + 0.054, -0.286]} base={[1.2, vineBase * 0.7, 1]} trigger={vinePulse} peak={[1.1, 1.3, 1.1]}>
-        <Viro3DObject source={MODELS.vines} type="GLB" ignoreEventHandling />
+        <GemMesh name="vines" />
       </Reactive>
 
       {/* flowers awaken with progress and pulse on every match */}
       {BLOOMS.map((p, i) => (
         <Reactive key={i} position={p} rotation={[0, i * 47, 0]} base={[bloomBase, bloomBase, bloomBase]} trigger={plantPulse} peak={[1.3, 1.45, 1.3]}>
-          <Viro3DObject source={MODELS.bloom} type="GLB" ignoreEventHandling />
+          <GemMesh name="bloom" />
         </Reactive>
       ))}
 
       {/* glowing crystal outcrops */}
       {CLUSTERS.map((p, i) => (
         <Reactive key={i} position={p} rotation={[0, i * 70, 0]} base={[clusterBase, clusterBase, clusterBase]} trigger={portalPulse + plantPulse} peak={[1.15, 1.35, 1.15]}>
-          <Viro3DObject source={MODELS.glowCluster} type="GLB" ignoreEventHandling />
+          <GemMesh name="glow_cluster" />
         </Reactive>
       ))}
 
       {/* drifting fireflies – kept behind the board: emitter volumes take part in hit-testing */}
-      <ViroParticleEmitter
+      <Gated>
+<ViroParticleEmitter
         position={[0, SURFACE_Y + 0.13, -0.25]}
         run
         loop
@@ -183,6 +190,7 @@ export function ForestWorld() {
         particleAppearance={{ opacity: { initialRange: [0, 0], factor: "Time", interpolation: [{ endValue: 1, interval: [0, 800] }, { endValue: 0, interval: [2000, 4000] }] }, color: { initialRange: ["#fff6b0", "#c8ffd8"] } }}
         particlePhysics={{ velocity: { initialRange: [[-0.01, -0.004, -0.01], [0.01, 0.01, 0.01]] } }}
       />
+</Gated>
 
       <Shockwave trigger={shock} strength={r.CASCADE_4_PLUS + r.LEVEL_COMPLETE > 0 ? 2 : 1} />
     </>
