@@ -17,6 +17,8 @@ import { attemptSwap } from "@/src/state/game";
 import { HUD } from "@/src/ui/HUD";
 import { PauseMenu, PlacementGuide } from "@/src/ui/Overlays";
 import { RunResult } from "@/src/ui/RunResult";
+import { RelicTray } from "@/src/ui/RelicTray";
+import { Coach } from "@/src/ui/Coach";
 import { trialDef, trialInstances } from "@/src/meta/competition";
 import { ISLANDS } from "@/src/meta/config/world";
 import { islandStatus } from "@/src/meta/progression";
@@ -82,6 +84,8 @@ export default function Play() {
         <ViroARSceneNavigator initialScene={{ scene: ARGameScene }} style={s.fill} autofocus />
       )}
       {phase === "placed" && <HUD onPause={() => setPaused(true)} />}
+      {phase === "placed" && <RelicTray ranked={!!trial} />}
+      {phase === "placed" && !trial && <Coach />}
       <PlacementGuide mock={DEV_AR_MOCK} onPlaceMock={placeMock} />
       <Diagnostics mock={DEV_AR_MOCK} />
       <RunResult

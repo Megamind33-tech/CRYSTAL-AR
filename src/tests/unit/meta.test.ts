@@ -14,7 +14,7 @@ import {
 import {
   achievementStatus, applyRun, archive, claimAchievement, claimDutyCache, claimKeepersReturn, claimQuest, collectSanctuary,
   dutyCacheStatus, feedLumin, houseLumin, islandStatus, keepersReturnStatus, openKeepersCache, pendingSanctuaryResonance,
-  recordEvent, refreshCycles, relicCharges, sanctuaryCost, unlockDiscovery, upgradeSanctuary, useRelic,
+  recordEvent, refreshCycles, relicCharges, sanctuaryCost, unlockDiscovery, upgradeSanctuary, activateRelic,
 } from "../../meta/progression.ts";
 import { accumulate, GAME_VERSION, makeRunId, mockSign, newRunStats, replayRun } from "../../meta/verify.ts";
 import type { PlayerState, RunReport } from "../../meta/types.ts";
@@ -205,11 +205,11 @@ test("Sanctuary: costs grow, rating rises, idle Resonance accrues and is capped"
 
 test("relic charges regenerate; unapproved relics are refused in ranked play", () => {
   let s = grant(fresh(), { relics: ["oracle-stone", "chrono-crystal"] }, T0).state;
-  for (let i = 0; i < 3; i++) s = useRelic(s, "oracle-stone", T0).state as PlayerState;
+  for (let i = 0; i < 3; i++) s = activateRelic(s, "oracle-stone", T0).state as PlayerState;
   assert.equal(relicCharges(s, "oracle-stone", T0).charges, 0);
-  assert.equal(useRelic(s, "oracle-stone", T0).ok, false);
+  assert.equal(activateRelic(s, "oracle-stone", T0).ok, false);
   assert.equal(relicCharges(s, "oracle-stone", T0 + 61 * 60000).charges, 1);
-  assert.equal(useRelic(s, "chrono-crystal", T0, true).ok, false);
+  assert.equal(activateRelic(s, "chrono-crystal", T0, true).ok, false);
   assert.equal(s.stats.relicsUsed, 3);
 });
 
@@ -336,4 +336,42 @@ test("story quests chain through prerequisites", () => {
   const r = claimQuest(s, "story-1-wake", T0);
   assert.ok(r.ok);
   assert.equal(claimQuest(r.state, "story-2-shard", T0).ok, false, "shard not recovered yet");
+});
+
+test("boost log: Stabilize Portal and relic effects replay exactly; forged boosts are rejected", async () => {
+  const { addMoves, reshuffleSession } = await import("../../game/level.ts");
+  const level = LEVELS[2];
+  // play greedily to a loss, stabilize (+5), reshuffle via Realm Compass, add Chrono moves, keep playing
+  let s = startSession(level, level.seed);
+  const acc = newRunStats();
+  const swaps: RunReport["swaps"] = [];
+  const boosts: NonNullable<RunReport["boosts"]> = [];
+  const step = () => {
+    const [a, b] = findValidMoves(s.engine.board)[0];
+    const r = playMove(s, a, b);
+    accumulate(acc, r.steps);
+    swaps.push([a.x, a.y, b.x, b.y]);
+    s = r.session;
+  };
+  while (s.status === "playing") step();
+  if (s.status === "lost") {
+    boosts.push({ atSwap: swaps.length, kind: "moves", value: 5, source: "stabilize" });
+    s = addMoves(s, 5);
+  }
+  boosts.push({ atSwap: swaps.length, kind: "reshuffle", value: 1, source: "relic", relic: "realm-compass" });
+  s = reshuffleSession(s).session;
+  boosts.push({ atSwap: swaps.length, kind: "moves", value: 3, source: "relic", relic: "chrono-crystal" });
+  s = addMoves(s, 3);
+  while (s.status === "playing") step();
+  const report: RunReport = {
+    runId: "kbeta-1", islandId: "heart-of-the-falls", levelIndex: 2, seed: level.seed, gameVersion: GAME_VERSION,
+    startedAt: T0, endedAt: T0 + swaps.length * 2000, swaps, relicsUsed: ["realm-compass", "chrono-crystal"], boosts,
+    claimed: { won: s.status === "won", stars: starsFor(s), score: s.score, ...acc },
+  };
+  const v = replayRun(report);
+  assert.ok(v.ok, v.reasons.join(", "));
+  assert.equal(replayRun({ ...report, boosts: boosts.map((b) => (b.source === "stabilize" ? { ...b, value: 50 } : b)) }).ok, false, "inflated stabilize");
+  assert.equal(replayRun({ ...report, boosts: [...boosts, { atSwap: 1, kind: "moves", value: 5, source: "stabilize" }, { atSwap: 2, kind: "moves", value: 5, source: "stabilize" }] }).ok, false, "too many stabilizations");
+  assert.equal(replayRun({ ...report, relicsUsed: [] }).ok, false, "relic effect without relic");
+  assert.equal(replayRun({ ...report, boosts: boosts.filter((b) => b.kind !== "reshuffle") }).ok, false, "omitted reshuffle changes the board");
 });

@@ -5,6 +5,7 @@ import { arSession, requestResetPlacement } from "@/src/state/arSession";
 import { useStore } from "@/src/state/store";
 import { Button } from "@/src/ui/Button";
 import { SettingsList } from "@/src/ui/SettingsList";
+import { AccountSettings } from "@/src/ui/AccountSettings";
 import { C, font } from "@/src/ui/theme";
 
 export default function Settings() {
@@ -15,6 +16,7 @@ export default function Settings() {
     <ScrollView style={{ backgroundColor: C.bg }} contentContainerStyle={[s.root, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
       <Text style={s.title}>Settings</Text>
       <SettingsList />
+      <AccountSettings />
       <View style={{ gap: 10, marginTop: 24 }}>
         {placed && (
           <Button

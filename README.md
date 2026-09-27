@@ -34,6 +34,21 @@ src/tests/           unit (engine) + integration (controller/layout)
 - Boards never start with a match, always have a move, and reshuffle when deadlocked.
 - Levels: *Waking Stones* (charge the portal), *Emerald Canopy* (gather leaf emeralds), *Heart of the Falls* (score).
 
+## The wider game (meta layer)
+
+The Prism Heart shattered into the Shattered Realms; you are a Keeper restoring them.
+
+- **Loop**: enter an island → match to generate Resonance → open its portal → a Lumin, relic, Memory
+  Crystal or Heart Shard emerges → return to the Sanctuary → upgrade, collect, compete → next realm.
+- **Currencies**: Prism Dust (earned) and Aether Crystals (premium, also earnable). Heart Shards are never sold.
+- **Systems**: Keeper levels with progressive feature unlocks, Sanctuary (idle Resonance, Lumin Grove,
+  Heart Altar), Keeper Archive, Keeper's Return (streak with grace day + Streak Restores), Keeper Duties
+  and Realm Missions, Chronicles (incl. hidden), relics with charges usable in play, Realm Trials on shared
+  seeded boards, leagues (Stone → Celestial), 8 leaderboards, Season 01 *The Eclipse Realm* with a 40-tier
+  Crystal Pass, data-driven events, Realm Exchange, Stabilize Portal recovery, rewarded-ad and payment
+  abstractions, analytics hooks, offline queue, replay-verified anti-cheat.
+- Everything is data in `src/meta/config/` and pure rules in `src/meta/`. See [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Quick start
 
 See [BUILD.md](BUILD.md). Short version:

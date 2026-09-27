@@ -5,7 +5,10 @@
 //   with curl) when the JVM keeps failing to download them. Scoped to those two groups only.
 const fs = require("fs");
 const path = require("path");
-const { withGradleProperties, withDangerousMod, withProjectBuildGradle } = require("expo/config-plugins");
+const { withAndroidManifest, withGradleProperties, withDangerousMod, withProjectBuildGradle } = require("expo/config-plugins");
+
+// Permissions merged in from the Viro AAR that a tabletop AR game does not use.
+const STRIP_PERMISSIONS = ["android.permission.RECORD_AUDIO", "android.permission.NFC", "com.oculus.permission.EYE_TRACKING"];
 
 const set = (props, key, value) => {
   const i = props.findIndex((p) => p.type === "property" && p.key === key);
@@ -15,6 +18,13 @@ const set = (props, key, value) => {
 };
 
 module.exports = function withAndroidBuildTweaks(config) {
+  config = withAndroidManifest(config, (c) => {
+    const m = c.modResults.manifest;
+    m.$ = { ...m.$, "xmlns:tools": "http://schemas.android.com/tools" };
+    m["uses-permission"] = (m["uses-permission"] ?? []).filter((x) => !STRIP_PERMISSIONS.includes(x.$["android:name"]));
+    for (const name of STRIP_PERMISSIONS) m["uses-permission"].push({ $: { "android:name": name, "tools:node": "remove" } });
+    return c;
+  });
   if (process.env.CRYSTALS_MAVEN_LOCAL === "1") {
     config = withProjectBuildGradle(config, (c) => {
       const block = 'mavenLocal { content { includeGroup("com.facebook.react"); includeGroup("com.facebook.hermes") } }';

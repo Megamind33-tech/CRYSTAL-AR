@@ -2,7 +2,8 @@
 // Renderers (AR and mock) only read `gameStore`; audio/haptics subscribe to `gameEvents`.
 import { boardHash, findValidMoves, isAdjacent } from "../game/board.ts";
 import { accumulate, newRunStats, type RunStats } from "../meta/verify.ts";
-import { chargeForStep, extendMoves, LEVELS, objectiveProgress, playMove, startSession, starsFor, type Session } from "../game/level.ts";
+import type { RunBoost } from "../meta/types.ts";
+import { addMoves, chargeForStep, extendMoves, reshuffleSession, LEVELS, objectiveProgress, playMove, startSession, starsFor, type Session } from "../game/level.ts";
 import { eventsForStep, stageForProgress, type WorldEvent, type WorldStage } from "../game/reactions.ts";
 import type { CrystalType, Pos, ResolveStep, Special } from "../game/types.ts";
 import { neighbourToward } from "../render/layout.ts";
@@ -94,7 +95,8 @@ export interface RunRecord {
   endedAt: number;
   swaps: [number, number, number, number][];
   stats: RunStats;
-  stabilizations: number;
+  boosts: RunBoost[];
+  relicsUsed: string[];
   score: number;
   won: boolean;
   stars: number;
@@ -142,7 +144,7 @@ export function startLevel(levelIndex: number, seedOverride?: number, movesOverr
   const base = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, levelIndex))];
   const level = movesOverride ? { ...base, moves: movesOverride } : base;
   const session = startSession(level, seedOverride);
-  run = { levelIndex: LEVELS.indexOf(base), seed: seedOverride ?? level.seed, startedAt: Date.now(), endedAt: 0, swaps: [], stats: newRunStats(), stabilizations: 0, score: 0, won: false, stars: 0 };
+  run = { levelIndex: LEVELS.indexOf(base), seed: seedOverride ?? level.seed, startedAt: Date.now(), endedAt: 0, swaps: [], stats: newRunStats(), boosts: [], relicsUsed: [], score: 0, won: false, stars: 0 };
   gameStore.set({
     levelIndex: LEVELS.indexOf(base),
     session,
@@ -170,7 +172,7 @@ export function stabilizeLevel(moves: number) {
   const s = gameStore.get();
   if (!s.session || s.session.status !== "lost") return false;
   const session = extendMoves(s.session, moves);
-  if (run) run.stabilizations++;
+  if (run) run.boosts.push({ atSwap: run.swaps.length, kind: "moves", value: moves, source: "stabilize" });
   gameStore.set({ session, result: null, hud: { ...s.hud, movesLeft: session.movesLeft } });
   scheduleHint();
   return true;
@@ -246,7 +248,7 @@ export async function attemptSwap(a: Pos, b: Pos) {
       gameEvents.emit({ type: "haptic", kind: "success" });
     }
     if (run) Object.assign(run, { endedAt: Date.now(), score: session.score, won: result.won, stars: result.stars });
-    gameEvents.emit({ type: "levelEnd", won: result.won, stars: result.stars, level: session.level.id, run: { ...run!, swaps: [...run!.swaps], stats: { ...run!.stats } } });
+    gameEvents.emit({ type: "levelEnd", won: result.won, stars: result.stars, level: session.level.id, run: { ...run!, swaps: [...run!.swaps], stats: { ...run!.stats }, boosts: [...run!.boosts], relicsUsed: [...run!.relicsUsed] } });
   }
   scheduleHint();
   gameStore.set({
@@ -401,6 +403,34 @@ function scheduleHint() {
     const moves = findValidMoves(s.session.engine.board);
     if (moves.length) gameStore.set({ hint: moves[Math.floor(moves.length / 2)] });
   }, HINT_DELAY_MS);
+}
+
+/**
+ * Applies a relic's in-run effect to the live board and logs it so the run stays replay-verifiable.
+ * Charges are spent by the meta layer (activateRelic) before this is called.
+ */
+export async function applyRelicEffect(relicId: string, kind: RunBoost["kind"], value: number): Promise<boolean> {
+  const s = gameStore.get();
+  if (!s.session || s.busy || s.session.status === "won") return false;
+  if (!run) return false;
+  run.boosts.push({ atSwap: run.swaps.length, kind, value, source: "relic", relic: relicId });
+  if (!run.relicsUsed.includes(relicId)) run.relicsUsed.push(relicId);
+  if (kind === "hint") {
+    const moves = findValidMoves(s.session.engine.board);
+    if (moves.length) gameStore.set({ hint: moves[0] });
+    return true;
+  }
+  if (kind === "moves") {
+    const session = addMoves(s.session, value);
+    gameStore.set({ session, result: null, hud: { ...s.hud, movesLeft: session.movesLeft } });
+    return true;
+  }
+  const { session, placements } = reshuffleSession(s.session);
+  const gen = generation;
+  gameStore.set({ busy: true, selected: null, hint: null });
+  await playSteps([{ kind: "shuffle", placements }], gen);
+  if (gen === generation) gameStore.set({ session, busy: false, crystals: viewsFromSession(session) });
+  return true;
 }
 
 /** Diagnostics helper. */

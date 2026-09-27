@@ -350,7 +350,7 @@ export function relicCharges(s: PlayerState, relicId: string, now: number) {
   const nextInMs = charges >= def.maxCharges ? null : regen - ((now - st.regenFrom) % regen);
   return { charges, max: def.maxCharges, nextInMs };
 }
-export function useRelic(state: PlayerState, relicId: string, now: number, ranked = false): Result {
+export function activateRelic(state: PlayerState, relicId: string, now: number, ranked = false): Result {
   const def = RELICS.find((r) => r.id === relicId);
   if (!def || !state.relics[relicId]) return fail("Relic not found");
   if (ranked && !def.trialApproved) return fail("Not approved for ranked Trials");

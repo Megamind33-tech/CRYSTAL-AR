@@ -340,8 +340,8 @@ export interface RunReport {
   endedAt: number;
   swaps: [number, number, number, number][];
   relicsUsed: string[];
-  /** times "Stabilize Portal" added moves after running out */
-  stabilizations?: number;
+  /** in-run effects in order, applied before swap #atSwap on replay (Stabilize Portal, relics) */
+  boosts?: RunBoost[];
   claimed: {
     won: boolean;
     stars: number;
@@ -374,3 +374,11 @@ export type MetaEvent =
   | { type: "checkin"; streak: number }
   | { type: "trialRound"; trial: string; rank: number; of: number }
   | { type: "seasonLevel"; season: string; level: number };
+
+export interface RunBoost {
+  atSwap: number;
+  kind: "moves" | "reshuffle" | "hint";
+  value: number;
+  source: "stabilize" | "relic";
+  relic?: string;
+}

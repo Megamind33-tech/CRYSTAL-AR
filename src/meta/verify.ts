@@ -1,7 +1,7 @@
 // Anti-cheat. The match engine is deterministic, so the authority replays seed + swap list and compares
 // every claimed number. Local validation is for honest-client UX only – it is NOT security: the real
 // checks (signature with a server-held key, duplicate run IDs, trial windows) must run on the backend.
-import { extendMoves, LEVELS, playMove, startSession, starsFor } from "../game/level.ts";
+import { addMoves, LEVELS, playMove, reshuffleSession, startSession, starsFor } from "../game/level.ts";
 import { ECONOMY } from "./config/live.ts";
 import { trialDef, trialInstances } from "./competition.ts";
 import { hash } from "./core.ts";
@@ -44,16 +44,32 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
   const base = LEVELS[r.levelIndex];
   if (!base) return { ok: false, reasons: ["unknown level"] };
   const level = opts.moves ? { ...base, moves: opts.moves } : base;
-  const stabs = Math.min(r.stabilizations ?? 0, ECONOMY.stabilize.perRunLimit);
-  if ((r.stabilizations ?? 0) > ECONOMY.stabilize.perRunLimit) reasons.push("too many stabilizations");
-  if (r.swaps.length > level.moves + stabs * ECONOMY.stabilize.moves) reasons.push("more swaps than moves allowed");
+  const boosts = [...(r.boosts ?? [])].sort((a, b) => a.atSwap - b.atSwap);
+  if (boosts.filter((b) => b.source === "stabilize").length > ECONOMY.stabilize.perRunLimit) reasons.push("too many stabilizations");
+  if (boosts.some((b) => b.source === "stabilize" && (b.kind !== "moves" || b.value !== ECONOMY.stabilize.moves))) reasons.push("invalid stabilization");
+  for (const b of boosts.filter((x) => x.source === "relic")) {
+    const def = RELICS.find((x) => x.id === b.relic);
+    const kind = def?.effect === "addMoves" ? "moves" : def?.effect === "reshuffle" ? "reshuffle" : def?.effect === "hint" ? "hint" : null;
+    if (!def || kind !== b.kind || (kind === "moves" && b.value !== def.effectValue) || !r.relicsUsed.includes(def.id)) reasons.push("invalid relic effect");
+  }
+  const extraMoves = boosts.filter((b) => b.kind === "moves").reduce((a, b) => a + b.value, 0);
+  if (r.swaps.length > level.moves + extraMoves) reasons.push("more swaps than moves allowed");
   const duration = r.endedAt - r.startedAt;
   if (duration < r.swaps.length * MIN_MS_PER_SWAP) reasons.push("swaps faster than humanly possible");
   if (r.endedAt < r.startedAt) reasons.push("clock went backwards");
   let s = startSession(level, r.seed);
   const acc = newRunStats();
-  let used = 0;
-  for (const [ax, ay, bx, by] of r.swaps) {
+  let bi = 0;
+  const applyBoosts = (i: number) => {
+    for (; bi < boosts.length && boosts[bi].atSwap <= i; bi++) {
+      const b = boosts[bi];
+      if (b.kind === "moves") s = addMoves(s, b.value);
+      else if (b.kind === "reshuffle") s = reshuffleSession(s).session;
+    }
+  };
+  for (let i = 0; i < r.swaps.length; i++) {
+    applyBoosts(i);
+    const [ax, ay, bx, by] = r.swaps[i];
     const m = playMove(s, { x: ax, y: ay }, { x: bx, y: by });
     if (!m.valid) {
       reasons.push("invalid swap in log");
@@ -61,10 +77,6 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
     }
     accumulate(acc, m.steps);
     s = m.session;
-    if (s.status === "lost" && used < stabs) {
-      s = extendMoves(s, ECONOMY.stabilize.moves);
-      used++;
-    }
   }
   const { resonance, matches, cascades, bestCascade, specialsCreated: created, specialsActivated: activated, combos, crystalsCleared: cleared, blueCleared: blue } = acc;
   const truth = { won: s.status === "won", stars: starsFor(s), score: s.score };
