@@ -20,6 +20,10 @@ export const LEVELS: LevelDef[] = [
   { id: 1, name: "Waking Stones", seed: 1101, moves: 20, objective: { kind: "power", target: 170 } },
   { id: 2, name: "Emerald Canopy", seed: 2207, moves: 16, objective: { kind: "collect", crystal: 2, target: 32 } },
   { id: 3, name: "Heart of the Falls", seed: 3313, moves: 18, objective: { kind: "score", target: 5600 } },
+  // discovery / seasonal / expedition islands (meta-game content)
+  { id: 4, name: "Hollow of Lanterns", seed: 4421, moves: 18, objective: { kind: "collect", crystal: 4, target: 30 } },
+  { id: 5, name: "Eclipse Threshold", seed: 5527, moves: 16, objective: { kind: "power", target: 190 } },
+  { id: 6, name: "Frostbound Signal", seed: 6637, moves: 18, objective: { kind: "collect", crystal: 1, target: 34 } },
 ];
 
 export type SessionStatus = "playing" | "won" | "lost";
