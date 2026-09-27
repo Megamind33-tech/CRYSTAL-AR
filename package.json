@@ -10,7 +10,7 @@
     "lint": "expo lint",
     "test": "node --test \"src/tests/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "gen:assets": "node scripts/gen-models.mjs && node scripts/gen-audio.mjs",
+    "gen:assets": "node scripts/gen-models.mjs && node scripts/gen-audio.mjs && node scripts/gen-branding.mjs",
     "postinstall": "node scripts/copy-viro-web.mjs",
     "web:mock": "expo start --web"
   },

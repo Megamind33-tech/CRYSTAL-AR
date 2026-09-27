@@ -9,7 +9,7 @@ models, textures or sounds are used. Regenerate with `yarn gen:assets`.
 | Forest Ruins diorama (terrain, prop clusters, platform, portal, waterfall, blooms, vines, glow clusters, ground shadow) | Crystals AR project | `scripts/gen-models.mjs` | Project-owned | Yes | None | n/a | `assets/models/*.glb` |
 | Particle sprite, shockwave ring, HDR lighting environment | Crystals AR project | `scripts/gen-models.mjs` | Project-owned | Yes | None | n/a | `assets/textures/` |
 | All sound effects + Forest Ruins ambient loop (synthesised) | Crystals AR project | `scripts/gen-audio.mjs` | Project-owned | Yes | None | n/a | `assets/audio/*.wav` |
-| App icon / splash / adaptive icon images | ReactVision (Expo starter kit) | github.com/ReactVision/expo-starter-kit-typescript | MIT | Yes | Keep MIT notice (see `LICENSE`) | No | `assets/images/` — **placeholder, replace with Crystals AR branding before release** |
+| App icon, adaptive icon layers, monochrome icon, splash, favicon | Crystals AR project | `scripts/gen-branding.mjs` | Project-owned | Yes | None | n/a | `assets/images/` |
 
 Runtime-bundled third-party content (not game assets):
 

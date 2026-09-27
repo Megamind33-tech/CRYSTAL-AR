@@ -11,6 +11,7 @@ import { act, loadKeeper, markFeatureSeen, metaStore } from "@/src/state/meta";
 import { useStore } from "@/src/state/store";
 import { Button } from "@/src/ui/Button";
 import { Bar, Wallet } from "@/src/ui/kit";
+import { NameKeeper } from "@/src/ui/NameKeeper";
 import { C, font } from "@/src/ui/theme";
 
 /** Slowly drifting facets behind the title – pure RN, no 3D needed on the menu. */
@@ -101,6 +102,7 @@ export default function Home() {
 
       {/* Keeper Briefing – one calm summary instead of launch pop-ups */}
       <View style={{ gap: 8 }}>
+        <NameKeeper />
         {reveal && (
           <Pressable
             style={[s.brief, { borderColor: C.gold }]}

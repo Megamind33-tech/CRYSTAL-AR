@@ -36,6 +36,9 @@ module.exports = function withAndroidBuildTweaks(config) {
   }
   config = withGradleProperties(config, (c) => {
     set(c.modResults, "reactNativeArchitectures", process.env.CRYSTALS_ABIS || "arm64-v8a,armeabi-v7a");
+    // incremental speed: reuse task outputs across builds (JS-only changes rebuild in minutes)
+    set(c.modResults, "org.gradle.caching", "true");
+    set(c.modResults, "org.gradle.parallel", "true");
     set(c.modResults, "systemProp.org.gradle.internal.http.socketTimeout", "300000");
     set(c.modResults, "systemProp.org.gradle.internal.http.connectionTimeout", "300000");
     return c;
