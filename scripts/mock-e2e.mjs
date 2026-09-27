@@ -128,7 +128,7 @@ try {
       await sleep(1500);
       const t = await home.evaluate(() => document.body.innerText);
       step(`screen ${route} renders`, expect.test(t), t.slice(0, 80).replace(/\s+/g, " "));
-      await home.screenshot({ path: `${outDir}/07${route.replace("/", "-")}.png` });
+      await home.screenshot({ path: `${outDir}/07${route.replace(/[/?=]/g, "-")}.png` });
     }
   }
   const errors = report.logs.filter((l) => /\[(error|pageerror)\]/.test(l));

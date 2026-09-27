@@ -5,7 +5,7 @@ export type PlacementPhase = "scanning" | "surfaceFound" | "placed";
 export interface ArSessionState {
   phase: PlacementPhase;
   planes: number;
-  tracking: "normal" | "limited" | "unavailable" | "mock";
+  tracking: "normal" | "limited" | "unavailable" | "mock" | "camera";
   trackingReason: string;
   /** ARCore light estimate, used to match the diorama to the room. */
   lightIntensity: number;

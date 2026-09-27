@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Viro3DSceneNavigator, ViroARSceneNavigator } from "@reactvision/react-viro";
-import ARGameScene from "@/src/ar/ARGameScene";
+import { useViewMode, ViewControls, WorldNavigator } from "@/src/ar/WorldNavigator";
 import { setAmbientActive } from "@/src/audio/AudioManager";
 import { DEV_AR_MOCK } from "@/src/config";
 import { Diagnostics } from "@/src/dev/Diagnostics";
 import { cellToScreen, installMockPicking } from "@/src/dev/mockPicking";
-import MockScene from "@/src/dev/MockScene";
 import { LEVELS } from "@/src/game/level";
 import { arSession, requestResetPlacement } from "@/src/state/arSession";
 import { endSession, gameEvents, gameStore, respawnView, restartLevel, startLevel } from "@/src/state/game";
@@ -36,6 +34,7 @@ export default function Play() {
   const seed = trial ? trial.seed : params.seed ? Number(params.seed) : undefined;
   const moves = tdef?.moves;
   const phase = useStore(arSession, (s) => s.phase);
+  const viewMode = useViewMode();
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
@@ -78,15 +77,12 @@ export default function Play() {
 
   return (
     <View style={s.root}>
-      {DEV_AR_MOCK ? (
-        <Viro3DSceneNavigator initialScene={{ scene: MockScene as never }} style={s.fill} shadowsEnabled pbrEnabled hdrEnabled={false} />
-      ) : (
-        <ViroARSceneNavigator initialScene={{ scene: ARGameScene }} style={s.fill} autofocus />
-      )}
+      <WorldNavigator />
+      <ViewControls />
       {phase === "placed" && <HUD onPause={() => setPaused(true)} />}
       {phase === "placed" && <RelicTray ranked={!!trial} />}
       {phase === "placed" && !trial && <Coach />}
-      <PlacementGuide mock={DEV_AR_MOCK} onPlaceMock={placeMock} />
+      <PlacementGuide mock={viewMode !== "ar"} cameraView={viewMode === "camera"} onPlaceMock={placeMock} />
       <Diagnostics mock={DEV_AR_MOCK} />
       <RunResult
         ranked={!!trial}
@@ -106,7 +102,7 @@ export default function Play() {
         }}
         onResetWorld={() => {
           setPaused(false);
-          if (DEV_AR_MOCK) arSession.set({ phase: "surfaceFound", anchorId: null });
+          if (viewMode !== "ar") arSession.set({ phase: "surfaceFound", anchorId: null });
           else requestResetPlacement();
         }}
         onExit={exit}

@@ -8,6 +8,8 @@ export interface Settings {
   sfx: boolean;
   haptics: boolean;
   diagnostics: boolean;
+  /** force Camera View even if ARCore reports support */
+  cameraView: boolean;
 }
 
 export interface Progress {
@@ -25,6 +27,7 @@ export const settingsStore = createStore<Settings & { loaded: boolean }>({
   sfx: true,
   haptics: true,
   diagnostics: __DEV__,
+  cameraView: false,
   loaded: false,
 });
 

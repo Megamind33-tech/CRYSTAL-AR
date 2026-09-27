@@ -10,7 +10,7 @@ import { SettingsList } from "./SettingsList";
 import { C, font, ui } from "./theme";
 
 /** Scan → surface found → tap. Shown until the world is placed. */
-export function PlacementGuide({ mock, onPlaceMock }: { mock: boolean; onPlaceMock: () => void }) {
+export function PlacementGuide({ mock, onPlaceMock, cameraView = false }: { mock: boolean; onPlaceMock: () => void; cameraView?: boolean }) {
   const insets = useSafeAreaInsets();
   const phase = useStore(arSession, (s) => s.phase);
   const reason = useStore(arSession, (s) => s.trackingReason);
@@ -31,11 +31,13 @@ export function PlacementGuide({ mock, onPlaceMock }: { mock: boolean; onPlaceMo
   if (phase === "placed") return null;
 
   const title =
-    phase === "scanning" ? (resuming ? "Find your table again" : "Find a table or floor") : mock ? "Mock table ready" : "Surface found";
+    phase === "scanning" ? (resuming ? "Find your table again" : "Find a table or floor") : cameraView ? "Camera View" : mock ? "Mock table ready" : "Surface found";
   const body =
     phase === "scanning"
       ? reason || "Move your phone slowly across a flat, textured surface."
-      : mock
+      : cameraView
+        ? "This phone can’t use Google’s AR tracking, so the world appears over your camera. Point at your table, then place it. Turn it with ⟲ ⟳."
+        : mock
         ? "DEV_AR_MOCK: a simulated table stands in for AR."
         : resuming
           ? "Tap the glowing area – your puzzle is waiting."

@@ -2,10 +2,8 @@ import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Viro3DSceneNavigator, ViroARSceneNavigator } from "@reactvision/react-viro";
-import ARGameScene from "@/src/ar/ARGameScene";
+import { useViewMode, ViewControls, WorldNavigator } from "@/src/ar/WorldNavigator";
 import { DEV_AR_MOCK } from "@/src/config";
-import MockScene from "@/src/dev/MockScene";
 import { sanctuaryRating } from "@/src/meta/progression";
 import { arSession } from "@/src/state/arSession";
 import { gameEvents } from "@/src/state/game";
@@ -20,6 +18,7 @@ export default function SanctuaryView() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ autoplace?: string }>();
   const phase = useStore(arSession, (s) => s.phase);
+  const viewMode = useViewMode();
   const p = useStore(metaStore, (m) => m.player);
 
   useEffect(() => {
@@ -32,11 +31,8 @@ export default function SanctuaryView() {
   const rating = p ? sanctuaryRating(p) : null;
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {DEV_AR_MOCK ? (
-        <Viro3DSceneNavigator initialScene={{ scene: MockScene as never }} style={{ flex: 1 }} shadowsEnabled pbrEnabled hdrEnabled={false} />
-      ) : (
-        <ViroARSceneNavigator initialScene={{ scene: ARGameScene }} style={{ flex: 1 }} autofocus />
-      )}
+      <WorldNavigator />
+      <ViewControls />
       <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { paddingTop: insets.top + 8, paddingHorizontal: 12 }]}>
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace("/sanctuary"))} style={[ui.glass, s.back]}>
@@ -50,7 +46,7 @@ export default function SanctuaryView() {
           )}
         </View>
       </View>
-      <PlacementGuide mock={DEV_AR_MOCK} onPlaceMock={() => { arSession.set({ phase: "placed", anchorId: "mock-table" }); gameEvents.emit({ type: "sfx", name: "place" }); }} />
+      <PlacementGuide mock={viewMode !== "ar"} cameraView={viewMode === "camera"} onPlaceMock={() => { arSession.set({ phase: "placed", anchorId: "mock-table" }); gameEvents.emit({ type: "sfx", name: "place" }); }} />
     </View>
   );
 }
