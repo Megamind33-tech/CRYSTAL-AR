@@ -15,13 +15,24 @@ import { useStore } from "@/src/state/store";
 import { findValidMoves } from "@/src/game/board";
 import { attemptSwap } from "@/src/state/game";
 import { HUD } from "@/src/ui/HUD";
-import { LevelResult, PauseMenu, PlacementGuide } from "@/src/ui/Overlays";
+import { PauseMenu, PlacementGuide } from "@/src/ui/Overlays";
+import { RunResult } from "@/src/ui/RunResult";
+import { trialDef, trialInstances } from "@/src/meta/competition";
+import { ISLANDS } from "@/src/meta/config/world";
+import { islandStatus } from "@/src/meta/progression";
+import { analytics, metaStore, setPlayContext } from "@/src/state/meta";
 import { C } from "@/src/ui/theme";
 
 export default function Play() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ level?: string; seed?: string; autoplace?: string }>();
-  const level = Math.max(0, Math.min(LEVELS.length - 1, Number(params.level ?? 0) || 0));
+  const params = useLocalSearchParams<{ level?: string; seed?: string; autoplace?: string; island?: string; trial?: string }>();
+  // What to play: a Realm Trial (fixed shared board), an island, or a raw level index (dev).
+  const trial = params.trial ? trialInstances(Date.now()).find((i) => i.instanceId === params.trial) : undefined;
+  const tdef = trial ? trialDef(trial.trialId) : undefined;
+  const island = ISLANDS.find((i) => i.id === params.island) ?? (params.level === undefined && !tdef ? ISLANDS[0] : undefined);
+  const level = tdef ? tdef.levelIndex : island ? island.levelIndex : Math.max(0, Math.min(LEVELS.length - 1, Number(params.level ?? 0) || 0));
+  const seed = trial ? trial.seed : params.seed ? Number(params.seed) : undefined;
+  const moves = tdef?.moves;
   const phase = useStore(arSession, (s) => s.phase);
   const [paused, setPaused] = useState(false);
 
@@ -45,7 +56,11 @@ export default function Play() {
   useEffect(() => {
     if (phase !== "placed") return;
     const s = gameStore.get();
-    if (!s.session) startLevel(level, params.seed ? Number(params.seed) : undefined);
+    if (!s.session) {
+      setPlayContext({ islandId: island?.id ?? null, trialInstanceId: trial?.instanceId ?? null });
+      analytics.track(trial ? "tournament_joined" : "island_started", { id: trial?.trialId ?? island?.id ?? String(level) });
+      startLevel(level, seed, moves);
+    }
     else respawnView();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
@@ -55,7 +70,9 @@ export default function Play() {
     gameEvents.emit({ type: "sfx", name: "place" });
   };
 
-  const exit = () => router.back();
+  const exit = () => (router.canGoBack() ? router.back() : router.replace("/"));
+  const player = useStore(metaStore, (m) => m.player);
+  const nextIsland = !trial && player ? ISLANDS.find((i) => i.id !== island?.id && !player.islands[i.id] && islandStatus(player, i, Date.now()).status === "available") : undefined;
 
   return (
     <View style={s.root}>
@@ -67,12 +84,13 @@ export default function Play() {
       {phase === "placed" && <HUD onPause={() => setPaused(true)} />}
       <PlacementGuide mock={DEV_AR_MOCK} onPlaceMock={placeMock} />
       <Diagnostics mock={DEV_AR_MOCK} />
-      <LevelResult
-        onNext={() => {
-          startLevel(gameStore.get().levelIndex + 1);
-          router.setParams({ level: String(gameStore.get().levelIndex) });
+      <RunResult
+        ranked={!!trial}
+        onNext={nextIsland ? () => router.replace({ pathname: "/play", params: { island: nextIsland.id, autoplace: params.autoplace } }) : null}
+        onReplay={() => {
+          metaStore.set({ lastOutcome: null });
+          restartLevel();
         }}
-        onReplay={restartLevel}
         onExit={exit}
       />
       <PauseMenu

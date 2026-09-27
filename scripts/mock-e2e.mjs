@@ -109,14 +109,28 @@ try {
   step("level reaches an end state", !!s.result, JSON.stringify(s));
   await sleep(2200);
   await page.screenshot({ path: `${outDir}/05-result.png` });
-  // Save: progress persisted (level 2 unlocked) and visible on the menu after a reload.
+  // Save: the Keeper's progress persists and the home screen moves the story on.
   if (s.result?.won) {
-    await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
-    await sleep(2500);
-    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("crystals.progress.v1") || "null"));
-    const unlocked = await page.$("[aria-label^=\"Play level 2\"]");
-    step("progress saved and level 2 unlocked after reload", saved?.unlocked >= 1 && !!unlocked, JSON.stringify(saved));
-    await page.screenshot({ path: `${outDir}/06-menu.png` });
+    await sleep(800);
+    // fresh tab: unloading the WASM render page is slow, and localStorage is shared per origin
+    const page2 = await openPage(browser, `${base}/`, report.logs);
+    await page.close().catch(() => {});
+    const page = page2;
+    await page.waitForSelector("[data-testid=play]", { timeout: 30000 });
+    await sleep(800);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("crystals.keeper.v1") || "null"));
+    const text = await page.evaluate(() => document.body.innerText);
+    step("Keeper progress saved; home offers the next island", !!saved?.islands?.["waking-stones"] && /Emerald Canopy/.test(text), JSON.stringify({ islands: Object.keys(saved?.islands ?? {}), lumins: Object.keys(saved?.lumins ?? {}), dust: saved?.wallet?.prismDust }));
+    await page.screenshot({ path: `${outDir}/06-home.png` });
+    // every meta screen renders with real state
+    const screens = [["/realms", /Waking Stones/], ["/sanctuary", /Heart Altar/], ["/archive", /Mossling/], ["/profile", /Chronicles/], ["/duties", /Story/], ["/trials", /Realm Trials/], ["/pass", /Crystal Pass/], ["/exchange", /Realm Exchange/]];
+    for (const [route, expect] of screens) {
+      await page.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
+      await sleep(1500);
+      const t = await page.evaluate(() => document.body.innerText);
+      step(`screen ${route} renders`, expect.test(t), t.slice(0, 80).replace(/\s+/g, " "));
+      await page.screenshot({ path: `${outDir}/07${route.replace("/", "-")}.png` });
+    }
   }
   const errors = report.logs.filter((l) => /\[(error|pageerror)\]/.test(l));
   step("no runtime errors in console", errors.length === 0, errors.slice(0, 5).join(" | "));

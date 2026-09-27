@@ -1,7 +1,8 @@
 // Anti-cheat. The match engine is deterministic, so the authority replays seed + swap list and compares
 // every claimed number. Local validation is for honest-client UX only – it is NOT security: the real
 // checks (signature with a server-held key, duplicate run IDs, trial windows) must run on the backend.
-import { LEVELS, playMove, startSession, starsFor } from "../game/level.ts";
+import { extendMoves, LEVELS, playMove, startSession, starsFor } from "../game/level.ts";
+import { ECONOMY } from "./config/live.ts";
 import { trialDef, trialInstances } from "./competition.ts";
 import { hash } from "./core.ts";
 import { RELICS } from "./config/collection.ts";
@@ -43,12 +44,15 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
   const base = LEVELS[r.levelIndex];
   if (!base) return { ok: false, reasons: ["unknown level"] };
   const level = opts.moves ? { ...base, moves: opts.moves } : base;
-  if (r.swaps.length > level.moves) reasons.push("more swaps than moves allowed");
+  const stabs = Math.min(r.stabilizations ?? 0, ECONOMY.stabilize.perRunLimit);
+  if ((r.stabilizations ?? 0) > ECONOMY.stabilize.perRunLimit) reasons.push("too many stabilizations");
+  if (r.swaps.length > level.moves + stabs * ECONOMY.stabilize.moves) reasons.push("more swaps than moves allowed");
   const duration = r.endedAt - r.startedAt;
   if (duration < r.swaps.length * MIN_MS_PER_SWAP) reasons.push("swaps faster than humanly possible");
   if (r.endedAt < r.startedAt) reasons.push("clock went backwards");
   let s = startSession(level, r.seed);
   const acc = newRunStats();
+  let used = 0;
   for (const [ax, ay, bx, by] of r.swaps) {
     const m = playMove(s, { x: ax, y: ay }, { x: bx, y: by });
     if (!m.valid) {
@@ -57,6 +61,10 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
     }
     accumulate(acc, m.steps);
     s = m.session;
+    if (s.status === "lost" && used < stabs) {
+      s = extendMoves(s, ECONOMY.stabilize.moves);
+      used++;
+    }
   }
   const { resonance, matches, cascades, bestCascade, specialsCreated: created, specialsActivated: activated, combos, crystalsCleared: cleared, blueCleared: blue } = acc;
   const truth = { won: s.status === "won", stars: starsFor(s), score: s.score };

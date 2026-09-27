@@ -1,4 +1,4 @@
-import { createEngine, type EngineState } from "./board.ts";
+import { cloneState, createEngine, reshuffle, type EngineState } from "./board.ts";
 import { trySwap } from "./resolve.ts";
 import { createRng } from "./rng.ts";
 import type { CrystalType, Pos, ResolveStep } from "./types.ts";
@@ -98,4 +98,23 @@ export function starsFor(s: Session): number {
   if (s.status !== "won") return 0;
   const ratio = s.movesLeft / s.level.moves;
   return ratio >= 0.35 ? 3 : ratio >= 0.15 ? 2 : 1;
+}
+
+/** "Stabilize Portal": a lost session resumes with extra moves (same board, same score). */
+export function extendMoves(s: Session, moves: number): Session {
+  if (s.status !== "lost") return s;
+  return { ...s, movesLeft: s.movesLeft + moves, status: "playing" };
+}
+
+/** Relic: add moves mid-run (also resumes a just-lost board). */
+export function addMoves(s: Session, moves: number): Session {
+  if (s.status === "won") return s;
+  return { ...s, movesLeft: s.movesLeft + moves, status: "playing" };
+}
+
+/** Relic: rearrange the board with the session's own RNG – deterministic, so replays match. */
+export function reshuffleSession(s: Session): { session: Session; placements: { id: number; x: number; y: number }[] } {
+  const engine = cloneState(s.engine);
+  const placements = reshuffle(engine);
+  return { session: { ...s, engine }, placements };
 }

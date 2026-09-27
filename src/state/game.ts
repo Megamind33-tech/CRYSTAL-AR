@@ -1,7 +1,8 @@
 // Game controller: runs the pure engine, then plays its ResolveSteps back as timed view states.
 // Renderers (AR and mock) only read `gameStore`; audio/haptics subscribe to `gameEvents`.
 import { boardHash, findValidMoves, isAdjacent } from "../game/board.ts";
-import { chargeForStep, LEVELS, objectiveProgress, playMove, startSession, starsFor, type Session } from "../game/level.ts";
+import { accumulate, newRunStats, type RunStats } from "../meta/verify.ts";
+import { chargeForStep, extendMoves, LEVELS, objectiveProgress, playMove, startSession, starsFor, type Session } from "../game/level.ts";
 import { eventsForStep, stageForProgress, type WorldEvent, type WorldStage } from "../game/reactions.ts";
 import type { CrystalType, Pos, ResolveStep, Special } from "../game/types.ts";
 import { neighbourToward } from "../render/layout.ts";
@@ -83,7 +84,23 @@ export const gameStore = createStore<GameState>({
 export type GameEvent =
   | { type: "sfx"; name: SfxName }
   | { type: "haptic"; kind: "light" | "medium" | "heavy" | "success" | "error" }
-  | { type: "levelEnd"; won: boolean; stars: number; level: number };
+  | { type: "levelEnd"; won: boolean; stars: number; level: number; run: RunRecord };
+
+/** Everything needed to build a verifiable RunReport for the meta layer. */
+export interface RunRecord {
+  levelIndex: number;
+  seed: number;
+  startedAt: number;
+  endedAt: number;
+  swaps: [number, number, number, number][];
+  stats: RunStats;
+  stabilizations: number;
+  score: number;
+  won: boolean;
+  stars: number;
+}
+let run: RunRecord | null = null;
+export const currentRun = () => run;
 export type SfxName =
   | "select" | "swap" | "invalid" | "match1" | "match2" | "match3" | "match4"
   | "special_create" | "special_activate" | "place" | "complete" | "portal";
@@ -120,12 +137,14 @@ const viewsFromSession = (s: Session): CrystalView[] => {
   return out;
 };
 
-export function startLevel(levelIndex: number, seedOverride?: number) {
+export function startLevel(levelIndex: number, seedOverride?: number, movesOverride?: number) {
   generation++;
-  const level = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, levelIndex))];
+  const base = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, levelIndex))];
+  const level = movesOverride ? { ...base, moves: movesOverride } : base;
   const session = startSession(level, seedOverride);
+  run = { levelIndex: LEVELS.indexOf(base), seed: seedOverride ?? level.seed, startedAt: Date.now(), endedAt: 0, swaps: [], stats: newRunStats(), stabilizations: 0, score: 0, won: false, stars: 0 };
   gameStore.set({
-    levelIndex: LEVELS.indexOf(level),
+    levelIndex: LEVELS.indexOf(base),
     session,
     crystals: viewsFromSession(session).map((c) => ({ ...c, anim: { kind: "spawn", fromY: c.y - 7, ms: 380 + c.y * 40, seq: seq++ } })),
     selected: null,
@@ -144,7 +163,18 @@ export function startLevel(levelIndex: number, seedOverride?: number) {
   scheduleHint();
 }
 
-export const restartLevel = () => startLevel(gameStore.get().levelIndex);
+export const restartLevel = () => startLevel(gameStore.get().levelIndex, run?.seed, gameStore.get().session?.level.moves);
+
+/** "Stabilize Portal": resume a lost board with extra moves (payment is handled by the meta layer). */
+export function stabilizeLevel(moves: number) {
+  const s = gameStore.get();
+  if (!s.session || s.session.status !== "lost") return false;
+  const session = extendMoves(s.session, moves);
+  if (run) run.stabilizations++;
+  gameStore.set({ session, result: null, hud: { ...s.hud, movesLeft: session.movesLeft } });
+  scheduleHint();
+  return true;
+}
 
 /** After the world is re-placed, replay the entrance so crystals rise into the new spot. */
 export function respawnView() {
@@ -197,6 +227,10 @@ export async function attemptSwap(a: Pos, b: Pos) {
     gameStore.set({ selected: null });
     return;
   }
+  if (r.valid && run) {
+    run.swaps.push([a.x, a.y, b.x, b.y]);
+    accumulate(run.stats, r.steps);
+  }
   const gen = generation;
   gameStore.set({ busy: true, selected: null });
   await playSteps(r.steps, gen);
@@ -211,7 +245,8 @@ export async function attemptSwap(a: Pos, b: Pos) {
       gameEvents.emit({ type: "sfx", name: "complete" });
       gameEvents.emit({ type: "haptic", kind: "success" });
     }
-    gameEvents.emit({ type: "levelEnd", won: result.won, stars: result.stars, level: session.level.id });
+    if (run) Object.assign(run, { endedAt: Date.now(), score: session.score, won: result.won, stars: result.stars });
+    gameEvents.emit({ type: "levelEnd", won: result.won, stars: result.stars, level: session.level.id, run: { ...run!, swaps: [...run!.swaps], stats: { ...run!.stats } } });
   }
   scheduleHint();
   gameStore.set({

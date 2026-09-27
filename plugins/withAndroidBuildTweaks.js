@@ -1,9 +1,11 @@
 // Applies Android build settings that must survive `expo prebuild --clean`.
 // - ABIs: Viro ships arm64-v8a/armeabi-v7a only. Override with CRYSTALS_ABIS=arm64-v8a for faster dev builds.
 // - Slow-network tolerance for Gradle downloads.
+// - CRYSTALS_MAVEN_LOCAL=1: resolve the very large React Native / Hermes AARs from ~/.m2 (pre-fetched
+//   with curl) when the JVM keeps failing to download them. Scoped to those two groups only.
 const fs = require("fs");
 const path = require("path");
-const { withGradleProperties, withDangerousMod } = require("expo/config-plugins");
+const { withGradleProperties, withDangerousMod, withProjectBuildGradle } = require("expo/config-plugins");
 
 const set = (props, key, value) => {
   const i = props.findIndex((p) => p.type === "property" && p.key === key);
@@ -13,6 +15,15 @@ const set = (props, key, value) => {
 };
 
 module.exports = function withAndroidBuildTweaks(config) {
+  if (process.env.CRYSTALS_MAVEN_LOCAL === "1") {
+    config = withProjectBuildGradle(config, (c) => {
+      const block = 'mavenLocal { content { includeGroup("com.facebook.react"); includeGroup("com.facebook.hermes") } }';
+      if (!c.modResults.contents.includes("mavenLocal {")) {
+        c.modResults.contents = c.modResults.contents.replace(/allprojects \{\s*repositories \{/, (m) => m + "\n    " + block);
+      }
+      return c;
+    });
+  }
   config = withGradleProperties(config, (c) => {
     set(c.modResults, "reactNativeArchitectures", process.env.CRYSTALS_ABIS || "arm64-v8a,armeabi-v7a");
     set(c.modResults, "systemProp.org.gradle.internal.http.socketTimeout", "300000");

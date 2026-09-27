@@ -340,6 +340,8 @@ export interface RunReport {
   endedAt: number;
   swaps: [number, number, number, number][];
   relicsUsed: string[];
+  /** times "Stabilize Portal" added moves after running out */
+  stabilizations?: number;
   claimed: {
     won: boolean;
     stars: number;
