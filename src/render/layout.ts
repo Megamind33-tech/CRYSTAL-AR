@@ -7,8 +7,11 @@
 export const BOARD_SIZE = 6;
 export const CELL = 0.052; // metres between crystal centres (keep in sync with scripts/gen-models.mjs)
 export const SURFACE_Y = 0.04; // top of the island terrain
-export const BOARD_TILT_DEG = 10; // far edge raised so the board faces the player
-export const BOARD_OFFSET: [number, number, number] = [0, SURFACE_Y + 0.034, 0.05];
+export const BOARD_TILT_DEG = 10;
+/** sideways roll of the tabletop while gravity points left/right */
+export const GRAVITY_ROLL_DEG = 8;
+export const rollFor = (g: "down" | "left" | "right") => (g === "left" ? GRAVITY_ROLL_DEG : g === "right" ? -GRAVITY_ROLL_DEG : 0); // far edge raised so the board faces the player
+export const BOARD_OFFSET: [number, number, number] = [0, SURFACE_Y + 0.05, 0.05]; // clears the terrain at full tilt + roll
 export const GEM_LIFT = 0.018; // crystal centre height above the tiles
 export const GEM_SCALE = 0.036;
 export const GEM_TILT_DEG = -28; // lean gems back so their faces look up toward the player
@@ -16,7 +19,8 @@ export const GEM_TILT_DEG = -28; // lean gems back so their faces look up toward
 /** Board-local position of a cell centre. Row y = 0 is the far edge; rows beyond it (y < 0) are spawn lanes. */
 export function cellToLocal(x: number, y: number): [number, number, number] {
   const half = (BOARD_SIZE - 1) / 2;
-  const h = y < 0 ? GEM_LIFT - y * 0.012 : GEM_LIFT; // spawn lanes arc slightly upward
+  const outside = Math.max(0, -y, y - (BOARD_SIZE - 1), -x, x - (BOARD_SIZE - 1));
+  const h = GEM_LIFT + outside * 0.012; // spawn lanes beyond any edge arc slightly upward
   return [round((x - half) * CELL), round(h), round((y - half) * CELL)];
 }
 

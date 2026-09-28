@@ -377,8 +377,9 @@ export type MetaEvent =
 
 export interface RunBoost {
   atSwap: number;
-  kind: "moves" | "reshuffle" | "hint";
+  kind: "moves" | "reshuffle" | "hint" | "gravity";
+  /** gravity: turn direction (-1 counter-clockwise, +1 clockwise) */
   value: number;
-  source: "stabilize" | "relic";
+  source: "stabilize" | "relic" | "gravity";
   relic?: string;
 }

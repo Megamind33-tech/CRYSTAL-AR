@@ -162,6 +162,16 @@ cascadeChords.forEach((chord, level) => {
   write("portal", reverb(x, 0.4, 0.8), 0.6);
 }
 
+{ // gravity shift: stone grinding, low-frequency slide, heavy settle
+  const x = buf(1.6);
+  noise(x, 0, 0.9, 0.9, 90, 420, 0.25);      // grinding rumble
+  noise(x, 0.05, 0.6, 0.25, 1200, 300, 0.1); // grit
+  tone(x, 0, 0.9, 110, 38, 0.9);             // low shift
+  tone(x, 0.82, 0.35, 70, 45, 0.8, "tri");  // settle thump
+  noise(x, 0.82, 0.25, 0.5, 300, 900, 0.05);
+  write("gravity", reverb(x, 0.3, 0.7), 0.8);
+}
+
 // --- ambient Forest Ruins loop (seamless) ------------------------------------
 {
   const L = 16;

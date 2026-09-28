@@ -6,6 +6,7 @@ import {
   idx,
   inBounds,
   isAdjacent,
+  isVoid,
   newCrystal,
   randomType,
   reshuffle,
@@ -21,6 +22,7 @@ import type {
   Crystal,
   CrystalType,
   FallMove,
+  Gravity,
   Pos,
   ResolveStep,
   Spawned,
@@ -93,28 +95,75 @@ function collectCleared(s: EngineState, clear: Set<number>): ClearedCrystal[] {
   return out;
 }
 
-/** Gravity toward y = height-1, then spawn new crystals into the gaps at the top. */
+/** Unit step in the direction crystals fall. */
+export const GRAVITY_DIR: Record<Gravity, Pos> = { down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+
+/**
+ * Lines of cells along the gravity axis, each ordered upstream → downstream.
+ * down: columns top→bottom · left: rows right→left · right: rows left→right.
+ */
+function gravityLines(b: { width: number; height: number }, g: Gravity): Pos[][] {
+  const lines: Pos[][] = [];
+  if (g === "down") {
+    for (let x = 0; x < b.width; x++) lines.push(Array.from({ length: b.height }, (_, y) => ({ x, y })));
+  } else {
+    for (let y = 0; y < b.height; y++) {
+      const row = Array.from({ length: b.width }, (_, x) => ({ x, y }));
+      lines.push(g === "right" ? row : row.reverse());
+    }
+  }
+  return lines;
+}
+
+/**
+ * Settle + refill under the current gravity.
+ * 1. Within each run of playable cells between voids, crystals slide downstream (voids are solid).
+ * 2. New crystals enter only from the upstream edge, filling empty cells that have an open path
+ *    to it. Cells sheltered by a void overhang stay empty – a Gravity Shift is how they get filled.
+ */
 function applyGravity(s: EngineState): ResolveStep {
   const b = s.board;
   const moves: FallMove[] = [];
   const spawned: Spawned[] = [];
-  for (let x = 0; x < b.width; x++) {
-    let write = b.height - 1;
-    for (let y = b.height - 1; y >= 0; y--) {
-      const c = get(b, x, y);
-      if (!c) continue;
-      if (write !== y) {
-        set(b, x, write, c);
-        set(b, x, y, null);
-        moves.push({ id: c.id, x, fromY: y, toY: write });
+  const d = GRAVITY_DIR[s.gravity];
+  for (const line of gravityLines(b, s.gravity)) {
+    // settle each void-separated segment toward its downstream end
+    let seg: Pos[] = [];
+    const flush = () => {
+      const crystals = seg.map((p) => get(b, p.x, p.y)).filter((c): c is Crystal => !!c);
+      for (const p of seg) set(b, p.x, p.y, null);
+      // fill from the downstream end of the segment
+      for (let i = 0; i < crystals.length; i++) {
+        const to = seg[seg.length - 1 - i];
+        const c = crystals[crystals.length - 1 - i];
+        set(b, to.x, to.y, c);
+        const from = findPos(c);
+        if (from && (from.x !== to.x || from.y !== to.y)) moves.push({ id: c.id, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y });
       }
-      write--;
+      seg = [];
+    };
+    const before = new Map<number, Pos>();
+    for (const p of line) {
+      const c = get(b, p.x, p.y);
+      if (c) before.set(c.id, p);
     }
-    const gaps = write + 1;
-    for (let y = 0; y < gaps; y++) {
+    const findPos = (c: Crystal) => before.get(c.id);
+    for (const p of line) {
+      if (isVoid(b, p.x, p.y)) flush();
+      else seg.push(p);
+    }
+    flush();
+    // refill: empty playable cells reachable from the upstream edge (stop at the first void/crystal)
+    const open: Pos[] = [];
+    for (const p of line) {
+      if (isVoid(b, p.x, p.y) || get(b, p.x, p.y)) break;
+      open.push(p);
+    }
+    const gaps = open.length;
+    for (const p of open) {
       const c = newCrystal(s, randomType(s));
-      set(b, x, y, c);
-      spawned.push({ ...c, x, y, fromY: y - gaps });
+      set(b, p.x, p.y, c);
+      spawned.push({ ...c, x: p.x, y: p.y, fromX: p.x - d.x * gaps, fromY: p.y - d.y * gaps });
     }
   }
   return { kind: "fall", moves, spawned };
@@ -162,7 +211,11 @@ function cascade(s: EngineState, steps: ResolveStep[], startCascade: number, swa
     });
     steps.push(applyGravity(s));
   }
-  if (!hasValidMove(b)) steps.push({ kind: "shuffle", placements: reshuffle(s) });
+  if (!hasValidMove(b)) {
+    // sparse masked boards can run out of material: top up sheltered pockets, then reshuffle
+    if (b.cells.filter(Boolean).length < b.cells.length * 0.6) steps.push(fillAllEmpty(s));
+    steps.push({ kind: "shuffle", placements: reshuffle(s) });
+  }
 }
 
 /** Special + special (or prism + anything) swaps fire immediately, without needing a match. */
@@ -224,6 +277,41 @@ function comboClear(s: EngineState, a: Pos, bPos: Pos): ResolveStep | null {
     combo,
     score: cleared.length * POINTS_PER_CRYSTAL * 2,
   };
+}
+
+/** Deadlock recovery for masked boards: every empty playable cell receives a crystal where it is. */
+function fillAllEmpty(s: EngineState): ResolveStep {
+  const b = s.board;
+  const spawned: Spawned[] = [];
+  for (let y = 0; y < b.height; y++)
+    for (let x = 0; x < b.width; x++) {
+      if (isVoid(b, x, y) || get(b, x, y)) continue;
+      const c = newCrystal(s, randomType(s));
+      set(b, x, y, c);
+      spawned.push({ ...c, x, y, fromX: x, fromY: y });
+    }
+  return { kind: "fall", moves: [], spawned };
+}
+
+export const GRAVITY_ORDER: Gravity[] = ["left", "down", "right"];
+/** Next gravity when the tabletop is turned one step (-1 = counter-clockwise, +1 = clockwise). */
+export function rotatedGravity(g: Gravity, turn: -1 | 1): Gravity | null {
+  const i = GRAVITY_ORDER.indexOf(g) + turn;
+  return i < 0 || i >= GRAVITY_ORDER.length ? null : GRAVITY_ORDER[i];
+}
+
+/**
+ * GRAVITY SHIFT: changes the gravity vector, lets unsupported crystals slide, refills from the new
+ * upstream edge, then resolves any matches/cascades the shift created. Never mutates the input.
+ */
+export function shiftGravity(input: EngineState, to: Gravity): SwapResult {
+  if (to === input.gravity) return { valid: false, state: input, steps: [] };
+  const s = cloneState(input);
+  const steps: ResolveStep[] = [{ kind: "gravity", from: s.gravity, to }];
+  s.gravity = to;
+  steps.push(applyGravity(s));
+  cascade(s, steps, 1, []);
+  return { valid: true, state: s, steps };
 }
 
 /**

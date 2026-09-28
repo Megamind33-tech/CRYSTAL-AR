@@ -1,11 +1,24 @@
-import { nextInt } from "./rng.ts";
-import type { Board, Crystal, CrystalType, MatchGroup, Pos, Rng, Special } from "./types.ts";
+import { nextFloat, nextInt } from "./rng.ts";
+import type { Board, Crystal, CrystalType, Gravity, MatchGroup, Pos, Rng, Special } from "./types.ts";
 
 export interface EngineState {
   board: Board;
   rng: Rng;
   nextId: number;
   typeCount: number;
+  gravity: Gravity;
+  /** optional spawn weights per crystal kind (e.g. an emerald-rich canyon) */
+  weights?: number[];
+}
+
+export const isVoid = (b: Board, x: number, y: number) => !!b.void?.[idx(b, x, y)];
+
+/** Parse a level mask: rows of "O" (playable) / "X" (void). */
+export function parseMask(rows: string[] | undefined, width: number, height: number): boolean[] | undefined {
+  if (!rows) return undefined;
+  const m: boolean[] = [];
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) m.push((rows[y]?.[x] ?? "O").toUpperCase() === "X");
+  return m;
 }
 
 export const idx = (b: Board, x: number, y: number) => y * b.width + x;
@@ -19,11 +32,11 @@ export const set = (b: Board, x: number, y: number, c: Crystal | null) => {
 export const isAdjacent = (a: Pos, b: Pos) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
 
 export function cloneBoard(b: Board): Board {
-  return { width: b.width, height: b.height, cells: b.cells.slice() };
+  return { width: b.width, height: b.height, cells: b.cells.slice(), void: b.void };
 }
 
 export function cloneState(s: EngineState): EngineState {
-  return { board: cloneBoard(s.board), rng: { state: s.rng.state }, nextId: s.nextId, typeCount: s.typeCount };
+  return { board: cloneBoard(s.board), rng: { state: s.rng.state }, nextId: s.nextId, typeCount: s.typeCount, gravity: s.gravity, weights: s.weights };
 }
 
 export function newCrystal(s: EngineState, type: CrystalType, special: Special = "none"): Crystal {
@@ -31,7 +44,14 @@ export function newCrystal(s: EngineState, type: CrystalType, special: Special =
 }
 
 export function randomType(s: EngineState): CrystalType {
-  return nextInt(s.rng, s.typeCount) as CrystalType;
+  if (!s.weights) return nextInt(s.rng, s.typeCount) as CrystalType;
+  const total = s.weights.reduce((a, b) => a + b, 0);
+  let r = nextFloat(s.rng) * total;
+  for (let t = 0; t < s.typeCount; t++) {
+    r -= s.weights[t] ?? 1;
+    if (r < 0) return t as CrystalType;
+  }
+  return (s.typeCount - 1) as CrystalType;
 }
 
 /** Would placing `type` at (x,y) complete a run of 3 with the two cells left or above? */
@@ -42,18 +62,21 @@ function makesRunBackward(b: Board, x: number, y: number, type: CrystalType): bo
   return !!(u1 && u2 && u1.type === type && u2.type === type);
 }
 
-/** Creates a board with no pre-existing matches and at least one valid move. */
-export function createEngine(width: number, height: number, typeCount: number, rng: Rng): EngineState {
+/** Creates a board with no pre-existing matches and at least one valid move. Void cells stay empty. */
+export function createEngine(width: number, height: number, typeCount: number, rng: Rng, mask?: boolean[], weights?: number[]): EngineState {
   const s: EngineState = {
-    board: { width, height, cells: new Array(width * height).fill(null) },
+    board: { width, height, cells: new Array(width * height).fill(null), void: mask },
     rng,
     nextId: 1,
     typeCount,
+    gravity: "down",
+    weights,
   };
   for (let attempt = 0; attempt < 100; attempt++) {
     s.nextId = 1;
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
+        if (isVoid(s.board, x, y)) continue;
         let type = randomType(s);
         for (let guard = 0; makesRunBackward(s.board, x, y, type) && guard < 20; guard++) {
           type = randomType(s);
@@ -70,11 +93,13 @@ export function createEngine(width: number, height: number, typeCount: number, r
 export function engineFromRows(rows: string[], typeCount: number, rng: Rng): EngineState {
   const height = rows.length;
   const width = rows[0].length;
-  const s: EngineState = { board: { width, height, cells: [] }, rng, nextId: 1, typeCount };
+  const s: EngineState = { board: { width, height, cells: [] }, rng, nextId: 1, typeCount, gravity: "down" };
+  const mask = rows.join("").includes("#") ? rows.flatMap((r) => [...r].map((c) => c === "#")) : undefined;
+  s.board.void = mask;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const ch = rows[y][x];
-      if (ch === ".") {
+      if (ch === "." || ch === "#") {
         s.board.cells.push(null);
         continue;
       }
@@ -258,7 +283,7 @@ export function boardToRows(b: Board): string[] {
     let r = "";
     for (let x = 0; x < b.width; x++) {
       const c = get(b, x, y);
-      r += !c ? "." : c.special === "prism" ? "P" : String(c.type);
+      r += isVoid(b, x, y) ? "#" : !c ? "." : c.special === "prism" ? "P" : String(c.type);
     }
     rows.push(r);
   }

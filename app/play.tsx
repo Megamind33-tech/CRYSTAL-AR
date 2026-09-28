@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useViewMode, ViewControls, WorldNavigator } from "@/src/ar/WorldNavigator";
+import { useViewMode, WorldNavigator } from "@/src/ar/WorldNavigator";
+import { GravityControl } from "@/src/ui/GravityControl";
 import { setAmbientActive } from "@/src/audio/AudioManager";
 import { DEV_AR_MOCK } from "@/src/config";
 import { Diagnostics } from "@/src/dev/Diagnostics";
@@ -11,7 +12,7 @@ import { arSession, requestResetPlacement } from "@/src/state/arSession";
 import { endSession, gameEvents, gameStore, respawnView, restartLevel, startLevel } from "@/src/state/game";
 import { useStore } from "@/src/state/store";
 import { findValidMoves } from "@/src/game/board";
-import { attemptSwap } from "@/src/state/game";
+import { attemptSwap, turnTabletop } from "@/src/state/game";
 import { HUD } from "@/src/ui/HUD";
 import { PauseMenu, PlacementGuide } from "@/src/ui/Overlays";
 import { RunResult } from "@/src/ui/RunResult";
@@ -44,7 +45,7 @@ export default function Play() {
     setAmbientActive(true);
     const removePicking = Platform.OS === "web" ? installMockPicking() : () => {};
     // automation hook for DEV_AR_MOCK runs (CI / screenshots)
-    if (DEV_AR_MOCK) (globalThis as Record<string, unknown>).__crystals = { gameStore, arSession, attemptSwap, findValidMoves, cellToScreen };
+    if (DEV_AR_MOCK) (globalThis as Record<string, unknown>).__crystals = { gameStore, arSession, attemptSwap, findValidMoves, cellToScreen, turnTabletop };
     if (DEV_AR_MOCK && params.autoplace) setTimeout(() => arSession.set({ phase: "placed", anchorId: "mock-table", yaw: 0 }), 300);
     return () => {
       removePicking();
@@ -72,6 +73,17 @@ export default function Play() {
     gameEvents.emit({ type: "sfx", name: "place" });
   };
 
+  /** CONTINUE: start the next island in place – the world stays on the table (no remount/re-place). */
+  const continueTo = (id: string) => {
+    const next = ISLANDS.find((i) => i.id === id);
+    if (!next) return;
+    endSession();
+    setPlayContext({ islandId: next.id, trialInstanceId: null });
+    analytics.track("island_started", { id: next.id });
+    startLevel(next.levelIndex);
+    router.setParams({ island: next.id });
+  };
+
   const exit = () => (router.canGoBack() ? router.back() : router.replace("/"));
   const player = useStore(metaStore, (m) => m.player);
   const nextIsland = !trial && player ? ISLANDS.find((i) => i.id !== island?.id && !player.islands[i.id] && islandStatus(player, i, Date.now()).status === "available") : undefined;
@@ -79,16 +91,16 @@ export default function Play() {
   return (
     <View style={s.root}>
       <WorldNavigator />
-      <ViewControls />
       {phase === "placed" && <HUD onPause={() => setPaused(true)} />}
       {phase === "placed" && <RelicTray ranked={!!trial} />}
+      {phase === "placed" && <GravityControl />}
       {phase === "placed" && !trial && <Coach />}
       <RisingOverlay />
       <PlacementGuide mock={viewMode !== "ar"} cameraView={viewMode === "camera"} onPlaceMock={placeMock} />
       <Diagnostics mock={viewMode !== "ar"} />
       <RunResult
         ranked={!!trial}
-        onNext={nextIsland ? () => router.replace({ pathname: "/play", params: { island: nextIsland.id, autoplace: params.autoplace } }) : null}
+        onNext={nextIsland ? () => continueTo(nextIsland.id) : null}
         onReplay={() => {
           metaStore.set({ lastOutcome: null });
           restartLevel();

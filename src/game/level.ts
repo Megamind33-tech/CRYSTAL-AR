@@ -1,7 +1,7 @@
-import { cloneState, createEngine, reshuffle, type EngineState } from "./board.ts";
-import { trySwap } from "./resolve.ts";
+import { cloneState, createEngine, parseMask, reshuffle, type EngineState } from "./board.ts";
+import { rotatedGravity, shiftGravity, trySwap } from "./resolve.ts";
 import { createRng } from "./rng.ts";
-import type { CrystalType, Pos, ResolveStep } from "./types.ts";
+import type { CrystalType, Gravity, Pos, ResolveStep } from "./types.ts";
 
 export type Objective =
   | { kind: "power"; target: number } // charge the portal with crystal energy
@@ -14,11 +14,25 @@ export interface LevelDef {
   seed: number;
   moves: number;
   objective: Objective;
+  /** board shape: rows of O (playable) / X (void terrain). Omit for a full 6×6. */
+  mask?: string[];
+  /** Gravity Charges at the start (0 = no Gravity Shift on this level). Max 3. */
+  gravityCharges?: number;
+  /** spawn weight per crystal kind (default 1 each) */
+  spawnWeights?: number[];
 }
+
+export const MAX_GRAVITY_CHARGES = 3;
 
 export const LEVELS: LevelDef[] = [
   { id: 1, name: "Waking Stones", seed: 1101, moves: 20, objective: { kind: "power", target: 170 } },
-  { id: 2, name: "Emerald Canopy", seed: 2207, moves: 16, objective: { kind: "collect", crystal: 2, target: 32 } },
+  // HERO LEVEL: irregular canyon board; sheltered pockets under the ruins only fill via Gravity Shift
+  {
+    id: 2, name: "Emerald Canyon", seed: 2207, moves: 22, gravityCharges: 2, spawnWeights: [1, 1, 1.6, 1, 1],
+    objective: { kind: "collect", crystal: 2, target: 32 },
+    // two sheltered pockets: under the ruin pillar (column 3) and the left cliff (column 0)
+    mask: ["OOOOOO", "OOOXOO", "OOOXOO", "XOOOOO", "OOXOOO", "OOXOOO"],
+  },
   { id: 3, name: "Heart of the Falls", seed: 3313, moves: 18, objective: { kind: "score", target: 5600 } },
   // discovery / seasonal / expedition islands (meta-game content)
   { id: 4, name: "Hollow of Lanterns", seed: 4421, moves: 18, objective: { kind: "collect", crystal: 4, target: 30 } },
@@ -37,18 +51,20 @@ export interface Session {
   collected: number[];
   status: SessionStatus;
   bestCascade: number;
+  gravityCharges: number;
 }
 
 export function startSession(level: LevelDef, seedOverride?: number): Session {
   return {
     level,
-    engine: createEngine(6, 6, 5, createRng(seedOverride ?? level.seed)),
+    engine: createEngine(6, 6, 5, createRng(seedOverride ?? level.seed), parseMask(level.mask, 6, 6), level.spawnWeights),
     score: 0,
     movesLeft: level.moves,
     charge: 0,
     collected: [0, 0, 0, 0, 0],
     status: "playing",
     bestCascade: 0,
+    gravityCharges: Math.min(MAX_GRAVITY_CHARGES, level.gravityCharges ?? 0),
   };
 }
 
@@ -81,16 +97,41 @@ export function playMove(s: Session, a: Pos, b: Pos): MoveResult {
     movesLeft: s.movesLeft - 1,
     collected: s.collected.slice(),
   };
-  for (const step of r.steps) {
+  account(next, r.steps);
+  if (objectiveProgress(next) >= 1) next.status = "won";
+  else if (next.movesLeft <= 0) next.status = "lost";
+  return { valid: true, session: next, steps: r.steps };
+}
+
+/** Score, portal charge, collection and Gravity Charge recharge from resolved steps. */
+function account(next: Session, steps: ResolveStep[]) {
+  for (const step of steps) {
     if (step.kind !== "clear") continue;
     next.score += step.score;
     next.charge += chargeForStep(step);
     next.bestCascade = Math.max(next.bestCascade, step.cascade);
     for (const c of step.cleared) next.collected[c.type]++;
+    // forging a Prism or fusing specials recharges the tabletop (only on levels that use it)
+    if (next.level.gravityCharges && (step.combo || step.created.some((c) => c.special === "prism"))) {
+      next.gravityCharges = Math.min(MAX_GRAVITY_CHARGES, next.gravityCharges + 1);
+    }
   }
+}
+
+/**
+ * GRAVITY SHIFT: turn the tabletop one step. Costs a Gravity Charge, not a move.
+ * turn -1 = counter-clockwise (gravity toward the left side), +1 = clockwise (toward the right).
+ */
+export function playShift(s: Session, turn: -1 | 1): MoveResult & { gravity?: Gravity } {
+  if (s.status !== "playing" || s.gravityCharges <= 0) return { valid: false, session: s, steps: [] };
+  const to = rotatedGravity(s.engine.gravity, turn);
+  if (!to) return { valid: false, session: s, steps: [] };
+  const r = shiftGravity(s.engine, to);
+  if (!r.valid) return { valid: false, session: s, steps: [] };
+  const next: Session = { ...s, engine: r.state, gravityCharges: s.gravityCharges - 1, collected: s.collected.slice() };
+  account(next, r.steps);
   if (objectiveProgress(next) >= 1) next.status = "won";
-  else if (next.movesLeft <= 0) next.status = "lost";
-  return { valid: true, session: next, steps: r.steps };
+  return { valid: true, session: next, steps: r.steps, gravity: to };
 }
 
 /** Stars awarded on a win: remaining moves reward efficiency. */

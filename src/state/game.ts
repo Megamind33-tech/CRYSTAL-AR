@@ -3,15 +3,15 @@
 import { boardHash, findValidMoves, isAdjacent } from "../game/board.ts";
 import { accumulate, newRunStats, type RunStats } from "../meta/verify.ts";
 import type { RunBoost } from "../meta/types.ts";
-import { addMoves, chargeForStep, extendMoves, reshuffleSession, LEVELS, objectiveProgress, playMove, startSession, starsFor, type Session } from "../game/level.ts";
+import { addMoves, chargeForStep, playShift, extendMoves, reshuffleSession, LEVELS, objectiveProgress, playMove, startSession, starsFor, type Session } from "../game/level.ts";
 import { eventsForStep, stageForProgress, type WorldEvent, type WorldStage } from "../game/reactions.ts";
-import type { CrystalType, Pos, ResolveStep, Special } from "../game/types.ts";
+import type { CrystalType, Gravity, Pos, ResolveStep, Special } from "../game/types.ts";
 import { neighbourToward } from "../render/layout.ts";
 import { createStore } from "./store.ts";
 
 export type Anim =
   | { kind: "move"; fromX: number; fromY: number; ms: number; seq: number }
-  | { kind: "spawn"; fromY: number; ms: number; seq: number }
+  | { kind: "spawn"; fromX: number; fromY: number; ms: number; seq: number }
   | { kind: "pop"; ms: number; seq: number }
   | { kind: "forge"; ms: number; seq: number };
 
@@ -56,11 +56,14 @@ export interface GameState {
   moveCount: number;
   /** idle hint: two cells of a valid swap, glowing */
   hint: [Pos, Pos] | null;
+  /** current gravity (drives the tabletop tilt) and Gravity Charges left */
+  gravity: Gravity;
+  gravityCharges: number;
 }
 
 const emptyReactions = (): Record<WorldEvent, number> => ({
   MATCH_3: 0, MATCH_4: 0, MATCH_5: 0, CASCADE_2: 0, CASCADE_3: 0, CASCADE_4_PLUS: 0,
-  SPECIAL_CREATED: 0, SPECIAL_ACTIVATED: 0, COMBO: 0, LEVEL_COMPLETE: 0,
+  SPECIAL_CREATED: 0, SPECIAL_ACTIVATED: 0, COMBO: 0, LEVEL_COMPLETE: 0, GRAVITY_SHIFT: 0,
 });
 
 export const gameStore = createStore<GameState>({
@@ -79,6 +82,8 @@ export const gameStore = createStore<GameState>({
   lastMatch: "-",
   moveCount: 0,
   hint: null,
+  gravity: "down",
+  gravityCharges: 0,
 });
 
 // ---- side-effect channel (audio, haptics, analytics) -----------------------
@@ -105,7 +110,7 @@ let run: RunRecord | null = null;
 export const currentRun = () => run;
 export type SfxName =
   | "select" | "swap" | "invalid" | "match1" | "match2" | "match3" | "match4"
-  | "special_create" | "special_activate" | "place" | "complete" | "portal";
+  | "special_create" | "special_activate" | "place" | "complete" | "portal" | "gravity";
 
 const listeners = new Set<(e: GameEvent) => void>();
 export const gameEvents = {
@@ -119,7 +124,7 @@ export const gameEvents = {
 };
 
 // ---- timing ----------------------------------------------------------------
-export const TIMING = { swap: 170, pop: 230, forge: 280, fallBase: 120, fallPerRow: 55, shuffle: 420, cascadeGap: 70 };
+export const TIMING = { tilt: 380, swap: 170, pop: 230, forge: 280, fallBase: 120, fallPerRow: 55, shuffle: 420, cascadeGap: 70 };
 let sleepImpl = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 /** Tests replace the clock so step playback runs instantly. */
 export function setSleep(fn: (ms: number) => Promise<void>) {
@@ -148,7 +153,7 @@ export function startLevel(levelIndex: number, seedOverride?: number, movesOverr
   gameStore.set({
     levelIndex: LEVELS.indexOf(base),
     session,
-    crystals: viewsFromSession(session).map((c) => ({ ...c, anim: { kind: "spawn", fromY: c.y - 7, ms: 380 + c.y * 40, seq: seq++ } })),
+    crystals: viewsFromSession(session).map((c) => ({ ...c, anim: { kind: "spawn", fromX: c.x, fromY: c.y - 7, ms: 380 + c.y * 40, seq: seq++ } })),
     selected: null,
     busy: false,
     hud: { score: 0, movesLeft: session.movesLeft, charge: 0, collected: [0, 0, 0, 0, 0] },
@@ -161,6 +166,8 @@ export function startLevel(levelIndex: number, seedOverride?: number, movesOverr
     lastMatch: "-",
     moveCount: 0,
     hint: null,
+    gravity: session.engine.gravity,
+    gravityCharges: session.gravityCharges,
   });
   scheduleHint();
 }
@@ -182,7 +189,7 @@ export function stabilizeLevel(moves: number) {
 export function respawnView() {
   gameStore.set((s) => ({
     selected: null,
-    crystals: s.crystals.map((c) => ({ ...c, anim: { kind: "spawn" as const, fromY: c.y - 7, ms: 380 + c.y * 40, seq: seq++ } })),
+    crystals: s.crystals.map((c) => ({ ...c, anim: { kind: "spawn" as const, fromX: c.x, fromY: c.y - 7, ms: 380 + c.y * 40, seq: seq++ } })),
   }));
 }
 
@@ -237,7 +244,11 @@ export async function attemptSwap(a: Pos, b: Pos) {
   gameStore.set({ busy: true, selected: null });
   await playSteps(r.steps, gen);
   if (gen !== generation) return;
-  const session = r.session;
+  finishTurn(s, r.session, r.valid);
+}
+
+/** Shared end of a swap or tabletop turn: outcome detection, HUD sync, level-end event. */
+function finishTurn(s: GameState, session: Session, countsAsMove: boolean) {
   const progress = objectiveProgress(session);
   let result: GameState["result"] = null;
   if (session.status !== "playing") {
@@ -259,8 +270,34 @@ export async function attemptSwap(a: Pos, b: Pos) {
     progress,
     stage: stageForProgress(progress),
     result,
-    moveCount: s.moveCount + (r.valid ? 1 : 0),
+    moveCount: s.moveCount + (countsAsMove ? 1 : 0),
+    gravity: session.engine.gravity,
+    gravityCharges: session.gravityCharges,
   });
+}
+
+/**
+ * GRAVITY SHIFT – turn the tabletop one step. Crystals slide, pockets fill, cascades resolve.
+ * Logged as a run boost so the run stays replay-verifiable.
+ */
+export async function turnTabletop(turn: -1 | 1): Promise<boolean> {
+  const s = gameStore.get();
+  if (s.busy || !s.session || s.result) return false;
+  const r = playShift(s.session, turn);
+  if (!r.valid) {
+    gameEvents.emit({ type: "sfx", name: "invalid" });
+    gameEvents.emit({ type: "haptic", kind: "error" });
+    return false;
+  }
+  clearHint();
+  if (run) run.boosts.push({ atSwap: run.swaps.length, kind: "gravity", value: turn, source: "gravity" });
+  if (run) accumulate(run.stats, r.steps);
+  const gen = generation;
+  gameStore.set({ busy: true, selected: null, gravityCharges: r.session.gravityCharges });
+  await playSteps(r.steps, gen);
+  if (gen !== generation) return true;
+  finishTurn(s, r.session, false);
+  return true;
 }
 
 function bumpReactions(events: WorldEvent[]) {
@@ -358,17 +395,26 @@ async function playSteps(steps: ResolveStep[], gen: number) {
           ...cs.map((c) => {
             const m = moved.get(c.id);
             if (!m) return c;
-            const ms = dur(m.toY - m.fromY);
+            const ms = dur(Math.abs(m.toY - m.fromY) + Math.abs(m.toX - m.fromX));
             longest = Math.max(longest, ms);
-            return { ...c, y: m.toY, anim: { kind: "move" as const, fromX: c.x, fromY: m.fromY, ms, seq: seq++ } };
+            return { ...c, x: m.toX, y: m.toY, anim: { kind: "move" as const, fromX: m.fromX, fromY: m.fromY, ms, seq: seq++ } };
           }),
           ...step.spawned.map((sp) => {
-            const ms = dur(sp.y - sp.fromY) + 40;
+            const ms = dur(Math.abs(sp.y - sp.fromY) + Math.abs(sp.x - sp.fromX)) + 40;
             longest = Math.max(longest, ms);
-            return { id: sp.id, type: sp.type, special: sp.special, x: sp.x, y: sp.y, anim: { kind: "spawn" as const, fromY: sp.fromY, ms, seq: seq++ } };
+            return { id: sp.id, type: sp.type, special: sp.special, x: sp.x, y: sp.y, anim: { kind: "spawn" as const, fromX: sp.fromX, fromY: sp.fromY, ms, seq: seq++ } };
           }),
         ]);
         if (!(await sleep(longest + TIMING.cascadeGap))) return;
+        break;
+      }
+      case "gravity": {
+        // the tabletop tilts (BoardView reads session gravity via gameStore.gravity)
+        gameStore.set({ gravity: step.to });
+        gameEvents.emit({ type: "sfx", name: "gravity" });
+        gameEvents.emit({ type: "haptic", kind: "heavy" });
+        bumpReactions(["GRAVITY_SHIFT"]);
+        if (!(await sleep(TIMING.tilt))) return;
         break;
       }
       case "shuffle": {

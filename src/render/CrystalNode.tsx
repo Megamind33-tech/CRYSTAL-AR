@@ -39,7 +39,7 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
         animation = { name: moveAnim(target, active.ms), run: true, onFinish: done };
         break;
       case "spawn":
-        position = cellToLocal(x, active.fromY);
+        position = cellToLocal(active.fromX, active.fromY);
         scale = [0.25, 0.25, 0.25];
         animation = { name: moveAnim(target, active.ms, true), run: true, onFinish: done };
         break;

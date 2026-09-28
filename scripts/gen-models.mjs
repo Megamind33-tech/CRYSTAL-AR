@@ -14,7 +14,7 @@ mkdirSync(TEX, { recursive: true });
 // which avoids Viro background-task races when crystals spawn mid-game (seen on a Tecno Camon 19).
 const MESHES = {};
 const out = (name, model) => {
-  if (name.startsWith("gem_") || ["surge_aura", "bloom", "glow_cluster", "vines", "portal_core"].includes(name)) {
+  if (name.startsWith("gem_") || name.startsWith("socket") || ["surge_aura", "bloom", "glow_cluster", "vines", "portal_core"].includes(name)) {
     MESHES[name] = [...model.buckets].filter(([, b]) => b.pos.length).map(([mat, b]) => {
       const def = model.materials.find((x) => x.name === mat);
       const r = (v) => Math.round(v * 1e4) / 1e4;
@@ -163,6 +163,24 @@ for (const [name, build] of Object.entries(gems)) {
     m.tris(moss, blob(0.008 + R() * 0.006, R, 0.3), xf({ s: [1.3, 0.5, 1.3], t: [px, -0.01, pz] }));
   }
   out("platform", m);
+}
+
+// ------------------------------------------------------- board stone sockets --
+// Each playable cell is its own carved stone column (top at y = 0, reaching down into the terrain),
+// so irregular board shapes read as ruins rather than a panel laid on the scenery.
+for (const [name, top, side] of [["socket_a", [0.64, 0.62, 0.57], [0.44, 0.42, 0.38]], ["socket_b", [0.56, 0.55, 0.5], [0.4, 0.38, 0.35]]]) {
+  const m = new Model();
+  const R2 = rng(name.length * 31);
+  const topM = m.material(name + "_top", { color: top, roughness: 0.95 });
+  const sideM = m.material(name + "_side", { color: side, roughness: 1 });
+  const grooveM = m.material(name + "_groove", { color: side.map((c) => c * 0.7), roughness: 1 });
+  const w = CELL - 0.005;
+  m.tris(sideM, box(w * 0.94, 0.07, w * 0.94), xf({ t: [0, -0.041, 0] }));          // column into the ground
+  m.tris(topM, slab(w, 0.008, w, 0.0022), xf({ t: [0, -0.008, 0] }));                  // dressed top
+  m.tris(grooveM, slab(w * 0.72, 0.0012, w * 0.72, 0.0004), xf({ t: [0, 0.0001, 0] })); // carved socket ring
+  m.tris(topM, slab(w * 0.6, 0.0012, w * 0.6, 0.0004), xf({ t: [0, 0.0004, 0] }));
+  for (let k = 0; k < 3; k++) m.tris(sideM, blob(0.004, R2, 0.3, 0), xf({ s: [1.2, 0.6, 1], t: [(R2() - 0.5) * w, -0.012 - R2() * 0.02, (R2() > 0.5 ? 1 : -1) * w * 0.47] }));
+  out(name, m);
 }
 
 // ------------------------------------------------------------------ island --

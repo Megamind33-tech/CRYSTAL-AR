@@ -55,7 +55,7 @@ export const ISLANDS: Island[] = [
   {
     id: "emerald-canopy",
     realm: "verdant",
-    name: "Emerald Canopy",
+    name: "Emerald Canyon",
     portal: "story",
     levelIndex: 1,
     after: "waking-stones",

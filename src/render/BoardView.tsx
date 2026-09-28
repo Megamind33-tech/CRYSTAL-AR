@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useState, type ReactNode } from "react";
 import { ViroNode, ViroParticleEmitter, ViroQuad } from "@reactvision/react-viro";
 import { Model, Gated } from "./LoadQueue";
 import { DEV_AR_MOCK, JS_PICKING } from "../config";
@@ -6,7 +6,8 @@ import { gameStore, pressCell, releaseCell, type Burst } from "../state/game";
 import { useStore } from "../state/store";
 import { CRYSTAL_COLORS, MODELS, TEXTURES } from "./assets";
 import { CrystalNode } from "./CrystalNode";
-import { BOARD_OFFSET, BOARD_SIZE, BOARD_TILT_DEG, CELL, cellToLocal } from "./layout";
+import { BOARD_OFFSET, BOARD_SIZE, BOARD_TILT_DEG, CELL, cellToLocal, rollFor } from "./layout";
+import { GemMesh } from "./GemMesh";
 
 const CLICK_DOWN = 1;
 const PAD_Y = 0.016;
@@ -19,10 +20,11 @@ const onCell = (x: number, y: number) => (state: number, position?: number[]) =>
 };
 
 /** Invisible per-cell touch pads: native hit-testing resolves which cell a finger is on. */
-const CellPads = memo(function CellPads({ selKey, hintKey }: { selKey: string; hintKey: string }) {
+const CellPads = memo(function CellPads({ selKey, hintKey, voids }: { selKey: string; hintKey: string; voids: string }) {
   const pads = [];
   for (let y = 0; y < BOARD_SIZE; y++)
     for (let x = 0; x < BOARD_SIZE; x++) {
+      if (voids[y * BOARD_SIZE + x] === "1") continue;
       const [px, , pz] = cellToLocal(x, y);
       pads.push(
         <ViroQuad
@@ -101,6 +103,39 @@ function BurstPool({ bursts }: { bursts: Burst[] }) {
   );
 }
 
+/** One carved stone column per playable cell – void cells are real gaps in the ruins. */
+const Sockets = memo(function Sockets({ voids }: { voids: string }) {
+  const out = [];
+  for (let y = 0; y < BOARD_SIZE; y++)
+    for (let x = 0; x < BOARD_SIZE; x++) {
+      if (voids[y * BOARD_SIZE + x] === "1") continue;
+      const [px, , pz] = cellToLocal(x, y);
+      out.push(<GemMesh key={x + "_" + y} name={(x + y) % 2 ? "socket_a" : "socket_b"} position={[px, 0, pz]} />);
+    }
+  return <>{out}</>;
+});
+
+/** Board group: tilted toward the player, and rolled toward the current gravity. */
+function TiltingBoard({ children }: { children: ReactNode }) {
+  const gravity = useStore(gameStore, (s) => s.gravity);
+  const [shown, setShown] = useState(gravity);
+  const [anim, setAnim] = useState<string | null>(null);
+  useEffect(() => {
+    if (gravity === shown) return;
+    setAnim("tilt" + gravity);
+    const t = setTimeout(() => {
+      setShown(gravity);
+      setAnim(null);
+    }, 420);
+    return () => clearTimeout(t);
+  }, [gravity]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <ViroNode position={BOARD_OFFSET} rotation={[BOARD_TILT_DEG, 0, rollFor(shown)]} animation={anim ? { name: anim, run: true } : undefined}>
+      {children}
+    </ViroNode>
+  );
+}
+
 export function BoardView() {
   const crystals = useStore(gameStore, (s) => s.crystals);
   const selected = useStore(gameStore, (s) => s.selected);
@@ -108,17 +143,18 @@ export function BoardView() {
   const hint = useStore(gameStore, (s) => s.hint);
   const hintKey = hint ? `|${hint[0].x}_${hint[0].y}|${hint[1].x}_${hint[1].y}|` : "";
   const selKey = selected ? `${selected.x}_${selected.y}` : "";
+  const voids = useStore(gameStore, (s) => (s.session?.engine.board.void ?? []).map((v) => (v ? "1" : "0")).join(""));
 
   return (
-    <ViroNode position={BOARD_OFFSET} rotation={[BOARD_TILT_DEG, 0, 0]}>
-      <Model source={MODELS.platform} ignoreEventHandling />
-      <CellPads selKey={selKey} hintKey={hintKey} />
+    <TiltingBoard>
+      <Sockets voids={voids} />
+      <CellPads selKey={selKey} hintKey={hintKey} voids={voids} />
       {crystals.map((c) => (
         <ViroNode key={c.id} onClickState={JS_PICKING ? undefined : onCell(c.x, c.y)}>
           <CrystalNode crystal={c} selected={!!selected && selected.x === c.x && selected.y === c.y} />
         </ViroNode>
       ))}
       <BurstPool bursts={bursts} />
-    </ViroNode>
+    </TiltingBoard>
   );
 }

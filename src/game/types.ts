@@ -28,7 +28,12 @@ export interface Board {
   width: number;
   height: number;
   cells: (Crystal | null)[];
+  /** level mask: true = void (terrain gap). Voids never hold crystals and block falling. */
+  void?: boolean[];
 }
+
+/** Direction crystals fall. "down" = toward row height-1 (the player). */
+export type Gravity = "down" | "left" | "right";
 
 export interface MatchGroup {
   cells: Pos[];
@@ -56,13 +61,15 @@ export interface ActivatedSpecial extends Pos {
 
 export interface FallMove {
   id: number;
-  x: number;
+  fromX: number;
   fromY: number;
+  toX: number;
   toY: number;
 }
 
 export interface Spawned extends Crystal, Pos {
-  /** virtual row above the board the crystal starts from (negative) */
+  /** virtual cell beyond the upstream edge the crystal enters from */
+  fromX: number;
   fromY: number;
 }
 
@@ -80,6 +87,7 @@ export type ResolveStep =
       score: number;
     }
   | { kind: "fall"; moves: FallMove[]; spawned: Spawned[] }
+  | { kind: "gravity"; from: Gravity; to: Gravity }
   | { kind: "shuffle"; placements: { id: number; x: number; y: number }[] };
 
 export type ComboKind =

@@ -4,7 +4,7 @@
 // Viro's own hit-testing; both paths call the same controller (pressCell / releaseCell).
 import { arSession } from "../state/arSession";
 import { gameStore, pressCell, releaseCell } from "../state/game";
-import { BOARD_OFFSET, BOARD_TILT_DEG, cellToLocal, localToCell } from "../render/layout";
+import { BOARD_OFFSET, BOARD_TILT_DEG, cellToLocal, localToCell, rollFor } from "../render/layout";
 
 /** Mock camera – MockScene renders with exactly these values. The web renderer's FOV is fixed at 90° vertical. */
 export const MOCK_CAMERA = { position: [0, 0.46, 0.4] as [number, number, number], pitchDeg: -48, fovYDeg: 90 };
@@ -13,6 +13,8 @@ const rad = (d: number) => (d * Math.PI) / 180;
 
 type V3 = [number, number, number];
 const rotX = ([x, y, z]: V3, a: number): V3 => [x, y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a)];
+const rotZ = ([x, y, z]: V3, a: number): V3 => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a), z];
+const roll = () => rad(rollFor(gameStore.get().gravity));
 const rotY = ([x, y, z]: V3, a: number): V3 => [x * Math.cos(a) + z * Math.sin(a), y, -x * Math.sin(a) + z * Math.cos(a)];
 
 /** World-space point → board-local, undoing world yaw/scale and the board's offset + tilt. */
@@ -21,11 +23,12 @@ function worldToBoard(p: V3): V3 {
   let q = rotY(p, -rad(yaw));
   q = [q[0] / worldScale, q[1] / worldScale, q[2] / worldScale];
   q = [q[0] - BOARD_OFFSET[0], q[1] - BOARD_OFFSET[1], q[2] - BOARD_OFFSET[2]];
-  return rotX(q, -rad(BOARD_TILT_DEG));
+  // board group rotation is Rx·Rz (tilt toward the player, roll toward gravity)
+  return rotZ(rotX(q, -rad(BOARD_TILT_DEG)), -roll());
 }
 function boardToWorld(p: V3): V3 {
   const { yaw, worldScale } = arSession.get();
-  let q = rotX(p, rad(BOARD_TILT_DEG));
+  let q = rotX(rotZ(p, roll()), rad(BOARD_TILT_DEG));
   q = [q[0] + BOARD_OFFSET[0], q[1] + BOARD_OFFSET[1], q[2] + BOARD_OFFSET[2]];
   q = [q[0] * worldScale, q[1] * worldScale, q[2] * worldScale];
   return rotY(q, rad(yaw));

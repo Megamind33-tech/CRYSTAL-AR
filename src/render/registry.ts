@@ -54,6 +54,9 @@ export function registerMaterials() {
     shockwaveBig: { properties: { scaleX: 10, scaleY: 10, scaleZ: 10, opacity: 0 }, duration: 950, easing: "EaseOut" },
     spinPortal: { properties: { rotateZ: 360 }, duration: 9000, easing: "Linear" },
     spinPortalFast: { properties: { rotateZ: 360 }, duration: 2200, easing: "Linear" },
+    tiltleft: { properties: { rotateX: 10, rotateZ: 8 }, duration: 380, easing: "EaseInEaseOut" },
+    tiltright: { properties: { rotateX: 10, rotateZ: -8 }, duration: 380, easing: "EaseInEaseOut" },
+    tiltdown: { properties: { rotateX: 10, rotateZ: 0 }, duration: 380, easing: "EaseInEaseOut" },
     materialize: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 1100, easing: "EaseOut" },
   });
 }

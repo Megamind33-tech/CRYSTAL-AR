@@ -10,7 +10,8 @@ export type WorldEvent =
   | "SPECIAL_CREATED"
   | "SPECIAL_ACTIVATED"
   | "COMBO"
-  | "LEVEL_COMPLETE";
+  | "LEVEL_COMPLETE"
+  | "GRAVITY_SHIFT";
 
 /** Translates one clear step into the world events the diorama should react to. */
 export function eventsForStep(step: ResolveStep): WorldEvent[] {

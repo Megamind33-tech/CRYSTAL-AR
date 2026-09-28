@@ -29,11 +29,14 @@ export function PlacementGuide({ mock, onPlaceMock, cameraView = false }: { mock
     return () => loop.stop();
   }, [pulse]);
   if (phase === "placed") return null;
+  // Tabletop View / mock have no surface to scan: never show the scanning state there, so the
+  // player can always place the world (was stuck on "Find a table" after leaving a level).
+  const scanning = phase === "scanning" && !mock;
 
   const title =
-    phase === "scanning" ? (resuming ? "Find your table again" : "Find a table or floor") : cameraView ? "Tabletop View" : mock ? "Mock table ready" : "Surface found";
+    scanning ? (resuming ? "Find your table again" : "Find a table or floor") : cameraView ? "Tabletop View" : mock ? "Mock table ready" : "Surface found";
   const body =
-    phase === "scanning"
+    scanning
       ? reason || "Move your phone slowly across a flat, textured surface."
       : cameraView
         ? "This phone can’t use Google’s AR tracking, so the Forest Ruins rest on a virtual table. Turn them with ⟲ ⟳ and resize with − +."
@@ -47,7 +50,7 @@ export function PlacementGuide({ mock, onPlaceMock, cameraView = false }: { mock
 
   return (
     <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { justifyContent: "flex-end", paddingBottom: insets.bottom + 28 }]}>
-      {phase === "scanning" && (
+      {scanning && (
         <Animated.View
           pointerEvents="none"
           style={[s.reticle, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.9] }), transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.06] }) }] }]}
@@ -68,7 +71,7 @@ export function PlacementGuide({ mock, onPlaceMock, cameraView = false }: { mock
             </Pressable>
           </View>
         </View>
-        {mock && phase === "surfaceFound" && <Button testID="place-world" label="PLACE WORLD" variant="primary" onPress={onPlaceMock} style={{ marginTop: 12 }} />}
+        {mock && <Button testID="place-world" label="PLACE WORLD" variant="primary" onPress={onPlaceMock} style={{ marginTop: 12 }} />}
       </View>
     </View>
   );

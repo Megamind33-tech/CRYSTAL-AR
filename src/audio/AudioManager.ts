@@ -17,6 +17,7 @@ const SFX: Record<SfxName, number> = {
   place: require("../../assets/audio/place.wav"),
   complete: require("../../assets/audio/complete.wav"),
   portal: require("../../assets/audio/portal.wav"),
+  gravity: require("../../assets/audio/gravity.wav"),
 };
 const VOLUME: Partial<Record<SfxName, number>> = { select: 0.5, swap: 0.55, invalid: 0.6, portal: 0.7 };
 /** Frequent sounds get two voices so rapid repeats overlap instead of cutting off. */

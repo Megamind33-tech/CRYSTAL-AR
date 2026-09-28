@@ -1,7 +1,7 @@
 // Anti-cheat. The match engine is deterministic, so the authority replays seed + swap list and compares
 // every claimed number. Local validation is for honest-client UX only – it is NOT security: the real
 // checks (signature with a server-held key, duplicate run IDs, trial windows) must run on the backend.
-import { addMoves, LEVELS, playMove, reshuffleSession, startSession, starsFor } from "../game/level.ts";
+import { addMoves, LEVELS, playMove, playShift, reshuffleSession, startSession, starsFor } from "../game/level.ts";
 import { ECONOMY } from "./config/live.ts";
 import { trialDef, trialInstances } from "./competition.ts";
 import { hash } from "./core.ts";
@@ -65,6 +65,14 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
       const b = boosts[bi];
       if (b.kind === "moves") s = addMoves(s, b.value);
       else if (b.kind === "reshuffle") s = reshuffleSession(s).session;
+      else if (b.kind === "gravity") {
+        const g = playShift(s, b.value === -1 ? -1 : 1);
+        if (!g.valid) reasons.push("invalid gravity shift");
+        else {
+          accumulate(acc, g.steps);
+          s = g.session;
+        }
+      }
     }
   };
   for (let i = 0; i < r.swaps.length; i++) {
@@ -78,6 +86,7 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
     accumulate(acc, m.steps);
     s = m.session;
   }
+  applyBoosts(r.swaps.length); // e.g. a winning Gravity Shift after the last swap
   const { resonance, matches, cascades, bestCascade, specialsCreated: created, specialsActivated: activated, combos, crystalsCleared: cleared, blueCleared: blue } = acc;
   const truth = { won: s.status === "won", stars: starsFor(s), score: s.score };
   const c = r.claimed;
