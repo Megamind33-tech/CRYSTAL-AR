@@ -3,6 +3,10 @@
 // Usage: node scripts/mock-e2e.mjs [baseUrl] [outDir]
 import { mkdirSync, writeFileSync } from "node:fs";
 import { launch, openPage } from "./mock-shot.mjs";
+import { buildCampaign } from "../src/game/campaign.ts";
+
+// after Waking Stones (#1) the campaign continues with level #2
+const NEXT_NAME = buildCampaign()[1].name;
 
 const base = process.argv[2] ?? "http://localhost:8090";
 const outDir = process.argv[3] ?? "e2e-out";
@@ -119,10 +123,10 @@ try {
     await sleep(800);
     const saved = await home.evaluate(() => JSON.parse(localStorage.getItem("crystals.keeper.v1") || "null"));
     const text = await home.evaluate(() => document.body.innerText);
-    step("Keeper progress saved; home offers the next island", !!saved?.islands?.["waking-stones"] && /Emerald Canyon/.test(text), JSON.stringify({ islands: Object.keys(saved?.islands ?? {}), lumins: Object.keys(saved?.lumins ?? {}), dust: saved?.wallet?.prismDust }));
+    step("Keeper progress saved; home offers the next island", !!saved?.islands?.["waking-stones"] && text.includes(NEXT_NAME), JSON.stringify({ islands: Object.keys(saved?.islands ?? {}), lumins: Object.keys(saved?.lumins ?? {}), dust: saved?.wallet?.prismDust }));
     await home.screenshot({ path: `${outDir}/06-home.png` });
     // every meta screen renders with real state
-    const screens = [["/realms", /Waking Stones/], ["/sanctuary", /Heart Altar/], ["/archive", /Mossling/], ["/profile", /Chronicles/i], ["/duties", /Story/i], ["/trials", /Realm Trials/], ["/pass", /Crystal Pass/], ["/exchange", /Realm Exchange/], ["/sanctuary-view?autoplace=1", /Sanctuary/]];
+    const screens = [["/realms", /PLAY 2/], ["/sanctuary", /Heart Altar/], ["/archive", /Mossling/], ["/profile", /Chronicles/i], ["/duties", /Story/i], ["/trials", /Realm Trials/], ["/pass", /Crystal Pass/], ["/exchange", /Realm Exchange/], ["/sanctuary-view?autoplace=1", /Sanctuary/]];
     for (const [route, expect] of screens) {
       await home.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
       await sleep(1500);

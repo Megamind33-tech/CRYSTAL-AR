@@ -20,16 +20,46 @@ export const MODELS = {
   vines: require("../../assets/models/vines.glb"),
   glowCluster: require("../../assets/models/glow_cluster.glb"),
   groundShadow: require("../../assets/models/ground_shadow.glb"),
+  // CC-BY 3.0 models from Poly Pizza – credited in ASSET_LICENSES.md and the Settings screen
+  dragonRed: require("../../assets/models/dragon_red.glb"),
+  dragonGreen: require("../../assets/models/dragon_green.glb"),
+  flameTurret: require("../../assets/models/flame_turret.glb"),
 };
 
 export const TEXTURES = {
   spark: require("../../assets/textures/spark.png"),
   ringGlow: require("../../assets/textures/ring_glow.png"),
-  environment: require("../../assets/textures/studio_forest.hdr"),
+  // CC0 studio HDRI (Poly Haven "Studio Small 09", resized to 512×256): soft boxes give crystal facets real highlights
+  environment: require("../../assets/textures/studio_hdri.hdr"),
   tableWood: require("../../assets/textures/table_wood.png"),
   roomBackdrop: require("../../assets/textures/room_backdrop.png"),
+  sky: require("../../assets/textures/sky_panorama.png"),
+  cloudSea: require("../../assets/textures/cloud_sea.png"),
 };
 
+/**
+ * CC0 photo-scanned PBR materials from ambientCG (see ASSET_LICENSES.md), resized to 512 px by
+ * scripts/process-textures.mjs. c = colour, n = OpenGL normal, r = roughness.
+ */
+const pbr = (c: number, n: number, r: number) => ({ c, n, r });
+export const PBR = {
+  grass: pbr(require("../../assets/textures/pbr/grass_c.jpg"), require("../../assets/textures/pbr/grass_n.jpg"), require("../../assets/textures/pbr/grass_r.jpg")),
+  moss: pbr(require("../../assets/textures/pbr/moss_c.jpg"), require("../../assets/textures/pbr/moss_n.jpg"), require("../../assets/textures/pbr/moss_r.jpg")),
+  rock: pbr(require("../../assets/textures/pbr/rock_c.jpg"), require("../../assets/textures/pbr/rock_n.jpg"), require("../../assets/textures/pbr/rock_r.jpg")),
+  cliff: pbr(require("../../assets/textures/pbr/cliff_c.jpg"), require("../../assets/textures/pbr/cliff_n.jpg"), require("../../assets/textures/pbr/cliff_r.jpg")),
+  rockMoss: pbr(require("../../assets/textures/pbr/rockMoss_c.jpg"), require("../../assets/textures/pbr/rockMoss_n.jpg"), require("../../assets/textures/pbr/rockMoss_r.jpg")),
+  rockDark: pbr(require("../../assets/textures/pbr/rockDark_c.jpg"), require("../../assets/textures/pbr/rockDark_n.jpg"), require("../../assets/textures/pbr/rockDark_r.jpg")),
+  sand: pbr(require("../../assets/textures/pbr/sand_c.jpg"), require("../../assets/textures/pbr/sand_n.jpg"), require("../../assets/textures/pbr/sand_r.jpg")),
+  snow: pbr(require("../../assets/textures/pbr/snow_c.jpg"), require("../../assets/textures/pbr/snow_n.jpg"), require("../../assets/textures/pbr/snow_r.jpg")),
+  ice: pbr(require("../../assets/textures/pbr/ice_c.jpg"), require("../../assets/textures/pbr/ice_n.jpg"), require("../../assets/textures/pbr/ice_r.jpg")),
+  lava: pbr(require("../../assets/textures/pbr/lava_c.jpg"), require("../../assets/textures/pbr/lava_n.jpg"), require("../../assets/textures/pbr/lava_r.jpg")),
+  bark: pbr(require("../../assets/textures/pbr/bark_c.jpg"), require("../../assets/textures/pbr/bark_n.jpg"), require("../../assets/textures/pbr/bark_r.jpg")),
+  dirt: pbr(require("../../assets/textures/pbr/dirt_c.jpg"), require("../../assets/textures/pbr/dirt_n.jpg"), require("../../assets/textures/pbr/dirt_r.jpg")),
+  gravel: pbr(require("../../assets/textures/pbr/gravel_c.jpg"), require("../../assets/textures/pbr/gravel_n.jpg"), require("../../assets/textures/pbr/gravel_r.jpg")),
+  paving: pbr(require("../../assets/textures/pbr/paving_c.jpg"), require("../../assets/textures/pbr/paving_n.jpg"), require("../../assets/textures/pbr/paving_r.jpg")),
+};
+export type PbrId = keyof typeof PBR;
+
 /** Display colours per crystal kind (particles, UI accents). Index = CrystalType. */
-export const CRYSTAL_COLORS = ["#ff3b4e", "#3d7bff", "#22d36a", "#b05cff", "#ffc53d"];
-export const CRYSTAL_NAMES = ["Ember Heart", "Deep Diamond", "Leaf Emerald", "Spiral Amethyst", "Sun Star"];
+export const CRYSTAL_COLORS = ["#ff5a2a", "#2f7bff", "#1fd06c", "#9b4dff", "#ffc53d"];
+export const CRYSTAL_NAMES = ["Ember Core", "Tide Sapphire", "Leaf Emerald", "Void Amethyst", "Solar Shard"];

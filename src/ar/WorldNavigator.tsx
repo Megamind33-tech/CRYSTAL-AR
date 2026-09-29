@@ -9,6 +9,8 @@ import { arSupport, detectArSupport, effectiveViewMode } from "../state/arSuppor
 import { settingsStore } from "../state/settings";
 import { useStore } from "../state/store";
 import { C, ui } from "../ui/theme";
+import { materialsStore } from "../render/materialsStore";
+import { bootMaterials } from "../render/materialsBoot";
 import ARGameScene from "./ARGameScene";
 
 /** Which navigator this phone gets. Exposed so overlays can adapt their copy and controls. */
@@ -27,6 +29,9 @@ export function WorldNavigator() {
   const mode = useViewMode();
   const phase = useStore(arSession, (s) => s.phase);
   useEffect(() => detectArSupport(), []);
+  // a Viro scene must not start while materials are still being registered (MaterialManager race)
+  const materialsDone = useStore(materialsStore, (m) => m.done);
+  useEffect(() => bootMaterials(), []);
 
   useEffect(() => {
     if (mode === "camera" && (phase === "scanning" || arSession.get().tracking !== "camera")) {
@@ -35,7 +40,7 @@ export function WorldNavigator() {
   }, [mode, phase]);
 
 
-  if (mode === "checking") {
+  if (mode === "checking" || !materialsDone) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.bg }}>
         <ActivityIndicator color={C.gold} />
@@ -47,7 +52,7 @@ export function WorldNavigator() {
 }
 
 /** Turn and size the world in Camera View / mock (in AR the player simply walks around it). */
-export function ViewControls() {
+export function ViewControls({ column = false }: { column?: boolean }) {
   const insets = useSafeAreaInsets();
   const mode = useViewMode();
   const placed = useStore(arSession, (s) => s.phase === "placed");
@@ -59,9 +64,9 @@ export function ViewControls() {
     </Pressable>
   );
   return (
-    <View pointerEvents="box-none" style={[s.wrap, { bottom: insets.bottom + 18 }]}>
-      <Btn label="⟲" a11y="Turn world left" onPress={() => turn(-30)} />
-      <Btn label="⟳" a11y="Turn world right" onPress={() => turn(30)} />
+    <View pointerEvents="box-none" style={column ? [s.col, { top: insets.top + 150 }] : [s.wrap, { bottom: insets.bottom + 18 }]}>
+      <Btn label="↶" a11y="Turn world left" onPress={() => turn(-30)} />
+      <Btn label="↷" a11y="Turn world right" onPress={() => turn(30)} />
       <Btn label="−" a11y="Smaller world" onPress={() => nudgeWorldScale(-0.1)} />
       <Btn label="+" a11y="Larger world" onPress={() => nudgeWorldScale(0.1)} />
     </View>
@@ -70,6 +75,7 @@ export function ViewControls() {
 
 const s = StyleSheet.create({
   wrap: { position: "absolute", left: 14, flexDirection: "row", gap: 8 },
+  col: { position: "absolute", right: 12, gap: 8 },
   btn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   txt: { color: C.ink, fontSize: 20, fontWeight: "700" },
 });

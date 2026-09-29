@@ -15,7 +15,7 @@ type V3 = [number, number, number];
  * A world prop that (a) grows smoothly when its stage-driven base scale changes and
  * (b) pulses to base × peak whenever `trigger` increments.
  */
-function Reactive({ position, rotation, base, trigger, peak = [1.2, 1.2, 1.2], children }: {
+export function Reactive({ position, rotation, base, trigger, peak = [1.2, 1.2, 1.2], children }: {
   position?: V3;
   rotation?: V3;
   base: V3;
@@ -65,7 +65,7 @@ function Reactive({ position, rotation, base, trigger, peak = [1.2, 1.2, 1.2], c
 }
 
 /** Expanding ring of light across the terrain – fired by big cascades and special crystals. */
-const Shockwave = memo(function Shockwave({ trigger, strength }: { trigger: number; strength: number }) {
+export const Shockwave = memo(function Shockwave({ trigger, strength }: { trigger: number; strength: number }) {
   const [waves, setWaves] = useState<number[]>([]);
   useEffect(() => {
     if (trigger === 0) return;

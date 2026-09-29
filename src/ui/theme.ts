@@ -1,31 +1,36 @@
-import { Platform, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
+import { F, L } from "./lux/tokens";
 
+// Legacy palette names, now mapped onto the LUMINOUS FANTASY tokens (src/ui/lux/tokens.ts) so every
+// screen that still uses `C` harmonises with the new look.
 export const C = {
-  ink: "#f4efe4",
-  inkDim: "rgba(244,239,228,0.72)",
-  inkFaint: "rgba(244,239,228,0.45)",
-  glass: "rgba(14,18,22,0.58)",
-  glassStrong: "rgba(12,15,19,0.86)",
-  line: "rgba(255,241,210,0.18)",
-  gold: "#f2c46b",
-  goldDeep: "#c8913a",
-  portal: "#8fe9ff",
-  danger: "#ff8a7a",
-  bg: "#0d1014",
+  ink: L.ivory,
+  inkDim: "rgba(245,238,220,0.78)",
+  inkFaint: "rgba(184,179,208,0.7)",
+  glass: "rgba(20,26,61,0.72)",
+  glassStrong: "rgba(11,14,36,0.9)",
+  line: "rgba(246,211,138,0.28)",
+  gold: L.goldPale,
+  goldDeep: L.gold,
+  portal: L.crystal,
+  danger: L.danger,
+  bg: L.night900,
 };
 
 export const font = {
-  display: Platform.select({ ios: "Georgia", android: "serif", default: "Georgia, 'Times New Roman', serif" }),
-  body: Platform.select({ ios: "System", android: "sans-serif", default: "system-ui, sans-serif" }),
+  display: F.title,
+  body: F.body,
+  /** legacy alias from the saga-map pass (Lilita One) – now the Cinzel display face */
+  candy: F.display,
 };
 
 export const ui = StyleSheet.create({
   glass: {
     backgroundColor: C.glass,
     borderColor: C.line,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderRadius: 16,
   },
-  label: { color: C.inkDim, fontSize: 11, letterSpacing: 1.6, fontFamily: font.body, textTransform: "uppercase" },
-  value: { color: C.ink, fontSize: 18, fontWeight: "700", fontFamily: font.body },
+  label: { color: C.gold, fontSize: 11, letterSpacing: 2, fontFamily: F.title, textTransform: "uppercase" },
+  value: { color: C.ink, fontSize: 18, fontFamily: F.number },
 });

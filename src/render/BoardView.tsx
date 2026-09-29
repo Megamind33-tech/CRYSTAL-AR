@@ -115,6 +115,19 @@ const Sockets = memo(function Sockets({ voids }: { voids: string }) {
   return <>{out}</>;
 });
 
+/** Cracked stone standing in its socket, and glowing runes buried in socket tops. */
+const Obstacles = memo(function Obstacles({ blocks, floor }: { blocks: string; floor: string }) {
+  const out = [];
+  for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
+    const x = i % BOARD_SIZE, y = Math.floor(i / BOARD_SIZE);
+    const [px, , pz] = cellToLocal(x, y);
+    const b = Number(blocks[i] ?? 0), f = Number(floor[i] ?? 0);
+    if (b > 0) out.push(<GemMesh key={`s${i}_${b}`} name={`ob_stone${Math.min(3, b)}`} position={[px, 0, pz]} />);
+    if (f > 0) out.push(<GemMesh key={`r${i}_${f}`} name={`ob_rune${Math.min(2, f)}`} position={[px, 0, pz]} />);
+  }
+  return <>{out}</>;
+});
+
 /** Board group: tilted toward the player, and rolled toward the current gravity. */
 function TiltingBoard({ children }: { children: ReactNode }) {
   const gravity = useStore(gameStore, (s) => s.gravity);
@@ -144,10 +157,14 @@ export function BoardView() {
   const hintKey = hint ? `|${hint[0].x}_${hint[0].y}|${hint[1].x}_${hint[1].y}|` : "";
   const selKey = selected ? `${selected.x}_${selected.y}` : "";
   const voids = useStore(gameStore, (s) => (s.session?.engine.board.void ?? []).map((v) => (v ? "1" : "0")).join(""));
+  // hp per cell as digit strings: cheap to compare, so obstacles only re-render when they change
+  const blocks = useStore(gameStore, (s) => (s.blocks ?? []).map((v) => Math.min(9, v)).join(""));
+  const floor = useStore(gameStore, (s) => (s.floor ?? []).map((v) => Math.min(9, v)).join(""));
 
   return (
     <TiltingBoard>
       <Sockets voids={voids} />
+      <Obstacles blocks={blocks} floor={floor} />
       <CellPads selKey={selKey} hintKey={hintKey} voids={voids} />
       {crystals.map((c) => (
         <ViroNode key={c.id} onClickState={JS_PICKING ? undefined : onCell(c.x, c.y)}>

@@ -15,28 +15,40 @@ export function RisingOverlay({ label = "The Forest Ruins are rising…" }: { la
   const { done, total, pending } = useLoadProgress();
   const [settled, setSettled] = useState(false);
   const fade = useRef(new Animated.Value(1)).current;
+  // Viro mounts the world's parts some time after placement (seconds on a slow phone), so "nothing
+  // pending" means nothing until this placement has actually queued its own loads.
+  const baseline = useRef<number | null>(null);
+  if (!placed) baseline.current = null;
+  else if (baseline.current === null) baseline.current = total;
+  const queued = placed && total > (baseline.current ?? total);
 
-  // give newly mounted parts a moment to take their place in the queue before calling it done
   useEffect(() => {
     if (!placed) {
       setSettled(false);
       fade.setValue(1);
       return;
     }
-    if (pending > 0) return;
-    const t = setTimeout(() => {
+    const reveal = () => {
       setSettled(true);
       Animated.timing(fade, { toValue: 0, duration: 500, useNativeDriver: true }).start();
-    }, 700);
-    return () => clearTimeout(t);
-  }, [placed, pending, fade]);
+    };
+    // never trap the player behind the overlay if a load goes missing
+    const giveUp = setTimeout(reveal, 25000);
+    if (!queued || pending > 0) return () => clearTimeout(giveUp);
+    // give late-mounting parts a moment to take their place in the queue before calling it done
+    const t = setTimeout(reveal, 700);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(giveUp);
+    };
+  }, [placed, queued, pending, fade]);
 
   if (!placed || settled) return null;
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, s.wrap, { opacity: fade }]}>
       <Text style={s.title}>{label}</Text>
       <View style={{ width: 180 }}>
-        <Bar value={total ? done / total : 0.05} color={C.portal} />
+        <Bar value={queued ? Math.max(0.05, (done - (baseline.current ?? 0)) / (total - (baseline.current ?? 0))) : 0.05} color={C.portal} />
       </View>
     </Animated.View>
   );

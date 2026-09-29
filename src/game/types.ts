@@ -10,12 +10,27 @@ export type CrystalType = 0 | 1 | 2 | 3 | 4;
  * surgeV – from a vertical 4-match; releases energy along its column
  * prism  – from a 5-match (straight or L/T); consumes every crystal of one kind
  */
-export type Special = "none" | "surgeH" | "surgeV" | "prism";
+export type Special = "none" | "surgeH" | "surgeV" | "prism" | "relic";
+
+/**
+ * Covers ride on a crystal (they fall with it). A covered crystal cannot be swapped; a match or
+ * special that includes it chips one layer off the cover instead of clearing the crystal.
+ *   ice   – Tide Grotto / Frozen Verge
+ *   vine  – Mushroom Hollow; creeps onto a neighbour every 2 moves in which no vine was cut
+ *   chain – Frozen Verge
+ *   ember – Ember Deep; spreads every move in which no ember was quenched
+ */
+export type CoverKind = "ice" | "vine" | "chain" | "ember";
+export interface Cover {
+  kind: CoverKind;
+  hp: number;
+}
 
 export interface Crystal {
   id: number;
   type: CrystalType;
   special: Special;
+  cover?: Cover;
 }
 
 export interface Pos {
@@ -30,6 +45,19 @@ export interface Board {
   cells: (Crystal | null)[];
   /** level mask: true = void (terrain gap). Voids never hold crystals and block falling. */
   void?: boolean[];
+  /** cracked stone: hit points per cell (0 = none). Solid like a void until broken by adjacent matches. */
+  block?: number[];
+  /** buried runes: layers under a cell (0 = none), worn down each time a crystal clears on top. */
+  floor?: number[];
+}
+
+/** Damage dealt to an obstacle during a clear step (hp = what remains). */
+export interface ObstacleHit extends Pos {
+  layer: "cover" | "block" | "floor";
+  kind: CoverKind | "stone" | "rune";
+  hp: number;
+  /** crystal id for cover hits */
+  id?: number;
 }
 
 /** Direction crystals fall. "down" = toward row height-1 (the player). */
@@ -85,8 +113,24 @@ export type ResolveStep =
       activated: ActivatedSpecial[];
       combo?: ComboKind;
       score: number;
+      /** obstacles damaged by this clear (covers chipped, stones cracked, runes worn) */
+      hits?: ObstacleHit[];
     }
   | { kind: "fall"; moves: FallMove[]; spawned: Spawned[] }
+  /** relics that reached the downstream edge and left the board */
+  | { kind: "relics"; collected: { id: number; x: number; y: number }[] }
+  /** embers / vines creeping onto neighbouring crystals (also: frost, fire and vines from twists) */
+  | { kind: "spread"; cells: { id: number; x: number; y: number; cover: CoverKind }[] }
+  /** a hidden island twist strikes (announcement; its effects follow as ordinary steps) */
+  | { kind: "twist"; twist: string; moves?: number }
+  /** rocks crash down: these crystals become cracked stone */
+  | { kind: "blocks"; cells: { id: number; x: number; y: number; hp: number }[] }
+  /** lightning turns crystals into surges */
+  | { kind: "empower"; cells: { id: number; x: number; y: number; special: "surgeH" | "surgeV" }[] }
+  /** a crystal thief snatches these crystals */
+  | { kind: "steal"; cells: { id: number; x: number; y: number }[] }
+  /** the island's buried secret was found */
+  | { kind: "secret"; x: number; y: number }
   | { kind: "gravity"; from: Gravity; to: Gravity }
   | { kind: "shuffle"; placements: { id: number; x: number; y: number }[] };
 

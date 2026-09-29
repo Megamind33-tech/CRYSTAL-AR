@@ -134,7 +134,7 @@ function toReport(rec: RunRecord, keeperId: string, ctx: PlayContext): RunReport
     swaps: rec.swaps,
     relicsUsed: rec.relicsUsed,
     boosts: rec.boosts,
-    claimed: { won: rec.won, stars: rec.stars, score: rec.score, ...rec.stats },
+    claimed: { won: rec.won, stars: rec.stars, score: rec.score, ...rec.stats, ...(rec.secretFound ? { secretFound: true } : {}) },
     trialInstanceId: ctx.trialInstanceId ?? undefined,
     buildFlags: { debug: __DEV__, emulator: false },
   };

@@ -324,6 +324,8 @@ export interface PlayerState {
   purchases: { receipt: string; offer: string; at: number }[];
   notifications: Record<NotificationClass, boolean>;
   seenFeatures: string[];
+  /** islands whose buried secret this Keeper has uncovered (absent on older saves) */
+  secrets?: string[];
 }
 
 export type NotificationClass = "sanctuaryResonance" | "realmGate" | "trialOpen" | "expeditionReturn" | "keepersReturn" | "eventStart";
@@ -355,6 +357,8 @@ export interface RunReport {
     combos: number;
     crystalsCleared: number;
     blueCleared: number;
+    /** the island's secret was found (optional: older clients never claim it) */
+    secretFound?: boolean;
   };
   trialInstanceId?: string;
   buildFlags?: { debug: boolean; emulator: boolean };

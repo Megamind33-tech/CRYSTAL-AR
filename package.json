@@ -15,9 +15,12 @@
     "web:mock": "expo start --web"
   },
   "dependencies": {
+    "@expo-google-fonts/cinzel": "^0.4.2",
+    "@expo-google-fonts/poppins": "^0.4.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@reactvision/react-viro": "^3.0.0",
     "@reactvision/viro-web-renderer": "1.0.0",
+    "@shopify/react-native-skia": "2.6.2",
     "expo": "^57.0.24",
     "expo-audio": "~57.0.5",
     "expo-build-properties": "~57.0.21",

@@ -35,6 +35,8 @@ export function registerMaterials() {
     tableMock: { lightingModel: "Lambert", diffuseTexture: TEXTURES.tableWood, diffuseColor: "#ffffff" },
     floorMock: { lightingModel: "Lambert", diffuseColor: "#3a3f47" },
     backdropMock: { lightingModel: "Constant", diffuseTexture: TEXTURES.roomBackdrop, diffuseColor: "#ffffff" },
+    skyMock: { lightingModel: "Constant", diffuseTexture: TEXTURES.sky, diffuseColor: "#ffffff" },
+    cloudSea: { lightingModel: "Constant", diffuseTexture: TEXTURES.cloudSea, diffuseColor: "#ffffff", blendMode: "Alpha", writesToDepthBuffer: false },
     shockRing: {
       lightingModel: "Constant",
       diffuseTexture: TEXTURES.ringGlow,
@@ -58,6 +60,10 @@ export function registerMaterials() {
     tiltright: { properties: { rotateX: 10, rotateZ: -8 }, duration: 380, easing: "EaseInEaseOut" },
     tiltdown: { properties: { rotateX: 10, rotateZ: 0 }, duration: 380, easing: "EaseInEaseOut" },
     materialize: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 1100, easing: "EaseOut" },
+    // PORTAL TRAVERSAL: the world rushes toward the camera until the portal fills the view…
+    portalDive: { properties: { positionY: 0.06, positionZ: 0.88, scaleX: 2.5, scaleY: 2.5, scaleZ: 2.5 }, duration: 1150, easing: "EaseIn" },
+    // …and the next island rises out of the light
+    portalEmerge: { properties: { positionY: 0, positionZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 1000, easing: "EaseOut" },
   });
 }
 

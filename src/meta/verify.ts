@@ -35,7 +35,7 @@ export interface Verdict {
   ok: boolean;
   reasons: string[];
   /** recomputed truth, used instead of the client's numbers */
-  truth?: { won: boolean; stars: number; score: number };
+  truth?: { won: boolean; stars: number; score: number; secretFound: boolean };
 }
 
 /** Replays a run and compares every claim. Used by the mock backend and (later) the real server. */
@@ -52,7 +52,9 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
     const kind = def?.effect === "addMoves" ? "moves" : def?.effect === "reshuffle" ? "reshuffle" : def?.effect === "hint" ? "hint" : null;
     if (!def || kind !== b.kind || (kind === "moves" && b.value !== def.effectValue) || !r.relicsUsed.includes(def.id)) reasons.push("invalid relic effect");
   }
-  const extraMoves = boosts.filter((b) => b.kind === "moves").reduce((a, b) => a + b.value, 0);
+  // bonus moves come from boosts and from Blessing twists (+3 each) that the island itself grants
+  const blessings = (level.twists ?? []).filter((t) => t.kind === "blessing").length * 3;
+  const extraMoves = boosts.filter((b) => b.kind === "moves").reduce((a, b) => a + b.value, 0) + blessings;
   if (r.swaps.length > level.moves + extraMoves) reasons.push("more swaps than moves allowed");
   const duration = r.endedAt - r.startedAt;
   if (duration < r.swaps.length * MIN_MS_PER_SWAP) reasons.push("swaps faster than humanly possible");
@@ -88,11 +90,12 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
   }
   applyBoosts(r.swaps.length); // e.g. a winning Gravity Shift after the last swap
   const { resonance, matches, cascades, bestCascade, specialsCreated: created, specialsActivated: activated, combos, crystalsCleared: cleared, blueCleared: blue } = acc;
-  const truth = { won: s.status === "won", stars: starsFor(s), score: s.score };
+  const truth = { won: s.status === "won", stars: starsFor(s), score: s.score, secretFound: s.secretFound };
   const c = r.claimed;
   if (c.score !== truth.score) reasons.push(`score ${c.score} ≠ replay ${truth.score}`);
   if (c.won !== truth.won) reasons.push("outcome mismatch");
   if (c.stars !== truth.stars) reasons.push("stars mismatch");
+  if (!!c.secretFound !== truth.secretFound) reasons.push("secret mismatch");
   if (c.resonance !== resonance) reasons.push("resonance mismatch");
   if (c.bestCascade !== bestCascade) reasons.push("cascade mismatch");
   if (c.crystalsCleared !== cleared || c.blueCleared !== blue) reasons.push("cleared-count mismatch");

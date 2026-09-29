@@ -1,75 +1,73 @@
 // World content: realms, islands, portals, story, Heart Shards and Memory Crystals.
-import type { HeartShard, Island, MemoryCrystal, Realm, StoryChapter } from "../types.ts";
+// The ten campaign realms and their 200 islands are derived from src/game/campaign.ts; the
+// hand-written islands (the first story beats, discovery / seasonal / expedition portals) keep
+// their original ids so existing saves stay valid.
+import { CAMPAIGN_REALMS, LEVELS_PER_REALM } from "../../game/campaign.ts";
+import { CAMPAIGN, LEVELS } from "../../game/level.ts";
+import type { HeartShard, Island, MemoryCrystal, Realm, Reward, StoryChapter } from "../types.ts";
+
+const REALM_BLURBS: Record<string, string> = {
+  verdant: "Moss-wrapped ruins where the first Heart Shard fell. Its Lumins have gone quiet.",
+  canyon: "Cliffs split by the Shattering. Turn the world itself and the crystals follow.",
+  tide: "Sea caves where the tide froze mid-breath. Its crystals sleep under ice.",
+  sky: "Temples adrift above the clouds, sealed behind cracked stone.",
+  hollow: "A glowing hollow of giant fungi. The vines here are hungry.",
+  caverns: "Crystal-veined caves. The old Keepers buried their runes beneath the floor.",
+  frozen: "A signal from ice that remembers the Heart whole. Its crystals are bound in chains.",
+  solar: "A sun-bleached plateau of dials and obelisks. Its relics must return to the earth.",
+  ember: "A volcanic realm whose gate still glows. Its crystals run hot and unstable.",
+  void: "Where the Heart broke. Every lesson the realms taught, all at once.",
+};
+
+const CAMPAIGN_REALM_LIST: Realm[] = CAMPAIGN_REALMS.map((r, i) => ({
+  id: r.id,
+  name: r.name,
+  blurb: REALM_BLURBS[r.id],
+  order: i + 1,
+  minKeeperLevel: 1 + i,
+  requiresShards: i,
+  islands: [],
+}));
 
 export const REALMS: Realm[] = [
-  {
-    id: "verdant",
-    name: "The Verdant Reach",
-    blurb: "Moss-wrapped ruins where the first Heart Shard fell. Its Lumins have gone quiet.",
-    order: 1,
-    minKeeperLevel: 1,
-    requiresShards: 0,
-    islands: ["waking-stones", "emerald-canopy", "heart-of-the-falls", "hollow-of-lanterns"],
-  },
+  ...CAMPAIGN_REALM_LIST,
   {
     id: "eclipse",
     name: "The Eclipse Realm",
     blurb: "A realm that should not exist, drifting across the others. Its light is borrowed.",
-    order: 2,
+    order: 11,
     minKeeperLevel: 4,
     requiresShards: 1,
     islands: ["eclipse-threshold"],
     seasonal: "s01-eclipse",
   },
   {
-    id: "frozen",
-    name: "The Frozen Verge",
+    id: "signal",
+    name: "The Frozen Signal",
     blurb: "A signal from ice that remembers the Heart whole. It will not stay open long.",
-    order: 3,
+    order: 12,
     minKeeperLevel: 5,
     requiresShards: 1,
     islands: ["frostbound-signal"],
   },
-  {
-    id: "ember",
-    name: "The Ember Deep",
-    blurb: "A volcanic realm whose gate still glows. Its crystals run hot and unstable.",
-    order: 4,
-    minKeeperLevel: 8,
-    requiresShards: 3,
-    islands: [],
-  },
 ];
 
-export const ISLANDS: Island[] = [
-  {
+/** Hand-written campaign islands (original ids and rewards). */
+const AUTHORED_ISLANDS: Record<number, Omit<Island, "levelIndex" | "after">> = {
+  1: {
     id: "waking-stones",
     realm: "verdant",
     name: "Waking Stones",
     portal: "story",
-    levelIndex: 0,
     firstRestore: { prismDust: 120, keeperXp: 80, lumins: ["mossling"], memories: ["mem-first-light"], passXp: 60 },
     replay: { prismDust: 25, keeperXp: 15, passXp: 15 },
     storyChapter: "ch1-waking",
   },
-  {
-    id: "emerald-canopy",
-    realm: "verdant",
-    name: "Emerald Canyon",
-    portal: "story",
-    levelIndex: 1,
-    after: "waking-stones",
-    firstRestore: { prismDust: 160, keeperXp: 100, relics: ["oracle-stone"], memories: ["mem-canopy-sang"], items: { sanctuaryStone: 4 }, passXp: 70 },
-    replay: { prismDust: 30, keeperXp: 20, passXp: 20 },
-    storyChapter: "ch2-canopy",
-  },
-  {
+  20: {
     id: "heart-of-the-falls",
     realm: "verdant",
     name: "Heart of the Falls",
     portal: "story",
-    levelIndex: 2,
-    after: "emerald-canopy",
     firstRestore: {
       prismDust: 220, keeperXp: 140, aether: 20, heartShards: ["shard-verdant"], lumins: ["fallsprite"],
       memories: ["mem-shard-in-water"], items: { portalFragment: 2, sanctuaryStone: 6 }, passXp: 90,
@@ -77,6 +75,63 @@ export const ISLANDS: Island[] = [
     replay: { prismDust: 35, keeperXp: 25, passXp: 25 },
     storyChapter: "ch3-falls",
   },
+  21: {
+    id: "emerald-canopy",
+    realm: "canyon",
+    name: "Emerald Canyon",
+    portal: "story",
+    firstRestore: { prismDust: 160, keeperXp: 100, relics: ["oracle-stone"], memories: ["mem-canopy-sang"], items: { sanctuaryStone: 4 }, passXp: 70 },
+    replay: { prismDust: 30, keeperXp: 20, passXp: 20 },
+    storyChapter: "ch2-canopy",
+  },
+};
+
+/** Heart Shard returned by each realm's final island. */
+export const shardForRealm = (realm: string) => `shard-${realm}`;
+
+/** Campaign island id for a level number (1..200). */
+export function campaignIslandId(n: number): string {
+  const authored = AUTHORED_ISLANDS[n];
+  if (authored) return authored.id;
+  const realm = CAMPAIGN_REALMS[Math.floor((n - 1) / LEVELS_PER_REALM)];
+  return `${realm.id}-${String(((n - 1) % LEVELS_PER_REALM) + 1).padStart(2, "0")}`;
+}
+
+function campaignIsland(n: number): Island {
+  const levelIndex = CAMPAIGN[n - 1];
+  const after = n > 1 ? campaignIslandId(n - 1) : undefined;
+  const authored = AUTHORED_ISLANDS[n];
+  if (authored) return { ...authored, levelIndex, ...(after ? { after } : {}) };
+  const realmIndex = Math.floor((n - 1) / LEVELS_PER_REALM);
+  const step = (n - 1) % LEVELS_PER_REALM;
+  const realm = CAMPAIGN_REALMS[realmIndex];
+  const finale = step === LEVELS_PER_REALM - 1;
+  const firstRestore: Reward = {
+    prismDust: Math.min(700, 90 + n * 3),
+    keeperXp: 60 + Math.round(n * 0.9),
+    passXp: 50 + Math.round(n / 4),
+  };
+  if (step % 5 === 4) firstRestore.items = { sanctuaryStone: 2 };
+  if (finale) {
+    firstRestore.aether = 20;
+    firstRestore.heartShards = [shardForRealm(realm.id)];
+    firstRestore.items = { portalFragment: 2, sanctuaryStone: 6 };
+  }
+  return {
+    id: campaignIslandId(n),
+    realm: realm.id,
+    name: LEVELS[levelIndex].name,
+    portal: "story",
+    levelIndex,
+    after,
+    firstRestore,
+    replay: { prismDust: 20 + Math.round(n / 8), keeperXp: 12 + Math.round(n / 20), passXp: 12 },
+    ...(step === 0 && realmIndex >= 2 ? { storyChapter: `ch-${realm.id}` } : {}),
+  };
+}
+
+export const ISLANDS: Island[] = [
+  ...Array.from({ length: CAMPAIGN.length }, (_, i) => campaignIsland(i + 1)),
   {
     id: "hollow-of-lanterns",
     realm: "verdant",
@@ -101,7 +156,7 @@ export const ISLANDS: Island[] = [
   },
   {
     id: "frostbound-signal",
-    realm: "frozen",
+    realm: "signal",
     name: "Frostbound Signal",
     portal: "expedition",
     levelIndex: 5,
@@ -111,6 +166,12 @@ export const ISLANDS: Island[] = [
     replay: { prismDust: 40, keeperXp: 25, passXp: 25 },
   },
 ];
+
+// every realm lists its islands in play order
+for (const island of ISLANDS) {
+  const realm = REALMS.find((r) => r.id === island.realm)!;
+  if (!realm.islands.includes(island.id)) realm.islands.push(island.id);
+}
 
 export const STORY: StoryChapter[] = [
   { id: "ch1-waking", title: "Waking Stones", realm: "verdant", beats: [
@@ -129,6 +190,38 @@ export const STORY: StoryChapter[] = [
     "This realm casts no shadow of its own. Its light is borrowed from the Heart.",
     "Whatever the Heart once held back, it is closer here.",
   ] },
+  { id: "ch-tide", title: "The Held Breath", realm: "tide", beats: [
+    "The grotto froze the instant the Heart broke. The waves are still standing where they stopped.",
+    "Under the ice, the crystals glow like held breath. Melt them gently.",
+  ] },
+  { id: "ch-sky", title: "Above the Clouds", realm: "sky", beats: [
+    "The old Keepers sealed these temples with stone and let them drift away.",
+    "Whatever they were keeping out has been gone a long time. Or has learned to wait.",
+  ] },
+  { id: "ch-hollow", title: "The Hungry Hollow", realm: "hollow", beats: [
+    "The fungi light the dark, and the vines follow the light.",
+    "Leave them long enough and they will cover everything you mean to save.",
+  ] },
+  { id: "ch-caverns", title: "What the Keepers Buried", realm: "caverns", beats: [
+    "Runes line the cavern floor, carved by hands that knew the Heart would break.",
+    "They buried instructions. Dig carefully, and you might learn what they were.",
+  ] },
+  { id: "ch-frozen", title: "Bound in Ice", realm: "frozen", beats: [
+    "Every crystal here has been chained. Not by the cold, but by Keepers.",
+    "Someone was very afraid of what these crystals remember.",
+  ] },
+  { id: "ch-solar", title: "Relics of the Sun", realm: "solar", beats: [
+    "The Solar relics were lifted from the earth to power the old dials.",
+    "Return them, and the plateau will remember how to tell time again.",
+  ] },
+  { id: "ch-ember", title: "The Burning Gate", realm: "ember", beats: [
+    "The Ember Deep never stopped burning after the Shattering.",
+    "Its fire spreads to anything left alone too long. Keep moving.",
+  ] },
+  { id: "ch-void", title: "Where It Broke", realm: "void", beats: [
+    "Every realm has led you here, to the place where the Prism Heart shattered.",
+    "Something is waiting in the silence between the shards. It knows your name.",
+  ] },
 ];
 
 /** The Prism Heart has twelve facets; each realm returns one or more Heart Shards (never sold). */
@@ -137,6 +230,13 @@ export const HEART_SHARDS: HeartShard[] = [
   { id: "shard-eclipse", name: "Umbral Facet", realm: "eclipse", facet: 1 },
   { id: "shard-frozen", name: "Rime Facet", realm: "frozen", facet: 2 },
   { id: "shard-ember", name: "Cinder Facet", realm: "ember", facet: 3 },
+  { id: "shard-canyon", name: "Canyon Facet", realm: "canyon", facet: 4 },
+  { id: "shard-tide", name: "Tidal Facet", realm: "tide", facet: 5 },
+  { id: "shard-sky", name: "Zenith Facet", realm: "sky", facet: 6 },
+  { id: "shard-hollow", name: "Spore Facet", realm: "hollow", facet: 7 },
+  { id: "shard-caverns", name: "Geode Facet", realm: "caverns", facet: 8 },
+  { id: "shard-solar", name: "Solar Facet", realm: "solar", facet: 9 },
+  { id: "shard-void", name: "Null Facet", realm: "void", facet: 10 },
 ];
 export const HEART_FACETS = 12;
 

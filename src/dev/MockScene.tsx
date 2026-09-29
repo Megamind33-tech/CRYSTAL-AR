@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ViroCamera, ViroQuad, ViroScene } from "@reactvision/react-viro";
 import { GameWorld } from "../render/GameWorld";
+import { DistantIslands } from "../render/island/IslandWorld";
 import { SanctuaryWorld } from "../render/SanctuaryWorld";
 import { registerMaterials } from "../render/registry";
 import { MOCK_CAMERA } from "./mockPicking";
@@ -27,15 +28,25 @@ export default function MockScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Android Viro can drop `active` when the camera mounts before the scene is attached, leaving the
+  // default camera at the island's centre (the view "starts under the island"). Activate the table
+  // camera once the scene is up, and again on every placement.
+  const [camOn, setCamOn] = useState(false);
+  useEffect(() => {
+    setCamOn(false);
+    const t = setTimeout(() => setCamOn(true), 120);
+    return () => clearTimeout(t);
+  }, [phase]);
+
   return (
     <ViroScene>
       {/* framed like a phone held above the table; web renderer uses a fixed 90° vertical FOV */}
-      <ViroCamera position={MOCK_CAMERA.position} rotation={[MOCK_CAMERA.pitchDeg, 0, 0]} fieldOfView={MOCK_CAMERA.fovYDeg} active />
-      {/* backdrop (skybox colour is not supported by the web renderer) */}
-      <ViroQuad position={[0, 0.2, -2.5]} width={12} height={8} materials={["backdropMock"]} />
-      {/* the simulated table surface */}
-      <ViroQuad position={[0, -0.001, 0]} rotation={[-90, 0, 0]} width={2.2} height={1.5} materials={["tableMock"]} />
-      <ViroQuad position={[0, -0.75, 0]} rotation={[-90, 0, 0]} width={8} height={8} materials={["floorMock"]} />
+      <ViroCamera key={`cam-${phase}`} position={MOCK_CAMERA.position} rotation={[MOCK_CAMERA.pitchDeg, 0, 0]} fieldOfView={MOCK_CAMERA.fovYDeg} active={camOn} />
+      {/* the sky universe: no table – the island floats among clouds with others on the horizon */}
+      <ViroQuad position={[0, -2.0, -2.8]} width={14} height={9} materials={["skyMock"]} />
+      <ViroQuad position={[0, -0.42, -0.6]} rotation={[-90, 0, 0]} width={6} height={6} materials={["cloudSea"]} />
+      <ViroQuad position={[0.8, -0.7, -1.4]} rotation={[-90, 0, 40]} width={7} height={7} materials={["cloudSea"]} />
+      {phase === "placed" && world === "game" && <DistantIslands />}
       {phase === "placed" && (world === "sanctuary" ? <SanctuaryWorld ambientIntensity={1100} ambientColor="#ffffff" /> : <GameWorld ambientIntensity={1100} ambientColor="#ffffff" />)}
     </ViroScene>
   );

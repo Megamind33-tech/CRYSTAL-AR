@@ -14,7 +14,7 @@ mkdirSync(TEX, { recursive: true });
 // which avoids Viro background-task races when crystals spawn mid-game (seen on a Tecno Camon 19).
 const MESHES = {};
 const out = (name, model) => {
-  if (name.startsWith("gem_") || name.startsWith("socket") || ["surge_aura", "bloom", "glow_cluster", "vines", "portal_core"].includes(name)) {
+  if (name.startsWith("gem_") || name.startsWith("socket") || name.startsWith("ob_") || ["surge_aura", "bloom", "glow_cluster", "vines", "portal_core"].includes(name)) {
     MESHES[name] = [...model.buckets].filter(([, b]) => b.pos.length).map(([mat, b]) => {
       const def = model.materials.find((x) => x.name === mat);
       const r = (v) => Math.round(v * 1e4) / 1e4;
@@ -31,53 +31,68 @@ const CELL = 0.052;
 
 // ---------------------------------------------------------------- crystals --
 const GEM_COLORS = {
-  red: [0.86, 0.07, 0.16],
-  blue: [0.1, 0.36, 0.96],
-  green: [0.07, 0.7, 0.3],
-  purple: [0.56, 0.2, 0.88],
-  gold: [1.0, 0.72, 0.1],
+  red: [0.95, 0.22, 0.06], // Ember Core
+  blue: [0.06, 0.42, 0.98], // Tide Sapphire
+  green: [0.04, 0.72, 0.36], // Leaf Emerald
+  purple: [0.5, 0.14, 0.9], // Void Amethyst
+  gold: [1.0, 0.78, 0.12], // Solar Shard
 };
 const gemMaterial = (m, name, c) =>
   m.material(name, { color: c, metallic: 0.35, roughness: 0.07, emissive: c.map((v) => v * 0.22), alpha: 0.82 });
 const coreMaterial = (m, name, c) =>
   m.material(name + "_core", { color: c.map((v) => Math.min(1, v * 0.6 + 0.4)), roughness: 0.3, emissive: c.map((v) => Math.min(1, v * 0.9 + 0.25)) });
 
-const outline = (n, f) => Array.from({ length: n }, (_, i) => f((i / n) * Math.PI * 2));
-const heart = outline(30, (t) => [
-  (16 * Math.sin(t) ** 3) / 34,
-  (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 34 + 0.05,
-]);
-const leaf = outline(26, (t) => {
-  const y = Math.cos(t) * 0.52;
-  const w = 0.3 * Math.sin(t) * (1 - 0.25 * Math.cos(t));
-  return [w + 0.04 * Math.cos(t) * Math.sin(t), y];
-});
-const star = Array.from({ length: 10 }, (_, i) => {
-  const a = Math.PI / 2 + (i / 10) * Math.PI * 2;
-  const r = i % 2 === 0 ? 0.52 : 0.24;
-  return [Math.cos(a) * r, Math.sin(a) * r - 0.02];
-});
+// Five crystal families, each with its own silhouette so they read without colour
+// (no hearts, stars or generic diamonds):
+//   Ember Core    (red)    – squat hexagonal ember with a banded girdle
+//   Tide Sapphire (blue)   – droplet cut, rounded belly, drawn-up tip
+//   Leaf Emerald  (green)  – tall step-cut emerald (octagonal table)
+//   Void Amethyst (purple) – natural quartz cluster: one tall point, two leaning buds
+//   Solar Shard   (gold)   – thin four-sided shard, tilted like a splinter of light
+const emeraldCut = [[-0.2, -0.52], [0.2, -0.52], [0.32, -0.38], [0.32, 0.38], [0.2, 0.52], [-0.2, 0.52], [-0.32, 0.38], [-0.32, -0.38]];
+const point = (h, r, lean, x, rot = 0) => loft([
+  { n: 6, r: r * 0.8, y: -0.5, rot },
+  { n: 6, r, y: -0.5 + h * 0.62, rot },
+  { n: 6, r: 0, y: -0.5 + h },
+]).map((tri) => tri.map(xf({ r: [0, 0, lean], t: [x, 0, 0] })));
 
 const gems = {
-  gem_red: (m, mat) => m.tris(mat, pillowGem(heart, 0.3, 0.17, 0.5)),
+  gem_red: (m, mat) =>
+    m.tris(mat, loft([
+      { n: 6, r: 0, y: -0.42 },
+      { n: 6, r: 0.46, y: -0.08, rot: 0 },
+      { n: 6, r: 0.5, y: 0.02, rot: Math.PI / 6 },
+      { n: 6, r: 0.46, y: 0.12, rot: 0 },
+      { n: 6, r: 0.26, y: 0.36, rot: Math.PI / 6 },
+      { n: 6, r: 0, y: 0.42 },
+    ])),
   gem_blue: (m, mat) =>
     m.tris(mat, loft([
-      { n: 8, r: 0, y: -0.52 },
-      { n: 8, r: 0.5, y: 0.06, rot: 0 },
-      { n: 8, r: 0.47, y: 0.13, rot: Math.PI / 8 },
-      { n: 8, r: 0.3, y: 0.34, rot: Math.PI / 8 },
+      { n: 14, r: 0, y: -0.52 },
+      { n: 14, r: 0.3, y: -0.44, rot: 0 },
+      { n: 14, r: 0.42, y: -0.24, rot: Math.PI / 14 },
+      { n: 14, r: 0.38, y: 0.02, rot: 0 },
+      { n: 14, r: 0.26, y: 0.22, rot: Math.PI / 14 },
+      { n: 14, r: 0.12, y: 0.42, rot: 0 },
+      { n: 14, r: 0, y: 0.6 },
     ])),
-  gem_green: (m, mat) => m.tris(mat, pillowGem(leaf, 0.24, 0.14, 0.45)),
-  gem_purple: (m, mat) =>
-    m.tris(mat, loft([
-      { n: 6, r: 0, y: -0.55 },
-      { n: 6, r: 0.24, y: -0.3, rot: 0 },
-      { n: 6, r: 0.27, y: -0.05, rot: 0.3 },
-      { n: 6, r: 0.27, y: 0.2, rot: 0.6 },
-      { n: 6, r: 0.22, y: 0.36, rot: 0.9 },
-      { n: 6, r: 0, y: 0.58, rot: 1.2 },
-    ])),
-  gem_gold: (m, mat) => m.tris(mat, pillowGem(star, 0.26, 0.15, 0.45)),
+  gem_green: (m, mat) => m.tris(mat, pillowGem(emeraldCut, 0.26, 0.1, 0.62)),
+  gem_purple: (m, mat) => {
+    m.tris(mat, point(1.08, 0.2, 0, 0, 0.3));
+    m.tris(mat, point(0.66, 0.14, 0.42, -0.2, 0.9));
+    m.tris(mat, point(0.54, 0.12, -0.46, 0.22, 0.1));
+  },
+  gem_gold: (m, mat) => {
+    // a twisted six-sided splinter of light with a smaller companion shard
+    const shard = (h, r) => loft([
+      { n: 6, r: 0, y: -h * 0.5 },
+      { n: 6, r, y: -h * 0.12, rot: 0, jitter: (i) => (i % 2 ? 0.62 : 1) },
+      { n: 6, r: r * 0.86, y: h * 0.12, rot: Math.PI / 6, jitter: (i) => (i % 2 ? 1 : 0.62) },
+      { n: 6, r: 0, y: h * 0.52 },
+    ]);
+    m.tris(mat, shard(1.18, 0.24), xf({ r: [0, 0.25, -0.22] }));
+    m.tris(mat, shard(0.62, 0.13), xf({ r: [0.2, 0.9, 0.55], t: [0.2, -0.22, 0.05] }));
+  },
 };
 const colorOf = { gem_red: "red", gem_blue: "blue", gem_green: "green", gem_purple: "purple", gem_gold: "gold" };
 for (const [name, build] of Object.entries(gems)) {
@@ -181,6 +196,170 @@ for (const [name, top, side] of [["socket_a", [0.64, 0.62, 0.57], [0.44, 0.42, 0
   m.tris(topM, slab(w * 0.6, 0.0012, w * 0.6, 0.0004), xf({ t: [0, 0.0004, 0] }));
   for (let k = 0; k < 3; k++) m.tris(sideM, blob(0.004, R2, 0.3, 0), xf({ s: [1.2, 0.6, 1], t: [(R2() - 0.5) * w, -0.012 - R2() * 0.02, (R2() > 0.5 ? 1 : -1) * w * 0.47] }));
   out(name, m);
+}
+
+// --------------------------------------------------------------- obstacles --
+// Covers are built in crystal units (scaled by GEM_SCALE at runtime, centred on the crystal);
+// stones and runes are in board-local metres like the sockets.
+const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const norm3 = (a) => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+/** A round tube along a polyline (vines, chain links). */
+function tube(pts, r, sides = 5, closed = false) {
+  const P = closed ? [...pts, pts[0], pts[1]] : pts;
+  const rings = P.map((p, i) => {
+    const q = P[Math.min(i + 1, P.length - 1)], o = P[Math.max(i - 1, 0)];
+    const d = norm3(sub3(q, o));
+    const a = norm3(cross3(d, Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]));
+    const b = cross3(d, a);
+    return Array.from({ length: sides }, (_, k) => {
+      const th = (k / sides) * Math.PI * 2;
+      return [0, 1, 2].map((j) => p[j] + (a[j] * Math.cos(th) + b[j] * Math.sin(th)) * r);
+    });
+  });
+  const t = [];
+  for (let i = 0; i < rings.length - (closed ? 2 : 1); i++)
+    for (let k = 0; k < sides; k++) {
+      const k2 = (k + 1) % sides;
+      const A = rings[i][k], B = rings[i + 1][k], C = rings[i + 1][k2], D = rings[i][k2];
+      t.push([A, C, B], [A, D, C]);
+    }
+  return t;
+}
+
+for (const hp of [1, 2]) { // ICE: a clear faceted shell locking the crystal, frosted when thick
+  const m = new Model();
+  const shell = m.material(`ob_ice${hp}_shell`, { color: [0.78, 0.93, 1], metallic: 0.1, roughness: 0.05, emissive: [0.1, 0.18, 0.24], alpha: hp === 2 ? 0.58 : 0.4 });
+  const frost = m.material(`ob_ice${hp}_frost`, { color: [0.92, 0.97, 1], roughness: 0.55, emissive: [0.18, 0.22, 0.26] });
+  const k = hp === 2 ? 1.12 : 1;
+  m.tris(shell, loft([
+    { n: 6, r: 0.6 * k, y: -0.62 },
+    { n: 6, r: 0.7 * k, y: -0.18, rot: 0.26 },
+    { n: 6, r: 0.64 * k, y: 0.38, rot: 0.52 },
+    { n: 6, r: 0.34 * k, y: 0.74, rot: 0.8 },
+  ]));
+  const R2 = rng(hp * 17);
+  for (let i = 0; i < (hp === 2 ? 8 : 4); i++) {
+    const a = R2() * Math.PI * 2;
+    m.tris(frost, blob(0.08 + R2() * 0.06, R2, 0.35, 0), xf({ t: [Math.cos(a) * 0.5 * k, 0.3 + R2() * 0.4, Math.sin(a) * 0.5 * k] }));
+  }
+  out(`ob_ice${hp}`, m);
+}
+
+for (const hp of [1, 2]) { // VINES: stems spiralling round the crystal, with leaves
+  const m = new Model();
+  const stem = m.material(`ob_vine${hp}_stem`, { color: [0.19, 0.4, 0.13], roughness: 0.9, doubleSided: true });
+  const leaf = m.material(`ob_vine${hp}_leaf`, { color: [0.33, 0.68, 0.22], roughness: 0.75, doubleSided: true });
+  const R2 = rng(70 + hp);
+  for (let s = 0; s < hp + 1; s++) {
+    const phase = (s / (hp + 1)) * Math.PI * 2;
+    const pts = Array.from({ length: 15 }, (_, i) => {
+      const t = i / 14, a = phase + t * Math.PI * 3.2;
+      const r = 0.52 + 0.05 * Math.sin(t * 9);
+      return [Math.cos(a) * r, -0.6 + t * 1.25, Math.sin(a) * r];
+    });
+    m.tris(stem, tube(pts, 0.045, 4));
+    for (let i = 2; i < pts.length; i += 3) {
+      const p = pts[i];
+      m.tris(leaf, blob(0.075, R2, 0.2, 0), xf({ s: [1.6, 0.35, 0.9], r: [0, R2() * 3, R2() - 0.5], t: [p[0] * 1.12, p[1], p[2] * 1.12] }));
+    }
+  }
+  out(`ob_vine${hp}`, m);
+}
+
+for (const hp of [1, 2]) { // CHAINS: iron links strapped diagonally across the crystal
+  const m = new Model();
+  const iron = m.material(`ob_chain${hp}_iron`, { color: [0.5, 0.5, 0.53], metallic: 0.85, roughness: 0.35, doubleSided: true });
+  const lock = m.material(`ob_chain${hp}_lock`, { color: [0.72, 0.56, 0.28], metallic: 0.8, roughness: 0.3 });
+  const straps = hp === 2 ? [0.6, -0.6] : [0.6];
+  for (const tilt of straps) {
+    const N = 10, R0 = 0.6;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2;
+      const c = [Math.cos(a) * R0, 0, Math.sin(a) * R0];
+      const tan = [-Math.sin(a), 0, Math.cos(a)];
+      const side = i % 2 ? [0, 1, 0] : [Math.cos(a), 0, Math.sin(a)];
+      const link = Array.from({ length: 7 }, (_, j) => {
+        const th = (j / 7) * Math.PI * 2;
+        return [0, 1, 2].map((q) => c[q] + tan[q] * Math.cos(th) * 0.15 + side[q] * Math.sin(th) * 0.08);
+      });
+      m.tris(iron, tube(link, 0.03, 3, true), xf({ r: [0, 0, tilt] }));
+    }
+    m.tris(lock, box(0.2, 0.22, 0.1), xf({ r: [0, 0, tilt], t: [0, 0, 0.6] }));
+  }
+  out(`ob_chain${hp}`, m);
+}
+
+for (const hp of [1, 2]) { // EMBERS: charred crust with glowing cracks
+  const m = new Model();
+  const crust = m.material(`ob_ember${hp}_crust`, { color: [0.13, 0.09, 0.08], roughness: 0.95 });
+  const glow = m.material(`ob_ember${hp}_glow`, { color: [1, 0.46, 0.12], emissive: [1, 0.45, 0.1] });
+  const R2 = rng(90 + hp);
+  const chunks = hp === 2 ? 16 : 10;
+  for (let i = 0; i < chunks; i++) {
+    const a = R2() * Math.PI * 2, e = (R2() - 0.35) * 1.3;
+    const p = [Math.cos(a) * Math.cos(e) * 0.55, Math.sin(e) * 0.6, Math.sin(a) * Math.cos(e) * 0.55];
+    m.tris(crust, blob(0.12 + R2() * 0.07, R2, 0.4, 0), xf({ s: [1, 0.7, 1], t: p }));
+    if (i % 2 === 0) m.tris(glow, cone(3, 0.05, 0.22), xf({ r: [R2() * 3, R2() * 3, R2() * 3], t: p.map((v) => v * 0.92) }));
+  }
+  out(`ob_ember${hp}`, m);
+}
+
+for (const hp of [1, 2, 3]) { // CRACKED STONE: fills the cell; more fractured as it takes hits
+  const m = new Model();
+  const R2 = rng(40 + hp);
+  const stone = m.material(`ob_stone${hp}_rock`, { color: [0.6, 0.57, 0.52], roughness: 0.95 });
+  const dark = m.material(`ob_stone${hp}_crack`, { color: [0.16, 0.14, 0.13], roughness: 1 });
+  const moss = m.material(`ob_stone${hp}_moss`, { color: [0.33, 0.45, 0.2], roughness: 1 });
+  const w = CELL * 0.86, h = 0.05;
+  if (hp === 3) {
+    m.tris(stone, slab(w, h, w, 0.004), xf({ t: [0, -0.004, 0] }));
+  } else {
+    // split into blocks that drift apart as the stone weakens
+    const parts = hp === 2 ? 2 : 4;
+    const gap = hp === 2 ? 0.0025 : 0.004;
+    for (let i = 0; i < parts; i++) {
+      const px = parts === 2 ? (i - 0.5) * (w / 2 + gap) : ((i % 2) - 0.5) * (w / 2 + gap);
+      const pz = parts === 2 ? 0 : (Math.floor(i / 2) - 0.5) * (w / 2 + gap);
+      const sw = parts === 2 ? w / 2 - gap : w / 2 - gap;
+      const sd = parts === 2 ? w : w / 2 - gap;
+      const hh = h * (0.8 + R2() * 0.2);
+      m.tris(stone, slab(sw, hh, sd, 0.003), xf({ r: [0, (R2() - 0.5) * 0.12, 0], t: [px, -0.004, pz] }));
+    }
+    m.tris(dark, box(hp === 2 ? 0.0025 : w, 0.0015, hp === 2 ? w : 0.0025), xf({ t: [0, h - 0.004, 0] }));
+  }
+  for (let k = 0; k < 3; k++) m.tris(moss, blob(0.006, R2, 0.3, 0), xf({ s: [1.4, 0.5, 1.2], t: [(R2() - 0.5) * w * 0.8, h - 0.003, (R2() - 0.5) * w * 0.8] }));
+  out(`ob_stone${hp}`, m);
+}
+
+for (const hp of [1, 2]) { // BURIED RUNES: a glowing carved plate on the socket top
+  const m = new Model();
+  const glowC = hp === 2 ? [0.55, 0.97, 1] : [0.3, 0.72, 0.8];
+  const rune = m.material(`ob_rune${hp}_glow`, { color: glowC, emissive: glowC });
+  const plate = m.material(`ob_rune${hp}_plate`, { color: [0.3, 0.29, 0.28], roughness: 0.9 });
+  const w = CELL * 0.8;
+  m.tris(plate, slab(w, 0.0016, w, 0.0006), xf({ t: [0, 0.0005, 0] }));
+  const ring = Array.from({ length: 24 }, (_, i) => { const a = (i / 24) * Math.PI * 2; return [Math.cos(a) * w * 0.4, 0.0024, Math.sin(a) * w * 0.4]; });
+  m.tris(rune, tube(ring, 0.0011, 3, true));
+  for (let g = 0; g < 4; g++) {
+    const a = (g / 4) * Math.PI * 2 + 0.4;
+    m.tris(rune, box(w * 0.22, 0.0012, 0.0016), xf({ r: [0, a, 0], t: [Math.cos(a) * w * 0.27, 0.0024, -Math.sin(a) * w * 0.27] }));
+    m.tris(rune, box(0.0016, 0.0012, w * 0.1), xf({ r: [0, a, 0], t: [Math.cos(a) * w * 0.33, 0.0024, -Math.sin(a) * w * 0.33] }));
+  }
+  out(`ob_rune${hp}`, m);
+}
+
+{ // SOLAR RELIC: a golden sun-disc idol that must be carried to the island's edge
+  const m = new Model();
+  const gold = m.material("gem_relic_gold", { color: [1, 0.76, 0.3], metallic: 0.85, roughness: 0.22 });
+  const core = m.material("gem_relic_core", { color: [1, 0.93, 0.6], emissive: [1, 0.9, 0.55] });
+  m.tris(gold, cylinder(14, 0.36, 0.14), xf({ r: [Math.PI / 2, 0, 0], t: [0, 0, -0.07] }));
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    m.tris(gold, cone(4, 0.07, i % 2 ? 0.2 : 0.3), xf({ r: [0, 0, a - Math.PI / 2], t: [Math.cos(a) * 0.36, Math.sin(a) * 0.36, 0] }));
+  }
+  m.tris(core, loft([{ n: 8, r: 0, y: -0.2 }, { n: 8, r: 0.18, y: 0 }, { n: 8, r: 0, y: 0.2 }]), xf({ r: [Math.PI / 2, 0, 0], t: [0, 0, 0.1] }));
+  out("gem_relic", m);
 }
 
 // ------------------------------------------------------------------ island --
@@ -598,5 +777,29 @@ png("ring_glow", 128, 128, (x, y) => {
     const top = [0.1, 0.11, 0.14], mid = [0.2, 0.16, 0.12], glow = [0.34, 0.27, 0.18];
     const base = t < 0.6 ? top.map((c, i) => c + (mid[i] - c) * (t / 0.6)) : mid.map((c, i) => c + (glow[i] - c) * ((t - 0.6) / 0.4));
     return [...base.map((c) => Math.round(Math.min(1, c * (1 - d * 0.35)) * 255)), 255];
+  });
+  // Sky universe: twilight gradient with drifting cloud bands (the islands float in this, not on a table)
+  const n2 = (x, y) => n1(x + n1(y * 0.7 + 11) * 6) * 0.6 + n1(y * 1.3 + n1(x * 0.4 + 5) * 4) * 0.4;
+  const clouds = (x, y) => n2(x, y) * 0.5 + n2(x * 2.1 + 9, y * 2.1 + 3) * 0.3 + n2(x * 4.3, y * 4.3 + 7) * 0.2;
+  png("sky_panorama", 512, 512, (x, y) => {
+    const t = y / 511; // 0 = zenith, 1 = below the horizon
+    const zen = [0.05, 0.08, 0.2], high = [0.2, 0.28, 0.52], hor = [0.98, 0.72, 0.5], low = [0.55, 0.52, 0.6];
+    const mix = (a, b, k) => a.map((c, i) => c + (b[i] - c) * k);
+    let col = t < 0.45 ? mix(zen, high, t / 0.45) : t < 0.62 ? mix(high, hor, (t - 0.45) / 0.17) : mix(hor, low, Math.min(1, (t - 0.62) / 0.38));
+    // cloud bands thicken toward the horizon, lit warm from below
+    const c = clouds(x / 70, y / 26);
+    const band = Math.max(0, c - 0.52) * 2.4 * (0.35 + t * 0.9);
+    const lit = mix([0.85, 0.82, 0.9], [1, 0.8, 0.62], Math.min(1, t * 1.4));
+    col = mix(col, lit, Math.min(0.85, band));
+    // a few stars high up
+    const star = t < 0.35 && noise[(x * 7 + y * 13) & 63] > 0.985 && (x * 31 + y * 17) % 7 === 0 ? 0.6 : 0;
+    return [...col.map((v) => Math.round(Math.min(1, v + star) * 255)), 255];
+  });
+  png("cloud_sea", 512, 512, (x, y) => {
+    const c = clouds(x / 40, y / 40);
+    const edge = Math.min(1, Math.hypot(x - 255.5, y - 255.5) / 256);
+    const a = Math.max(0, Math.min(1, (c - 0.38) * 2.6)) * (1 - Math.pow(edge, 3));
+    const v = 0.78 + c * 0.25;
+    return [Math.round(Math.min(1, v * 1.02) * 255), Math.round(Math.min(1, v * 0.96) * 255), Math.round(Math.min(1, v * 1.05) * 255), Math.round(a * 235)];
   });
 }

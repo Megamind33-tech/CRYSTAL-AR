@@ -1,5 +1,5 @@
 import { nextFloat, nextInt } from "./rng.ts";
-import type { Board, Crystal, CrystalType, Gravity, MatchGroup, Pos, Rng, Special } from "./types.ts";
+import type { Board, CoverKind, Crystal, CrystalType, Gravity, MatchGroup, Pos, Rng, Special } from "./types.ts";
 
 export interface EngineState {
   board: Board;
@@ -9,9 +9,30 @@ export interface EngineState {
   gravity: Gravity;
   /** optional spawn weights per crystal kind (e.g. an emerald-rich canyon) */
   weights?: number[];
+  /** Solar relics still to enter the board, and how many may be on it at once */
+  relics?: { pending: number; maxOnBoard: number };
 }
 
+/** Level obstacles placed when the board is created (all coordinates board cells). */
+export interface BoardSetup {
+  /** cracked stone [x, y, hp] */
+  blocks?: [number, number, number][];
+  /** buried runes [x, y, layers] */
+  floor?: [number, number, number][];
+  /** covers on the starting crystals [x, y, kind, hp] */
+  covers?: [number, number, CoverKind, number][];
+  /** Solar relics to bring down to the bottom edge */
+  relics?: { total: number; maxOnBoard: number };
+}
+
+/** Relics and prisms never form part of a match. */
+export const matchable = (c: Crystal | null): c is Crystal => !!c && c.special !== "prism" && c.special !== "relic";
+
 export const isVoid = (b: Board, x: number, y: number) => !!b.void?.[idx(b, x, y)];
+export const blockHp = (b: Board, x: number, y: number) => b.block?.[idx(b, x, y)] ?? 0;
+export const floorHp = (b: Board, x: number, y: number) => b.floor?.[idx(b, x, y)] ?? 0;
+/** Void terrain or unbroken stone: holds no crystal and stops falling crystals. */
+export const isSolid = (b: Board, x: number, y: number) => isVoid(b, x, y) || blockHp(b, x, y) > 0;
 
 /** Parse a level mask: rows of "O" (playable) / "X" (void). */
 export function parseMask(rows: string[] | undefined, width: number, height: number): boolean[] | undefined {
@@ -32,11 +53,11 @@ export const set = (b: Board, x: number, y: number, c: Crystal | null) => {
 export const isAdjacent = (a: Pos, b: Pos) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
 
 export function cloneBoard(b: Board): Board {
-  return { width: b.width, height: b.height, cells: b.cells.slice(), void: b.void };
+  return { width: b.width, height: b.height, cells: b.cells.slice(), void: b.void, block: b.block?.slice(), floor: b.floor?.slice() };
 }
 
 export function cloneState(s: EngineState): EngineState {
-  return { board: cloneBoard(s.board), rng: { state: s.rng.state }, nextId: s.nextId, typeCount: s.typeCount, gravity: s.gravity, weights: s.weights };
+  return { board: cloneBoard(s.board), rng: { state: s.rng.state }, nextId: s.nextId, typeCount: s.typeCount, gravity: s.gravity, weights: s.weights, relics: s.relics && { ...s.relics } };
 }
 
 export function newCrystal(s: EngineState, type: CrystalType, special: Special = "none"): Crystal {
@@ -63,9 +84,13 @@ function makesRunBackward(b: Board, x: number, y: number, type: CrystalType): bo
 }
 
 /** Creates a board with no pre-existing matches and at least one valid move. Void cells stay empty. */
-export function createEngine(width: number, height: number, typeCount: number, rng: Rng, mask?: boolean[], weights?: number[]): EngineState {
+export function createEngine(width: number, height: number, typeCount: number, rng: Rng, mask?: boolean[], weights?: number[], setup?: BoardSetup): EngineState {
+  const block = setup?.blocks?.length ? new Array(width * height).fill(0) : undefined;
+  for (const [x, y, hp] of setup?.blocks ?? []) block![y * width + x] = hp;
+  const floor = setup?.floor?.length ? new Array(width * height).fill(0) : undefined;
+  for (const [x, y, hp] of setup?.floor ?? []) floor![y * width + x] = hp;
   const s: EngineState = {
-    board: { width, height, cells: new Array(width * height).fill(null), void: mask },
+    board: { width, height, cells: new Array(width * height).fill(null), void: mask, block, floor },
     rng,
     nextId: 1,
     typeCount,
@@ -74,9 +99,10 @@ export function createEngine(width: number, height: number, typeCount: number, r
   };
   for (let attempt = 0; attempt < 100; attempt++) {
     s.nextId = 1;
+    s.board.cells.fill(null);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        if (isVoid(s.board, x, y)) continue;
+        if (isSolid(s.board, x, y)) continue;
         let type = randomType(s);
         for (let guard = 0; makesRunBackward(s.board, x, y, type) && guard < 20; guard++) {
           type = randomType(s);
@@ -84,9 +110,30 @@ export function createEngine(width: number, height: number, typeCount: number, r
         set(s.board, x, y, newCrystal(s, type));
       }
     }
+    applySetup(s, setup);
     if (findMatches(s.board).length === 0 && hasValidMove(s.board)) return s;
   }
   throw new Error("createEngine: could not generate a playable board");
+}
+
+function applySetup(s: EngineState, setup?: BoardSetup) {
+  const b = s.board;
+  for (const [x, y, kind, hp] of setup?.covers ?? []) {
+    const c = get(b, x, y);
+    if (c) set(b, x, y, { ...c, cover: { kind, hp } });
+  }
+  if (setup?.relics && setup.relics.total > 0) {
+    // starting relics sit on the far row, spread across the columns that can carry them down
+    const open: number[] = [];
+    for (let x = 0; x < b.width; x++) if (get(b, x, 0)) open.push(x);
+    const first = Math.min(setup.relics.maxOnBoard, setup.relics.total, open.length);
+    for (let i = 0; i < first; i++) {
+      const x = open[Math.floor(((i + 0.5) * open.length) / first)];
+      const c = get(b, x, 0)!;
+      set(b, x, 0, { id: c.id, type: c.type, special: "relic" });
+    }
+    s.relics = { pending: setup.relics.total - first, maxOnBoard: setup.relics.maxOnBoard };
+  }
 }
 
 /** Build a board from explicit type rows (tests / authored levels). Row strings use digits 0-4. */
@@ -96,15 +143,17 @@ export function engineFromRows(rows: string[], typeCount: number, rng: Rng): Eng
   const s: EngineState = { board: { width, height, cells: [] }, rng, nextId: 1, typeCount, gravity: "down" };
   const mask = rows.join("").includes("#") ? rows.flatMap((r) => [...r].map((c) => c === "#")) : undefined;
   s.board.void = mask;
+  // "S" = cracked stone (1 hp), "R" = Solar relic
+  if (rows.join("").includes("S")) s.board.block = rows.flatMap((r) => [...r].map((c) => (c === "S" ? 1 : 0)));
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const ch = rows[y][x];
-      if (ch === "." || ch === "#") {
+      if (ch === "." || ch === "#" || ch === "S") {
         s.board.cells.push(null);
         continue;
       }
-      const special: Special = ch === "P" ? "prism" : "none";
-      s.board.cells.push(newCrystal(s, (special === "prism" ? 0 : Number(ch)) as CrystalType, special));
+      const special: Special = ch === "P" ? "prism" : ch === "R" ? "relic" : "none";
+      s.board.cells.push(newCrystal(s, (special === "none" ? Number(ch) : 0) as CrystalType, special));
     }
   }
   return s;
@@ -128,9 +177,9 @@ export function findMatches(b: Board): MatchGroup[] {
         const at = (k: number) => (horizontal ? get(b, k, o) : get(b, o, k));
         const cur = i < inner ? at(i) : null;
         const first = at(start);
-        const same = cur && first && cur.special !== "prism" && first.special !== "prism" && cur.type === first.type;
+        const same = matchable(cur) && matchable(first) && cur.type === first.type;
         if (!same) {
-          if (first && first.special !== "prism" && i - start >= 3) {
+          if (matchable(first) && i - start >= 3) {
             const cells: Pos[] = [];
             for (let k = start; k < i; k++) cells.push(horizontal ? { x: k, y: o } : { x: o, y: k });
             runs.push({ cells, horizontal, type: first.type });
@@ -186,7 +235,7 @@ function lineLength(b: Board, x: number, y: number, dx: number, dy: number, type
   let n = 0;
   for (let cx = x + dx, cy = y + dy; ; cx += dx, cy += dy) {
     const c = get(b, cx, cy);
-    if (!c || c.special === "prism" || c.type !== type) return n;
+    if (!matchable(c) || c.type !== type) return n;
     n++;
   }
 }
@@ -194,7 +243,7 @@ function lineLength(b: Board, x: number, y: number, dx: number, dy: number, type
 /** True if the crystal at (x,y) is part of a horizontal or vertical run of 3+. */
 export function matchAt(b: Board, x: number, y: number): boolean {
   const c = get(b, x, y);
-  if (!c || c.special === "prism") return false;
+  if (!matchable(c)) return false;
   const h = 1 + lineLength(b, x, y, -1, 0, c.type) + lineLength(b, x, y, 1, 0, c.type);
   const v = 1 + lineLength(b, x, y, 0, -1, c.type) + lineLength(b, x, y, 0, 1, c.type);
   return h >= 3 || v >= 3;
@@ -204,9 +253,10 @@ export function matchAt(b: Board, x: number, y: number): boolean {
 export function isProductiveSwap(b: Board, a: Pos, c: Pos): boolean {
   if (!inBounds(b, a.x, a.y) || !inBounds(b, c.x, c.y) || !isAdjacent(a, c)) return false;
   const ca = get(b, a.x, a.y), cc = get(b, c.x, c.y);
-  if (!ca || !cc) return false;
-  if (ca.special === "prism" || cc.special === "prism") return true;
-  if (ca.special !== "none" && cc.special !== "none") return true;
+  if (!ca || !cc || ca.cover || cc.cover) return false; // covered crystals are locked in place
+  const relic = ca.special === "relic" || cc.special === "relic";
+  if (!relic && (ca.special === "prism" || cc.special === "prism")) return true;
+  if (!relic && ca.special !== "none" && cc.special !== "none") return true;
   set(b, a.x, a.y, cc);
   set(b, c.x, c.y, ca);
   const ok = matchAt(b, a.x, a.y) || matchAt(b, c.x, c.y);
@@ -242,7 +292,8 @@ export function hasValidMove(b: Board): boolean {
  */
 export function reshuffle(s: EngineState): { id: number; x: number; y: number }[] {
   const b = s.board;
-  const crystals = b.cells.filter((c): c is Crystal => !!c);
+  const free = (c: Crystal | null): c is Crystal => !!c && !c.cover && c.special !== "relic";
+  const crystals = b.cells.filter(free);
   for (let attempt = 0; attempt < 200; attempt++) {
     const pool = crystals.slice();
     if (attempt >= 100) {
@@ -255,7 +306,7 @@ export function reshuffle(s: EngineState): { id: number; x: number; y: number }[
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     let k = 0;
-    for (let i = 0; i < b.cells.length; i++) if (b.cells[i]) b.cells[i] = pool[k++];
+    for (let i = 0; i < b.cells.length; i++) if (free(b.cells[i])) b.cells[i] = pool[k++];
     if (findMatches(b).length === 0 && hasValidMove(b)) break;
   }
   const out: { id: number; x: number; y: number }[] = [];
@@ -283,7 +334,7 @@ export function boardToRows(b: Board): string[] {
     let r = "";
     for (let x = 0; x < b.width; x++) {
       const c = get(b, x, y);
-      r += isVoid(b, x, y) ? "#" : !c ? "." : c.special === "prism" ? "P" : String(c.type);
+      r += isVoid(b, x, y) ? "#" : blockHp(b, x, y) ? "S" : !c ? "." : c.special === "prism" ? "P" : c.special === "relic" ? "R" : String(c.type);
     }
     rows.push(r);
   }

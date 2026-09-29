@@ -83,7 +83,8 @@ export function RunResult({ onNext, onReplay, onExit, ranked }: Props) {
         {outcome && !outcome.verified && <Text style={[s.body, { color: C.danger }]}>This run could not be verified and earned no rewards.</Text>}
         {chapter && chapter.beats.map((b, i) => <Text key={i} style={s.beat}>{b}</Text>)}
         {reveals.map((r, i) => <Text key={i} style={s.reveal}>{r}</Text>)}
-        {outcome && result.won && !ranked && <RewardLine reward={outcome.reward} />}
+        {outcome?.secret && <Text style={[s.body, { color: C.gold }]}>✦ Secret uncovered: a Memory Shard answers you.</Text>}
+        {outcome && (result.won || outcome.secret) && !ranked && <RewardLine reward={outcome.reward} />}
         {err && <Text style={{ color: C.danger, textAlign: "center" }}>{err}</Text>}
 
         <View style={{ gap: 10, marginTop: 14 }}>
@@ -97,7 +98,7 @@ export function RunResult({ onNext, onReplay, onExit, ranked }: Props) {
               </View>
             </>
           )}
-          {result.won && onNext && <Button testID="next-level" label="CONTINUE" variant="primary" onPress={onNext} />}
+          {result.won && onNext && <Button testID="next-level" label="STEP THROUGH THE PORTAL" variant="primary" onPress={onNext} />}
           <Button testID="replay" label={result.won ? "REPLAY" : "TRY AGAIN"} variant={result.won && onNext ? "ghost" : "primary"} onPress={onReplay} />
           <Button label="RETURN TO SANCTUARY" onPress={onExit} />
         </View>

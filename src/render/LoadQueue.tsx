@@ -5,7 +5,9 @@ import { useEffect, useRef, type ReactElement, type ReactNode } from "react";
 import { Viro3DObject, ViroLightingEnvironment } from "@reactvision/react-viro";
 import { createStore, useStore } from "../state/store";
 
-const queue = createStore({ granted: 1 });
+// `issued` lives in the store too so the loading overlay re-renders as soon as new parts queue up
+// (a module counter left it reading "0 pending" while the island was still loading in).
+const queue = createStore({ granted: 1, issued: 0 });
 let issued = 0;
 /** Safety net: a load that never reports back must not stall the queue forever. */
 const MAX_WAIT_MS = 5000;
@@ -23,7 +25,10 @@ function advance(from: number) {
 
 function useTicket() {
   const ticket = useRef(0);
-  if (ticket.current === 0) ticket.current = ++issued;
+  if (ticket.current === 0) {
+    ticket.current = ++issued;
+    queueMicrotask(() => queue.set({ issued })); // not during render
+  }
   const granted = useStore(queue, (s) => s.granted);
   const released = useRef(false);
   const release = () => {
@@ -72,6 +77,7 @@ export function LightingEnvironment({ source }: { source: number }) {
 /** Loads still waiting or in flight – drives the "island is rising" overlay. */
 export function useLoadProgress() {
   const granted = useStore(queue, (s) => s.granted);
+  const total = useStore(queue, (s) => s.issued);
   const done = Math.max(0, granted - 1 - abandoned.size);
-  return { done: Math.min(done, issued), total: issued, pending: Math.max(0, issued - (granted - 1)) };
+  return { done: Math.min(done, total), total, pending: Math.max(0, total - (granted - 1)) };
 }

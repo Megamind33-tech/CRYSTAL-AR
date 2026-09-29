@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useViewMode, WorldNavigator } from "@/src/ar/WorldNavigator";
+import { useViewMode, ViewControls, WorldNavigator } from "@/src/ar/WorldNavigator";
 import { GravityControl } from "@/src/ui/GravityControl";
 import { setAmbientActive } from "@/src/audio/AudioManager";
 import { DEV_AR_MOCK } from "@/src/config";
@@ -18,6 +18,9 @@ import { PauseMenu, PlacementGuide } from "@/src/ui/Overlays";
 import { RunResult } from "@/src/ui/RunResult";
 import { RelicTray } from "@/src/ui/RelicTray";
 import { Coach } from "@/src/ui/Coach";
+import { Announce } from "@/src/ui/Announce";
+import { PortalVeil } from "@/src/ui/PortalVeil";
+import { Lightning } from "@/src/ui/Lightning";
 import { RisingOverlay } from "@/src/ui/RisingOverlay";
 import { trialDef, trialInstances } from "@/src/meta/competition";
 import { ISLANDS } from "@/src/meta/config/world";
@@ -37,6 +40,7 @@ export default function Play() {
   const moves = tdef?.moves;
   const phase = useStore(arSession, (s) => s.phase);
   const viewMode = useViewMode();
+  const travelling = useStore(gameStore, (s) => !!s.travel);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
@@ -73,15 +77,31 @@ export default function Play() {
     gameEvents.emit({ type: "sfx", name: "place" });
   };
 
-  /** CONTINUE: start the next island in place – the world stays on the table (no remount/re-place). */
-  const continueTo = (id: string) => {
+  /**
+   * STEP THROUGH THE PORTAL: the world dives into the gate, the light hides the swap, and the next
+   * island rises in place (no remount, no re-placement, no loading screen).
+   */
+  const continueTo = async (id: string) => {
     const next = ISLANDS.find((i) => i.id === id);
-    if (!next) return;
-    endSession();
-    setPlayContext({ islandId: next.id, trialInstanceId: null });
-    analytics.track("island_started", { id: next.id });
-    startLevel(next.levelIndex);
-    router.setParams({ island: next.id });
+    if (!next || gameStore.get().travel) return;
+    const seqNo = Date.now();
+    gameStore.set({ travel: { phase: "dive", seq: seqNo, to: next.name } });
+    gameEvents.emit({ type: "sfx", name: "portal" });
+    gameEvents.emit({ type: "haptic", kind: "heavy" });
+    try {
+      await new Promise((r) => setTimeout(r, 1200));
+      endSession();
+      setPlayContext({ islandId: next.id, trialInstanceId: null });
+      analytics.track("island_started", { id: next.id });
+      startLevel(next.levelIndex);
+      router.setParams({ island: next.id });
+      gameStore.set({ travel: { phase: "emerge", seq: seqNo, to: next.name } });
+      gameEvents.emit({ type: "sfx", name: "place" });
+      await new Promise((r) => setTimeout(r, 1100));
+    } finally {
+      // whatever happens, the trip ends: the veil clears and the world returns to rest
+      gameStore.set({ travel: null });
+    }
   };
 
   const exit = () => (router.canGoBack() ? router.back() : router.replace("/"));
@@ -91,14 +111,18 @@ export default function Play() {
   return (
     <View style={s.root}>
       <WorldNavigator />
+      {phase === "placed" && <Lightning />}
       {phase === "placed" && <HUD onPause={() => setPaused(true)} />}
       {phase === "placed" && <RelicTray ranked={!!trial} />}
       {phase === "placed" && <GravityControl />}
+      {phase === "placed" && <ViewControls column />}
       {phase === "placed" && !trial && <Coach />}
+      {phase === "placed" && <Announce />}
       <RisingOverlay />
       <PlacementGuide mock={viewMode !== "ar"} cameraView={viewMode === "camera"} onPlaceMock={placeMock} />
       <Diagnostics mock={viewMode !== "ar"} />
-      <RunResult
+      <PortalVeil />
+      {!travelling && <RunResult
         ranked={!!trial}
         onNext={nextIsland ? () => continueTo(nextIsland.id) : null}
         onReplay={() => {
@@ -106,7 +130,7 @@ export default function Play() {
           restartLevel();
         }}
         onExit={exit}
-      />
+      />}
       <PauseMenu
         visible={paused}
         onResume={() => setPaused(false)}

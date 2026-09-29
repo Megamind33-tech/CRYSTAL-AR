@@ -1,15 +1,24 @@
-import { cloneState, createEngine, parseMask, reshuffle, type EngineState } from "./board.ts";
-import { rotatedGravity, shiftGravity, trySwap } from "./resolve.ts";
+import { cloneState, createEngine, parseMask, reshuffle, type BoardSetup, type EngineState } from "./board.ts";
+import { rotatedGravity, shiftGravity, spreadCover, trySwap } from "./resolve.ts";
 import { createRng } from "./rng.ts";
-import type { CrystalType, Gravity, Pos, ResolveStep } from "./types.ts";
+import { buildCampaign } from "./campaign.ts";
+import { applyTwist, revealsSecret, type Secret, type Twist } from "./twists.ts";
+import { islandStory } from "./lore.ts";
+import type { CoverKind, CrystalType, Gravity, Pos, ResolveStep } from "./types.ts";
 
 export type Objective =
   | { kind: "power"; target: number } // charge the portal with crystal energy
   | { kind: "score"; target: number }
-  | { kind: "collect"; crystal: CrystalType; target: number };
+  | { kind: "collect"; crystal: CrystalType; target: number }
+  | { kind: "cover"; cover: CoverKind; target: number } // melt ice / cut vines / break chains / quench embers
+  | { kind: "stone"; target: number } // break cracked stone
+  | { kind: "rune"; target: number } // unearth buried runes
+  | { kind: "relic"; target: number }; // bring Solar relics down to the edge
 
 export interface LevelDef {
   id: number;
+  /** shown instead of "Level {id}" for islands outside the numbered campaign */
+  label?: string;
   name: string;
   seed: number;
   moves: number;
@@ -20,25 +29,61 @@ export interface LevelDef {
   gravityCharges?: number;
   /** spawn weight per crystal kind (default 1 each) */
   spawnWeights?: number[];
+  /** board size (default 6 × 6) */
+  width?: number;
+  height?: number;
+  /** obstacles placed at the start */
+  setup?: BoardSetup;
+  /** embers / vines creep onto a neighbour after `every` moves in which none were cleared */
+  creep?: { cover: "ember" | "vine"; every: number };
+  /** realm this level belongs to (campaign levels) – drives the island biome */
+  realm?: string;
+  /** seed for the island's terrain and props (defaults to the level seed) */
+  islandSeed?: number;
+  /** hidden events that strike mid-level (never shown in advance) */
+  twists?: Twist[];
+  /** a buried secret – or nothing; the story line may hint at it */
+  secret?: Secret;
+  /** the island's arrival passage */
+  story?: string;
 }
 
 export const MAX_GRAVITY_CHARGES = 3;
 
-export const LEVELS: LevelDef[] = [
-  { id: 1, name: "Waking Stones", seed: 1101, moves: 20, objective: { kind: "power", target: 170 } },
+/**
+ * Every playable board. Indices are stable IDs (saved runs, replays and Realm Trials store them), so
+ * the six original levels keep 0–5 and the generated campaign is appended after them.
+ * Play order lives in CAMPAIGN.
+ */
+const AUTHORED: LevelDef[] = [
+  { id: 1, name: "Waking Stones", seed: 1101, moves: 20, objective: { kind: "power", target: 170 }, realm: "verdant", islandSeed: 1101 },
   // HERO LEVEL: irregular canyon board; sheltered pockets under the ruins only fill via Gravity Shift
   {
-    id: 2, name: "Emerald Canyon", seed: 2207, moves: 22, gravityCharges: 2, spawnWeights: [1, 1, 1.6, 1, 1],
+    id: 21, name: "Emerald Canyon", seed: 2207, moves: 22, gravityCharges: 2, spawnWeights: [1, 1, 1.6, 1, 1],
     objective: { kind: "collect", crystal: 2, target: 32 },
     // two sheltered pockets: under the ruin pillar (column 3) and the left cliff (column 0)
     mask: ["OOOOOO", "OOOXOO", "OOOXOO", "XOOOOO", "OOXOOO", "OOXOOO"],
+    realm: "canyon", islandSeed: 2207,
   },
-  { id: 3, name: "Heart of the Falls", seed: 3313, moves: 18, objective: { kind: "score", target: 5600 } },
-  // discovery / seasonal / expedition islands (meta-game content)
-  { id: 4, name: "Hollow of Lanterns", seed: 4421, moves: 18, objective: { kind: "collect", crystal: 4, target: 30 } },
-  { id: 5, name: "Eclipse Threshold", seed: 5527, moves: 16, objective: { kind: "power", target: 190 } },
-  { id: 6, name: "Frostbound Signal", seed: 6637, moves: 18, objective: { kind: "collect", crystal: 1, target: 34 } },
+  { id: 20, name: "Heart of the Falls", seed: 3313, moves: 18, objective: { kind: "score", target: 5600 }, realm: "verdant", islandSeed: 3313 },
+  // discovery / seasonal / expedition islands (meta-game content, outside the numbered campaign)
+  { id: 4, label: "Discovery", name: "Hollow of Lanterns", seed: 4421, moves: 18, objective: { kind: "collect", crystal: 4, target: 30 }, realm: "hollow", islandSeed: 4421 },
+  { id: 5, label: "Eclipse", name: "Eclipse Threshold", seed: 5527, moves: 16, objective: { kind: "power", target: 190 }, realm: "void", islandSeed: 5527 },
+  { id: 6, label: "Expedition", name: "Frostbound Signal", seed: 6637, moves: 18, objective: { kind: "collect", crystal: 1, target: 34 }, realm: "frozen", islandSeed: 6637 },
 ];
+/** campaign numbers played on the authored boards above (number → LEVELS index) */
+const AUTHORED_AT: Record<number, number> = { 1: 0, 20: 2, 21: 1 };
+
+const GENERATED = buildCampaign().filter((l) => AUTHORED_AT[l.number] === undefined);
+// authored islands keep their hand-tuned boards (no twists) but get arrival passages too
+for (const l of AUTHORED) l.story ??= islandStory(l.realm ?? "verdant", l.seed);
+export const LEVELS: LevelDef[] = [...AUTHORED, ...GENERATED];
+
+/** The 200 campaign levels in play order, as LEVELS indices. */
+export const CAMPAIGN: number[] = Array.from({ length: 200 }, (_, i) => {
+  const n = i + 1;
+  return AUTHORED_AT[n] ?? LEVELS.indexOf(GENERATED.find((l) => l.number === n)!);
+});
 
 export type SessionStatus = "playing" | "won" | "lost";
 
@@ -52,12 +97,21 @@ export interface Session {
   status: SessionStatus;
   bestCascade: number;
   gravityCharges: number;
+  /** obstacles fully removed this run */
+  tally: { cover: Record<CoverKind, number>; stone: number; rune: number; relic: number };
+  /** moves in a row without cutting the creeping cover */
+  creepIdle: number;
+  /** player moves made (twists fire on these, independent of bonus moves) */
+  movesMade: number;
+  /** how many of the level's twists have struck */
+  twistsFired: number;
+  secretFound: boolean;
 }
 
 export function startSession(level: LevelDef, seedOverride?: number): Session {
   return {
     level,
-    engine: createEngine(6, 6, 5, createRng(seedOverride ?? level.seed), parseMask(level.mask, 6, 6), level.spawnWeights),
+    engine: createEngine(level.width ?? 6, level.height ?? 6, 5, createRng(seedOverride ?? level.seed), parseMask(level.mask, level.width ?? 6, level.height ?? 6), level.spawnWeights, level.setup),
     score: 0,
     movesLeft: level.moves,
     charge: 0,
@@ -65,6 +119,11 @@ export function startSession(level: LevelDef, seedOverride?: number): Session {
     status: "playing",
     bestCascade: 0,
     gravityCharges: Math.min(MAX_GRAVITY_CHARGES, level.gravityCharges ?? 0),
+    tally: { cover: { ice: 0, vine: 0, chain: 0, ember: 0 }, stone: 0, rune: 0, relic: 0 },
+    creepIdle: 0,
+    movesMade: 0,
+    twistsFired: 0,
+    secretFound: false,
   };
 }
 
@@ -76,8 +135,23 @@ export function chargeForStep(step: Extract<ResolveStep, { kind: "clear" }>): nu
 /** 0..1 progress toward the level objective. Drives the world's evolution stages. */
 export function objectiveProgress(s: Session): number {
   const o = s.level.objective;
-  const v = o.kind === "power" ? s.charge : o.kind === "score" ? s.score : s.collected[o.crystal];
-  return Math.min(1, v / o.target);
+  return Math.min(1, objectiveValue(s) / o.target);
+}
+
+/** Current count toward the objective's target. */
+export const objectiveValue = (s: Session) => objectiveValueFrom(s.level.objective, s);
+
+/** Shared with the view layer, which tracks the same counters while steps play back. */
+export function objectiveValueFrom(o: Objective, s: Pick<Session, "charge" | "score" | "collected" | "tally">): number {
+  switch (o.kind) {
+    case "power": return s.charge;
+    case "score": return s.score;
+    case "collect": return s.collected[o.crystal];
+    case "cover": return s.tally.cover[o.cover];
+    case "stone": return s.tally.stone;
+    case "rune": return s.tally.rune;
+    case "relic": return s.tally.relic;
+  }
 }
 
 export interface MoveResult {
@@ -95,18 +169,69 @@ export function playMove(s: Session, a: Pos, b: Pos): MoveResult {
     ...s,
     engine: r.state,
     movesLeft: s.movesLeft - 1,
+    movesMade: s.movesMade + 1,
     collected: s.collected.slice(),
+    tally: cloneTally(s.tally),
   };
   account(next, r.steps);
+  creep(next, r.steps);
+  twist(next, r.steps);
+  findSecret(next, r.steps);
   if (objectiveProgress(next) >= 1) next.status = "won";
   else if (next.movesLeft <= 0) next.status = "lost";
   return { valid: true, session: next, steps: r.steps };
 }
 
-/** Score, portal charge, collection and Gravity Charge recharge from resolved steps. */
+const cloneTally = (t: Session["tally"]): Session["tally"] => ({ ...t, cover: { ...t.cover } });
+
+/** A hidden twist strikes after its move (only while the level is still being played). */
+function twist(next: Session, steps: ResolveStep[]) {
+  const t = next.level.twists?.[next.twistsFired];
+  if (!t || next.movesMade !== t.atMove || objectiveProgress(next) >= 1 || next.movesLeft <= 0) return;
+  next.twistsFired++;
+  const o = next.level.objective;
+  const r = applyTwist(next.engine, t.kind, o.kind === "collect" ? o.crystal : undefined);
+  next.engine = r.state;
+  steps.push({ kind: "twist", twist: t.kind, ...(t.kind === "blessing" ? { moves: 3 } : {}) }, ...r.steps);
+  if (t.kind === "blessing") next.movesLeft += 3;
+  account(next, r.steps);
+}
+
+/** The island's secret answers one kind of clear on one buried cell. */
+function findSecret(next: Session, steps: ResolveStep[]) {
+  const sec = next.level.secret;
+  if (!sec || next.secretFound) return;
+  if (steps.some((st) => revealsSecret(st, sec))) {
+    next.secretFound = true;
+    steps.push({ kind: "secret", x: sec.x, y: sec.y });
+  }
+}
+
+/** Embers / vines creep after enough moves in which none were cut. Appends the spread steps. */
+function creep(next: Session, steps: ResolveStep[]) {
+  const c = next.level.creep;
+  if (!c || next.status !== "playing") return;
+  const cut = steps.some((st) => st.kind === "clear" && st.hits?.some((h) => h.layer === "cover" && h.kind === c.cover));
+  next.creepIdle = cut ? 0 : next.creepIdle + 1;
+  if (next.creepIdle < c.every) return;
+  next.creepIdle = 0;
+  const r = spreadCover(next.engine, c.cover);
+  if (!r) return;
+  next.engine = r.state;
+  steps.push(...r.steps);
+}
+
+/** Score, portal charge, collection, obstacles and Gravity Charge recharge from resolved steps. */
 function account(next: Session, steps: ResolveStep[]) {
   for (const step of steps) {
+    if (step.kind === "relics") next.tally.relic += step.collected.length;
     if (step.kind !== "clear") continue;
+    for (const h of step.hits ?? []) {
+      if (h.hp > 0) continue;
+      if (h.layer === "cover") next.tally.cover[h.kind as CoverKind]++;
+      else if (h.layer === "block") next.tally.stone++;
+      else next.tally.rune++;
+    }
     next.score += step.score;
     next.charge += chargeForStep(step);
     next.bestCascade = Math.max(next.bestCascade, step.cascade);
@@ -128,8 +253,9 @@ export function playShift(s: Session, turn: -1 | 1): MoveResult & { gravity?: Gr
   if (!to) return { valid: false, session: s, steps: [] };
   const r = shiftGravity(s.engine, to);
   if (!r.valid) return { valid: false, session: s, steps: [] };
-  const next: Session = { ...s, engine: r.state, gravityCharges: s.gravityCharges - 1, collected: s.collected.slice() };
+  const next: Session = { ...s, engine: r.state, gravityCharges: s.gravityCharges - 1, collected: s.collected.slice(), tally: cloneTally(s.tally) };
   account(next, r.steps);
+  findSecret(next, r.steps);
   if (objectiveProgress(next) >= 1) next.status = "won";
   return { valid: true, session: next, steps: r.steps, gravity: to };
 }

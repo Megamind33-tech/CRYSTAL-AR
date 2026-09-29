@@ -7,6 +7,7 @@ import { passStatus } from "@/src/meta/live";
 import { achievementScore, achievementStatus, claimAchievement, sanctuaryRating } from "@/src/meta/progression";
 import { act, metaStore, setPlayer } from "@/src/state/meta";
 import { useStore } from "@/src/state/store";
+import { DIMENSION_LABEL, keeperRank, RANKS, type Dimension } from "@/src/meta/rank";
 import { Bar, Card, ErrorLine, Pill, RewardLine, Row, Screen, Section, T } from "@/src/ui/kit";
 import { C, font } from "@/src/ui/theme";
 
@@ -31,8 +32,9 @@ export default function Profile() {
     </View>
   );
 
+  const rank = keeperRank(p);
   return (
-    <Screen title="Keeper" subtitle={p.profile.title}>
+    <Screen title="Keeper" subtitle={`${rank.name} · ${p.profile.title}`}>
       <ErrorLine msg={err} />
       <Card style={{ alignItems: "center", gap: 8, paddingVertical: 20, borderColor: C.gold }}>
         <View style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: C.gold, backgroundColor: "#1d3a2f", alignItems: "center", justifyContent: "center" }}>
@@ -73,6 +75,22 @@ export default function Profile() {
           <Stat k="Rare Lumins" v={rare.map((l) => l.name).join(", ") || "–"} />
         </View>
       </Card>
+
+      <Section title="Keeper Rank" note={`${rank.index + 1} of ${RANKS.length}`}>
+        <Card>
+          {T.h(rank.name)}
+          <Bar value={rank.score} color={C.gold} />
+          {(Object.keys(rank.dimensions) as Dimension[]).map((k) => (
+            <Row key={k} style={{ justifyContent: "space-between" }}>
+              <Text style={{ color: C.inkDim, fontSize: 12.5 }}>{DIMENSION_LABEL[k]}</Text>
+              <View style={{ width: 120 }}>
+                <Bar value={rank.dimensions[k]} color={C.portal} height={5} />
+              </View>
+            </Row>
+          ))}
+          {rank.next ? T.p(rank.next, true) : T.p("The highest rank a Keeper can hold.", true)}
+        </Card>
+      </Section>
 
       <Section title="Chronicles" note={`${achievementScore(p)} points`}>
         {ach.filter((a) => !a.concealed).map((a) => (

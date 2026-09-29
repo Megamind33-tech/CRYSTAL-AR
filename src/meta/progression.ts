@@ -192,14 +192,24 @@ export interface RunOutcome {
   firstRestore: boolean;
   log: GrantLog | null;
   storyChapter: string | null;
+  /** a secret was uncovered for the first time on this run */
+  secret?: boolean;
 }
 
 /** Applies a (verified) run. Stats/quests always update; rewards only on a win. */
+/** A buried secret pays out once per island, win or lose: a discovery is a discovery. */
+export const SECRET_REWARD: Reward = { prismDust: 150, aether: 5, keeperXp: 60 };
+
 export function applyRun(state: PlayerState, report: RunReport, now: number): RunOutcome {
   let s = recordEvent(state, { type: "runCompleted", report }, now);
   const island = islandDef(report.islandId);
   const c = report.claimed;
-  if (!c.won || !island) return { state: s, reward: {}, firstRestore: false, log: null, storyChapter: null };
+  let secret = false;
+  if (c.secretFound && island && !(s.secrets ?? []).includes(island.id)) {
+    secret = true;
+    s = grant({ ...s, secrets: [...(s.secrets ?? []), island.id] }, SECRET_REWARD, now).state;
+  }
+  if (!c.won || !island) return { state: s, reward: secret ? SECRET_REWARD : {}, firstRestore: false, log: null, storyChapter: null, secret };
   const firstRestore = !s.islands[island.id];
   const prev = s.islands[island.id];
   s.islands[island.id] = { stars: Math.max(prev?.stars ?? 0, c.stars), bestScore: Math.max(prev?.bestScore ?? 0, c.score), restoredAt: prev?.restoredAt ?? now };
@@ -214,7 +224,13 @@ export function applyRun(state: PlayerState, report: RunReport, now: number): Ru
   s = recordEvent(g.state, { type: "portalOpened", island: island.id, portal: island.portal }, now);
   // unlock follow-on story islands happens implicitly via islandStatus(); record realm progress
   s.currentRealm = island.realm;
-  return { state: s, reward, firstRestore, log: g.log, storyChapter: firstRestore ? (island.storyChapter ?? null) : null };
+  return { state: s, reward: secret ? mergeRewards(reward, SECRET_REWARD) : reward, firstRestore, log: g.log, storyChapter: firstRestore ? (island.storyChapter ?? null) : null, secret };
+}
+
+function mergeRewards(a: Reward, b: Reward): Reward {
+  const out: Reward = { ...a };
+  for (const k of ["prismDust", "aether", "keeperXp", "passXp"] as const) if (b[k]) out[k] = (out[k] ?? 0) + b[k]!;
+  return out;
 }
 
 // ---- Keeper's Return ------------------------------------------------------------------------------------------------

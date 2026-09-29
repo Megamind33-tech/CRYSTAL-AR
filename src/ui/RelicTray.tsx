@@ -1,16 +1,37 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown, FadeOut, useAnimatedStyle } from "react-native-reanimated";
 import { RELICS } from "../meta/config/collection";
 import { relicCharges, activateRelic } from "../meta/progression";
 import type { RunBoost } from "../meta/types";
 import { gameStore, applyRelicEffect } from "../state/game";
 import { act, metaStore } from "../state/meta";
 import { useStore } from "../state/store";
-import { C } from "./theme";
+import { PressSpring } from "./kit";
+import { useLoop } from "./lux/Lux";
+import { F, L, titleGlow } from "./lux/tokens";
 
 const GLYPH: Record<string, string> = { hint: "◉", addMoves: "⧗", reshuffle: "✥" };
+const TONE: Record<string, string> = { hint: L.crystal, addMoves: L.goldLight, reshuffle: L.rose };
 const KIND: Record<string, RunBoost["kind"]> = { hint: "hint", addMoves: "moves", reshuffle: "reshuffle" };
+
+/** A breathing relic orb: tinted core, gold ring, charge badge. */
+function RelicOrb({ glyph, tone, charges, off }: { glyph: string; tone: string; charges: number; off: boolean }) {
+  const t = useLoop(2600);
+  const halo = useAnimatedStyle(() => ({ opacity: off ? 0 : 0.35 + Math.sin(t.value * Math.PI * 2) * 0.25 }));
+  return (
+    <View style={[s.orb, off && { opacity: 0.4 }]}>
+      <Animated.View pointerEvents="none" style={[s.halo, { backgroundColor: tone, shadowColor: tone }, halo]} />
+      <View style={[s.core, { borderColor: tone }]}>
+        <Text style={[s.glyph, { color: tone }, titleGlow(tone, 10)]}>{glyph}</Text>
+      </View>
+      <View style={s.badge}>
+        <Text style={s.count}>{charges}</Text>
+      </View>
+    </View>
+  );
+}
 
 /** Relics usable during a run. Board-changing relics are unranked; Trials allow only approved ones. */
 export function RelicTray({ ranked }: { ranked: boolean }) {
@@ -35,23 +56,24 @@ export function RelicTray({ ranked }: { ranked: boolean }) {
 
   return (
     <View pointerEvents="box-none" style={[s.wrap, { bottom: insets.bottom + 18 }]}>
-      {msg && <Text style={s.msg}>{msg}</Text>}
+      {msg && (
+        <Animated.Text entering={FadeInDown.duration(200)} exiting={FadeOut} style={s.msg}>
+          {msg}
+        </Animated.Text>
+      )}
       <View style={s.row}>
         {usable.map((r) => {
           const ch = relicCharges(p, r.id, now);
           const empty = ch.charges === 0 && p.items.relicCharge === 0;
           return (
-            <Pressable
+            <PressSpring
               key={r.id}
-              accessibilityRole="button"
               accessibilityLabel={`${r.name}, ${ch.charges} charges`}
               disabled={busy || empty}
               onPress={() => use(r.id, r.effect, r.effectValue)}
-              style={({ pressed }) => [s.btn, (busy || empty) && { opacity: 0.4 }, pressed && { transform: [{ scale: 0.94 }] }]}
             >
-              <Text style={s.glyph}>{GLYPH[r.effect]}</Text>
-              <Text style={s.count}>{ch.charges}</Text>
-            </Pressable>
+              <RelicOrb glyph={GLYPH[r.effect]} tone={TONE[r.effect]} charges={ch.charges} off={busy || empty} />
+            </PressSpring>
           );
         })}
       </View>
@@ -60,10 +82,22 @@ export function RelicTray({ ranked }: { ranked: boolean }) {
 }
 
 const s = StyleSheet.create({
-  wrap: { position: "absolute", right: 14, alignItems: "flex-end", gap: 6 },
-  row: { flexDirection: "row", gap: 8 },
-  btn: { width: 52, height: 52, borderRadius: 26, backgroundColor: C.glass, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
-  glyph: { color: C.portal, fontSize: 22 },
-  count: { position: "absolute", right: 4, bottom: 2, color: C.gold, fontSize: 11, fontWeight: "800" },
-  msg: { color: C.ink, backgroundColor: C.glass, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, fontSize: 12 },
+  wrap: { position: "absolute", right: 14, alignItems: "flex-end", gap: 8 },
+  row: { flexDirection: "row", gap: 10 },
+  orb: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
+  halo: { position: "absolute", width: 50, height: 50, borderRadius: 25, shadowRadius: 14, shadowOpacity: 1, elevation: 0 },
+  core: {
+    width: 52, height: 52, borderRadius: 26, borderWidth: 2, alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(14,18,48,0.92)",
+  },
+  glyph: { fontSize: 22, fontFamily: F.bold },
+  badge: {
+    position: "absolute", right: -2, bottom: -2, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5,
+    alignItems: "center", justifyContent: "center", backgroundColor: L.gold, borderWidth: 1.5, borderColor: L.goldLight,
+  },
+  count: { color: L.ink, fontSize: 11, fontFamily: F.number },
+  msg: {
+    color: L.ivory, fontFamily: F.bodyStrong, fontSize: 12, backgroundColor: "rgba(20,26,61,0.94)", paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,106,122,0.6)", overflow: "hidden",
+  },
 });

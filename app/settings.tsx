@@ -8,6 +8,13 @@ import { SettingsList } from "@/src/ui/SettingsList";
 import { AccountSettings } from "@/src/ui/AccountSettings";
 import { C, font } from "@/src/ui/theme";
 
+/** Required attribution for CC-BY assets (and thanks for the CC0 ones). */
+const CREDITS = [
+  "“Red Dragon” by Tomek Zamojski, “Dragon Rigged” by na3ee1 and “Flamethrower Turret” by Zsky (Poly Pizza), licensed under CC-BY 3.0.",
+  "Surface textures from ambientCG and the studio HDRI from Poly Haven (CC0).",
+  "Everything else is original to Crystals AR.",
+].join("\n");
+
 export default function Settings() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -29,6 +36,10 @@ export default function Settings() {
         )}
         <Button testID="settings-back" label="BACK" variant="primary" onPress={() => router.back()} />
       </View>
+      <Text style={s.creditsTitle}>Credits</Text>
+      <Text style={s.credits}>
+        {CREDITS}
+      </Text>
     </ScrollView>
   );
 }
@@ -36,4 +47,6 @@ export default function Settings() {
 const s = StyleSheet.create({
   root: { paddingHorizontal: 22 },
   title: { color: C.ink, fontSize: 32, fontFamily: font.display, fontWeight: "700", marginBottom: 12 },
+  creditsTitle: { color: C.inkDim, fontSize: 12, letterSpacing: 1.6, textTransform: "uppercase", fontWeight: "700", marginTop: 28 },
+  credits: { color: C.inkFaint, fontSize: 12, lineHeight: 18, marginTop: 6 },
 });

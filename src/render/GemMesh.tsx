@@ -18,7 +18,7 @@ interface Part {
 const cache = new Map<string, Part[]>();
 let materialsReady = false;
 
-function registerGemMaterials() {
+export function registerGemMaterials() {
   if (materialsReady) return;
   materialsReady = true;
   const defs: Record<string, object> = {};
@@ -31,9 +31,11 @@ function registerGemMaterials() {
       const clear = `rgba(${rgb.join(",")},${p.alpha})`;
       // crystal shells keep their glassy PBR; small props are matte
       const gem = p.material.startsWith("gem_") || p.material.startsWith("prism_") || p.material === "surge";
+      // gem shells: near-mirror facets that pick up the studio HDRI highlights
+      const shell = gem ? { roughness: 0.03, metalness: 0.55 } : { roughness: 0.1, metalness: 0.3 };
       defs["gm_" + p.material] =
         p.alpha < 1
-          ? { lightingModel: glow ? "Constant" : "PBR", diffuseColor: clear, blendMode: "Alpha", roughness: 0.1, metalness: 0.3, writesToDepthBuffer: !glow, ...cull }
+          ? { lightingModel: glow ? "Constant" : "PBR", diffuseColor: clear, blendMode: "Alpha", ...shell, writesToDepthBuffer: !glow, ...cull }
           : glow
             ? { lightingModel: "Constant", diffuseColor: solid, ...cull }
             : { lightingModel: "PBR", diffuseColor: solid, roughness: gem ? 0.2 : 0.8, metalness: gem ? 0.3 : 0.02, ...cull };
