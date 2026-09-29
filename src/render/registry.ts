@@ -60,6 +60,34 @@ export function registerMaterials() {
     tiltright: { properties: { rotateX: 10, rotateZ: -8 }, duration: 380, easing: "EaseInEaseOut" },
     tiltdown: { properties: { rotateX: 10, rotateZ: 0 }, duration: 380, easing: "EaseInEaseOut" },
     materialize: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 1100, easing: "EaseOut" },
+    // --- crystal motion (transform-only, absolute targets; stepped from JS, see useMotion.ts) ---
+    // clear: a quick swell then a shrink-away (70 + 160 ≈ TIMING.pop; the Slow pair covers the 2× pops)
+    popSwell: { properties: { scaleX: 1.22, scaleY: 1.22, scaleZ: 1.22 }, duration: 70, easing: "EaseOut" },
+    popVanish: { properties: { scaleX: 0, scaleY: 0, scaleZ: 0 }, duration: 160, easing: "EaseIn" },
+    popSwellSlow: { properties: { scaleX: 1.22, scaleY: 1.22, scaleZ: 1.22 }, duration: 150, easing: "EaseOut" },
+    popVanishSlow: { properties: { scaleX: 0, scaleY: 0, scaleZ: 0 }, duration: 310, easing: "EaseIn" },
+    // special activation: each flavour swells differently, all end in the same shrink-away
+    flarePrism: { properties: { scaleX: 1.75, scaleY: 1.75, scaleZ: 1.75 }, duration: 90, easing: "EaseOut" },
+    flareRelic: { properties: { scaleX: 1.45, scaleY: 1.45, scaleZ: 1.45 }, duration: 90, easing: "EaseOut" },
+    flareSurge: { properties: { scaleX: 1.3, scaleY: 1.3, scaleZ: 1.3 }, duration: 90, easing: "EaseOut" },
+    flareVanish: { properties: { scaleX: 0, scaleY: 0, scaleZ: 0 }, duration: 140, easing: "EaseIn" },
+    relicFlip: { properties: { rotateY: 180 }, duration: 230, easing: "EaseOut" },
+    // surge_aura is a flat plate whose long axis is local X: the parent is yawed 0°/90° in code for a
+    // horizontal/vertical clear, so one stretch along local X serves both directions
+    auraBlast: { properties: { scaleX: 2.6, scaleY: 0.7, scaleZ: 1 }, duration: 230, easing: "EaseOut" },
+    auraBreathUp: { properties: { scaleX: 1.07, scaleY: 1.07, scaleZ: 1.07 }, duration: 800, easing: "EaseInEaseOut" },
+    auraBreathDown: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 800, easing: "EaseInEaseOut" },
+    // idle bob of special gems (~5 mm) and the restrained selection pulse
+    bobUp: { properties: { positionY: 0.005 }, duration: 900, easing: "EaseInEaseOut" },
+    bobDown: { properties: { positionY: 0 }, duration: 900, easing: "EaseInEaseOut" },
+    selUp: { properties: { scaleX: 1.1, scaleY: 1.1, scaleZ: 1.1 }, duration: 420, easing: "EaseInEaseOut" },
+    selDown: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 420, easing: "EaseInEaseOut" },
+    // obstacle damage: a brief yaw rattle around the layer's own centre (no pivot or geometry change),
+    // then the rest pose (the lower-strength mesh is swapped in by the game state) or a shrink-away
+    impactA: { properties: { rotateY: 9, scaleX: 1.1, scaleY: 1.1, scaleZ: 1.1 }, duration: 50, easing: "EaseOut" },
+    impactB: { properties: { rotateY: -7, scaleX: 0.95, scaleY: 0.95, scaleZ: 0.95 }, duration: 60, easing: "EaseInEaseOut" },
+    impactRest: { properties: { rotateY: 0, scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 120, easing: "EaseOut" },
+    impactVanish: { properties: { rotateY: 0, scaleX: 0, scaleY: 0, scaleZ: 0 }, duration: 130, easing: "EaseIn" },
     // PORTAL TRAVERSAL: the world rushes toward the camera until the portal fills the view…
     portalDive: { properties: { positionY: 0.06, positionZ: 0.88, scaleX: 2.5, scaleY: 2.5, scaleZ: 2.5 }, duration: 1150, easing: "EaseIn" },
     // …and the next island rises out of the light
@@ -112,4 +140,12 @@ export function scale3Anim(s: [number, number, number], ms: number): string {
     });
   }
   return name;
+}
+
+/** Swell/vanish animation names and swell length (ms) for clearing a crystal, by kind of special. */
+export function popSteps(special: string, ms: number): { swell: string; swellMs: number; vanish: string } {
+  if (special === "prism") return { swell: "flarePrism", swellMs: 90, vanish: "flareVanish" };
+  if (special === "relic") return { swell: "flareRelic", swellMs: 90, vanish: "flareVanish" };
+  if (special === "surgeH" || special === "surgeV") return { swell: "flareSurge", swellMs: 90, vanish: "flareVanish" };
+  return ms >= 400 ? { swell: "popSwellSlow", swellMs: 150, vanish: "popVanishSlow" } : { swell: "popSwell", swellMs: 70, vanish: "popVanish" };
 }

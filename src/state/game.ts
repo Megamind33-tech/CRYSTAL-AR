@@ -46,6 +46,8 @@ export interface Hud {
 
 export interface GameState {
   levelIndex: number;
+  /** bumps on every level start, so the renderer builds fresh nodes instead of animating the reset */
+  runId: number;
   session: Session | null;
   crystals: CrystalView[];
   selected: Pos | null;
@@ -84,6 +86,7 @@ const emptyReactions = (): Record<WorldEvent, number> => ({
 
 export const gameStore = createStore<GameState>({
   levelIndex: 0,
+  runId: 0,
   session: null,
   crystals: [],
   selected: null,
@@ -175,6 +178,7 @@ export function startLevel(levelIndex: number, seedOverride?: number, movesOverr
   run = { levelIndex: LEVELS.indexOf(base), seed: seedOverride ?? level.seed, startedAt: Date.now(), endedAt: 0, swaps: [], stats: newRunStats(), boosts: [], relicsUsed: [], score: 0, won: false, stars: 0 };
   gameStore.set({
     levelIndex: LEVELS.indexOf(base),
+    runId: gameStore.get().runId + 1,
     session,
     crystals: viewsFromSession(session).map((c) => ({ ...c, anim: { kind: "spawn", fromX: c.x, fromY: c.y - 7, ms: 380 + c.y * 40, seq: seq++ } })),
     selected: null,
@@ -389,6 +393,12 @@ async function playSteps(steps: ResolveStep[], gen: number) {
         const bursts: Burst[] = (big ? step.cleared.filter((_, i) => i % 3 === 0) : step.cleared).map((c) => ({
           id: burstId++, x: c.x, y: c.y, type: c.type, big: c.special !== "none",
         }));
+        // a small spark puff where an obstacle layer took a hit (cover, stone or rune), via the same pool
+        const HIT_TYPE = { ice: 1, vine: 2, chain: 4, ember: 0 } as const;
+        for (const h of step.hits ?? []) {
+          const t = h.layer === "cover" ? HIT_TYPE[h.kind as Cover["kind"]] ?? 4 : h.layer === "block" ? 4 : 3;
+          bursts.push({ id: burstId++, x: h.x, y: h.y, type: t as CrystalType, big: false });
+        }
         const text =
           step.combo ? "Resonance!" : step.cascade >= 4 ? "Crystal Storm!" : step.cascade === 3 ? "Radiant!" : step.cascade === 2 ? "Chain!" : null;
         gameStore.set((s) => {

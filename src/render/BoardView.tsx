@@ -8,6 +8,7 @@ import { CRYSTAL_COLORS, MODELS, TEXTURES } from "./assets";
 import { CrystalNode } from "./CrystalNode";
 import { BOARD_OFFSET, BOARD_SIZE, BOARD_TILT_DEG, CELL, cellToLocal, rollFor } from "./layout";
 import { GemMesh } from "./GemMesh";
+import { impactAnimation, useImpact } from "./useMotion";
 
 const CLICK_DOWN = 1;
 const PAD_Y = 0.016;
@@ -115,6 +116,22 @@ const Sockets = memo(function Sockets({ voids }: { voids: string }) {
   return <>{out}</>;
 });
 
+/**
+ * One obstacle layer in a cell (stone or buried rune). Hit → it keeps its old model for a brief rattle,
+ * then the game state's lower-strength model takes over (or it shrinks away when broken); a rise from
+ * nothing grows in. The models themselves are static and never deformed.
+ */
+const LayerCell = memo(function LayerCell({ kind, hp, position }: { kind: "stone" | "rune"; hp: number; position: [number, number, number] }) {
+  const impact = useImpact(hp, kind);
+  if (impact.shown <= 0) return null;
+  const mesh = kind === "stone" ? `ob_stone${Math.min(3, impact.shown)}` : `ob_rune${Math.min(2, impact.shown)}`;
+  return (
+    <ViroNode position={position} scale={impact.phase === "grow" ? [0.1, 0.1, 0.1] : [1, 1, 1]} animation={impactAnimation(impact.phase, impact.advance)}>
+      <GemMesh key={mesh} name={mesh} />
+    </ViroNode>
+  );
+});
+
 /** Cracked stone standing in its socket, and glowing runes buried in socket tops. */
 const Obstacles = memo(function Obstacles({ blocks, floor }: { blocks: string; floor: string }) {
   const out = [];
@@ -122,8 +139,9 @@ const Obstacles = memo(function Obstacles({ blocks, floor }: { blocks: string; f
     const x = i % BOARD_SIZE, y = Math.floor(i / BOARD_SIZE);
     const [px, , pz] = cellToLocal(x, y);
     const b = Number(blocks[i] ?? 0), f = Number(floor[i] ?? 0);
-    if (b > 0) out.push(<GemMesh key={`s${i}_${b}`} name={`ob_stone${Math.min(3, b)}`} position={[px, 0, pz]} />);
-    if (f > 0) out.push(<GemMesh key={`r${i}_${f}`} name={`ob_rune${Math.min(2, f)}`} position={[px, 0, pz]} />);
+    // a cell mounts a layer once it has ever held one; LayerCell renders nothing while it is empty
+    out.push(<LayerCell key={`s${i}`} kind="stone" hp={b} position={[px, 0, pz]} />);
+    out.push(<LayerCell key={`r${i}`} kind="rune" hp={f} position={[px, 0, pz]} />);
   }
   return <>{out}</>;
 });
@@ -151,6 +169,7 @@ function TiltingBoard({ children }: { children: ReactNode }) {
 
 export function BoardView() {
   const crystals = useStore(gameStore, (s) => s.crystals);
+  const runId = useStore(gameStore, (s) => s.runId);
   const selected = useStore(gameStore, (s) => s.selected);
   const bursts = useStore(gameStore, (s) => s.bursts);
   const hint = useStore(gameStore, (s) => s.hint);
@@ -164,10 +183,10 @@ export function BoardView() {
   return (
     <TiltingBoard>
       <Sockets voids={voids} />
-      <Obstacles blocks={blocks} floor={floor} />
+      <Obstacles key={runId} blocks={blocks} floor={floor} />
       <CellPads selKey={selKey} hintKey={hintKey} voids={voids} />
       {crystals.map((c) => (
-        <ViroNode key={c.id} onClickState={JS_PICKING ? undefined : onCell(c.x, c.y)}>
+        <ViroNode key={`${runId}:${c.id}`} onClickState={JS_PICKING ? undefined : onCell(c.x, c.y)}>
           <CrystalNode crystal={c} selected={!!selected && selected.x === c.x && selected.y === c.y} />
         </ViroNode>
       ))}
