@@ -2,6 +2,9 @@
 // (the web bridge ignores relative "+=" values), keyed by target so the set stays bounded.
 import { ViroAnimations, ViroMaterials } from "@reactvision/react-viro";
 import { CRYSTAL_COLORS, TEXTURES } from "./assets";
+import { lifeMaterial, lifeMaterialSet, ORBIT_MS, TINTS, type Sprite } from "./island/life";
+
+const LIFE_TEXTURE: Record<Sprite, number> = { bird: TEXTURES.fxBird, butterfly: TEXTURES.fxButterfly, manta: TEXTURES.fxManta, jelly: TEXTURES.fxJelly, wisp: TEXTURES.fxGlow, shard: TEXTURES.fxShard };
 
 /** colour scaled toward black: added on top of pale tiles it would otherwise wash out to white */
 const dim = (hex: string, k: number) => {
@@ -66,6 +69,17 @@ export function registerMaterials() {
     fxTwinkle: { lightingModel: "Constant", diffuseTexture: TEXTURES.fxStar, diffuseColor: "#ffffff", blendMode: "Add", writesToDepthBuffer: false },
     fxGate: { lightingModel: "Constant", diffuseTexture: TEXTURES.ringGlow, diffuseColor: "rgba(130,240,255,0.95)", blendMode: "Alpha", writesToDepthBuffer: false },
     fxGateCore: { lightingModel: "Constant", diffuseTexture: TEXTURES.fxGlow, diffuseColor: "rgba(70,190,235,0.6)", blendMode: "Alpha", writesToDepthBuffer: false },
+    // living environment: one tinted sprite material per (creature, tint) actually used (island/life.ts)
+    ...Object.fromEntries(
+      lifeMaterialSet().map(({ sprite, tint }) => [
+        lifeMaterial(sprite, tint),
+        sprite === "wisp"
+          ? { lightingModel: "Constant", diffuseTexture: LIFE_TEXTURE.wisp, diffuseColor: dim(TINTS[tint], 0.85), blendMode: "Add", writesToDepthBuffer: false }
+          : { lightingModel: "Constant", diffuseTexture: LIFE_TEXTURE[sprite], diffuseColor: TINTS[tint], blendMode: "Alpha", writesToDepthBuffer: false, cullMode: "None" },
+      ]),
+    ),
+    // drifting mist / cloud discs around the island, tinted by realm (see Life.tsx)
+    mistDisc: { lightingModel: "Constant", diffuseTexture: TEXTURES.cloudSea, diffuseColor: "rgba(255,255,255,0.5)", blendMode: "Alpha", writesToDepthBuffer: false, cullMode: "None" },
     shadowCatcher: { lightingModel: "Lambert", diffuseColor: "#ffffff", writesToDepthBuffer: true },
   });
 
@@ -110,6 +124,16 @@ export function registerMaterials() {
     fxFlash: { properties: { scaleX: 2.2, scaleY: 2.2, scaleZ: 2.2, opacity: 0 }, duration: 320, easing: "EaseOut" },
     fxTwinkle: { properties: { scaleX: 1.5, scaleY: 1.5, scaleZ: 1.5, opacity: 0 }, duration: 380, easing: "EaseOut" },
     fxGateSettle: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 420, easing: "EaseOut" },
+    // living environment: creatures lap the island (a rotating parent, the creature offset by its radius); mist turns
+    ...Object.fromEntries(ORBIT_MS.map((ms) => [`orbit${ms}`, { properties: { rotateY: 360 }, duration: ms, easing: "Linear" }])),
+    mistSpinA: { properties: { rotateY: 360 }, duration: 260000, easing: "Linear" },
+    mistSpinB: { properties: { rotateY: -360 }, duration: 190000, easing: "Linear" },
+    flapIn: { properties: { scaleX: 0.4, scaleY: 1, scaleZ: 1 }, duration: 230, easing: "EaseInEaseOut" },
+    flapOut: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 230, easing: "EaseInEaseOut" },
+    pulseIn: { properties: { scaleX: 0.78, scaleY: 0.78, scaleZ: 0.78 }, duration: 1400, easing: "EaseInEaseOut" },
+    pulseOut: { properties: { scaleX: 1.08, scaleY: 1.08, scaleZ: 1.08 }, duration: 1400, easing: "EaseInEaseOut" },
+    driftUp: { properties: { positionY: 0.014 }, duration: 2600, easing: "EaseInEaseOut" },
+    driftDown: { properties: { positionY: -0.014 }, duration: 2600, easing: "EaseInEaseOut" },
     // idle bob of special gems (~5 mm) and the restrained selection pulse
     bobUp: { properties: { positionY: 0.005 }, duration: 900, easing: "EaseInEaseOut" },
     bobDown: { properties: { positionY: 0 }, duration: 900, easing: "EaseInEaseOut" },

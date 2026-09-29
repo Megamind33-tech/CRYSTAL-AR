@@ -13,6 +13,8 @@ import { MODELS } from "../assets";
 import { BIOMES, biomeFor, WEATHER, type Biome, type Surface } from "./biomes";
 import { buildDais, buildIsland, PORTAL_CENTER, SURFACE_Y, type MeshPart, type Slot } from "./buildIsland";
 import { MeshyIslandMesh, useMeshyIsland } from "./MeshyIsland";
+import { Life, Mist } from "./Life";
+import { DaisTrim } from "./DaisTrim";
 
 /**
  * Normal maps give the CC0 surfaces their relief. Viro derives tangents for custom geometry on
@@ -22,6 +24,7 @@ const USE_NORMAL_MAPS = false;
 
 const registered = new Set<string>();
 const matName = (biome: Biome, slot: Slot) => `isl_${biome.id}_${slot}`;
+export const trimMat = (biome: Biome) => `isl_${biome.id}_trim`;
 
 function surface(s: Surface, extra: object = {}) {
   return {
@@ -58,6 +61,10 @@ export function registerBiome(b: Biome) {
     water: { lightingModel: "PBR", diffuseColor: "rgba(70,160,210,0.72)", roughness: 0.05, metalness: 0.1, blendMode: "Alpha" },
   };
   ViroMaterials.createMaterials(Object.fromEntries(Object.entries(defs).map(([slot, d]) => [matName(b, slot as Slot), d])) as never);
+  // the glowing rune line on the dais rim (DaisTrim): the realm's glow colour, soft-edged, unlit
+  ViroMaterials.createMaterials({
+    [trimMat(b)]: { lightingModel: "Constant", diffuseTexture: TEXTURES.fxGlow, diffuseColor: b.glow, blendMode: "Alpha", writesToDepthBuffer: false },
+  } as never);
 }
 
 
@@ -118,6 +125,7 @@ export function IslandWorld() {
       {meshy && ready ? (
         <>
           <MeshyIslandMesh realm={biome.id} lod="hero" />
+          <DaisTrim material={trimMat(biome)} />
           {dais!.map((part) => (
             <IslandPart key={`${key}_dais`} part={part} material={matName(biome, part.slot)} />
           ))}
@@ -194,6 +202,9 @@ export function IslandWorld() {
           particlePhysics={{ velocity: { initialRange: weather.velocity } }}
         />
       </Gated>
+
+      <Mist />
+      <Life realm={biome.id} />
 
       <Shockwave trigger={shock} strength={r.CASCADE_4_PLUS + r.LEVEL_COMPLETE > 0 ? 2 : 1} />
     </ViroNode>

@@ -49,7 +49,13 @@ flattest ground for the board's stone dais (`buildIsland.DAIS`; the unit test ch
 scale/yaw/offset into the vertices so the dais top is exactly `SURFACE_Y`, clamps stray spikes under the dais, and
 decimates to a hero LOD (~4.5k triangles) and a far LOD (~700) with the texture kept. Output: `src/render/meshyIslands/`
 (lazy per realm) plus a 1024 px texture per realm. The runtime adds the dais and portal arch (`buildDais`).
-`gen-fx.mjs` generates the crystal effect sprites.
+`gen-fx.mjs` generates the effect and creature sprites (shards, glow, twinkle, gull, butterfly, manta, jellyfish).
+
+Island polish in the bake: normals are recomputed from the decimated surface (the sampled ones come from the
+multi-million-triangle original and shade the coarse facets against each other), and the texture gets a light blur
+and slightly lower saturation to calm painted noise. At runtime each realm also has a colour grade
+(`MeshyIsland.tsx`), drifting mist discs and a slow sun swing (`Life.tsx`), and its own creatures (`life.ts`, tested by
+`life.test.ts`).
 
 ## Loading
 

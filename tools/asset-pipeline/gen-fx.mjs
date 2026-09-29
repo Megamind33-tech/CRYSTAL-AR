@@ -23,6 +23,15 @@ const sprites = {
     <defs><radialGradient id="g"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0.85"/></radialGradient></defs>
     <polygon points="32,0 37,27 64,32 37,37 32,64 27,37 0,32 27,27" fill="url(#g)"/>
     <circle cx="32" cy="32" r="5" fill="#fff"/>`),
+  // ---- living-environment creatures (white on alpha; tinted per realm by their Viro material)
+  // gull seen from above, wings swept back: head points up the image
+  fx_bird: svg(64, `<path d="M32 4 L37 24 L62 42 L37 37 L32 60 L27 37 L2 42 L27 24 Z" fill="#fff"/><path d="M32 4 L37 24 L32 60 Z" fill="#fff" fill-opacity="0.7"/>`),
+  // butterfly: two wing pairs and a body
+  fx_butterfly: svg(64, `<path d="M31 30 C12 2 0 18 6 32 C10 40 24 38 31 32 Z" fill="#fff"/><path d="M33 30 C52 2 64 18 58 32 C54 40 40 38 33 32 Z" fill="#fff"/><path d="M31 34 C14 44 12 62 26 58 C32 56 32 44 31 34 Z" fill="#fff" fill-opacity="0.85"/><path d="M33 34 C50 44 52 62 38 58 C32 56 32 44 33 34 Z" fill="#fff" fill-opacity="0.85"/><rect x="30" y="18" width="4" height="34" rx="2" fill="#fff"/>`),
+  // manta ray, head up
+  fx_manta: svg(64, `<path d="M32 4 C44 18 62 24 61 36 C50 32 42 40 35 46 L32 62 L29 46 C22 40 14 32 3 36 C2 24 20 18 32 4 Z" fill="#fff"/><path d="M32 4 C44 18 62 24 61 36 C50 32 42 40 35 46 L32 20 Z" fill="#fff" fill-opacity="0.65"/>`),
+  // jellyfish, standing up: bell and trailing tentacles (billboarded in the scene)
+  fx_jelly: svg(64, `<defs><radialGradient id="g" cx="0.5" cy="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="1"/></radialGradient></defs><path d="M6 32 C6 8 58 8 58 32 C48 27 40 30 32 28 C24 30 16 27 6 32 Z" fill="url(#g)"/><g stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.85"><path d="M16 30 C12 40 20 46 15 58"/><path d="M26 30 C24 42 30 48 26 60"/><path d="M38 30 C40 42 34 48 38 60"/><path d="M48 30 C52 40 44 46 49 58"/></g>`),
 };
 for (const [name, xml] of Object.entries(sprites)) {
   await sharp(Buffer.from(xml)).png({ compressionLevel: 9 }).toFile(`${OUT}${name}.png`);

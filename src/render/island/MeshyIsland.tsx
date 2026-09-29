@@ -30,12 +30,18 @@ function geometry(m: IslandMesh) {
 
 export const islandMaterial = (realm: string) => "mi_" + realm;
 
+/** A gentle grade per realm (multiplies the texture): tames blown-out whites and pulls each island toward its mood. */
+const GRADE: Record<string, string> = {
+  verdant: "#eef2e2", canyon: "#f2e4d6", tide: "#e6f0f2", sky: "#b4bccb", hollow: "#e4dcee",
+  caverns: "#dfe4f0", frozen: "#d8e2f0", solar: "#f0e6cf", ember: "#eddcd2", void: "#e6dcf0",
+};
+
 /** Registers one island material (called from materialsBoot with the realm's other materials). False on failure. */
 export function registerMeshyIslandMaterial(realm: string): boolean {
   const tex = ISLAND_TEXTURES[realm];
   if (!tex || !MESHY_ISLAND_REALMS.includes(realm)) return false;
   try {
-    ViroMaterials.createMaterials({ [islandMaterial(realm)]: { lightingModel: "PBR", diffuseTexture: tex, roughness: 0.9, metalness: 0, cullMode: "None" } } as never);
+    ViroMaterials.createMaterials({ [islandMaterial(realm)]: { lightingModel: "PBR", diffuseTexture: tex, diffuseColor: GRADE[realm] ?? "#ffffff", roughness: 0.9, metalness: 0, cullMode: "None" } } as never);
     return true;
   } catch {
     return false;

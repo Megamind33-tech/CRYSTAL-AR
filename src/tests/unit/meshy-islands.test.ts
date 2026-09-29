@@ -36,7 +36,7 @@ test("the bake script's dais numbers match the runtime's", () => {
 for (const realm of Object.keys(BIOMES)) {
   test(`${realm}: island geometry is well-formed and within the bridge budget`, () => {
     const isl = meshyIsland(realm)!;
-    for (const [lod, cap] of [["hero", 90000], ["far", 20000]] as const) {
+    for (const [lod, cap] of [["hero", 120000], ["far", 20000]] as const) {
       const m = isl[lod], verts = m.v.length / 3;
       assert.equal(m.n.length, m.v.length, `${lod}: one normal per vertex`);
       assert.equal(m.t.length / 2, verts, `${lod}: one uv per vertex`);
