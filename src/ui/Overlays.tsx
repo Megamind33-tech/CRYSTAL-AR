@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeIn, FadeOut, useAnimatedStyle, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeIn, useAnimatedStyle, ZoomIn } from "react-native-reanimated";
 import { arSession, nudgeWorldScale } from "../state/arSession";
 import { gameStore } from "../state/game";
 import { useStore } from "../state/store";
@@ -102,8 +102,9 @@ export function PauseMenu({ visible, onResume, onRestart, onResetWorld, onExit }
     if (!visible) setShowSettings(false);
   }, [visible]);
   if (!visible) return null;
+  // no exit fade: the board must take touches the instant RESUME is pressed (a fading scrim swallowed taps)
   return (
-    <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(180)} style={[StyleSheet.absoluteFill, s.scrim]}>
+    <Animated.View entering={FadeIn.duration(220)} style={[StyleSheet.absoluteFill, s.scrim]}>
       <Animated.View entering={ZoomIn.springify().damping(14)} style={s.panelWrap}>
         <GlassFrame radius={26} glowColor={L.violet} style={s.panel}>
           <Text style={s.kicker}>{showSettings ? "THE KEEPER'S" : level ? (level.label ?? `LEVEL ${level.id}`).toUpperCase() : "THE WORLD"}</Text>

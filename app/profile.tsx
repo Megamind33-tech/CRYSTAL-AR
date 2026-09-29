@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { LUMINS, RARITY_ORDER } from "@/src/meta/config/collection";
 import { leagueName } from "@/src/meta/competition";
 import { keeperLevel } from "@/src/meta/core";
@@ -8,8 +8,10 @@ import { achievementScore, achievementStatus, claimAchievement, sanctuaryRating 
 import { act, metaStore, setPlayer } from "@/src/state/meta";
 import { useStore } from "@/src/state/store";
 import { DIMENSION_LABEL, keeperRank, RANKS, type Dimension } from "@/src/meta/rank";
-import { Bar, Card, ErrorLine, Pill, RewardLine, Row, Screen, Section, T } from "@/src/ui/kit";
-import { C, font } from "@/src/ui/theme";
+import { Bar, Card, ErrorLine, Field, Pill, RewardLine, Row, Screen, Section, Stat, T } from "@/src/ui/kit";
+import { useLoop } from "@/src/ui/lux/Lux";
+import { F, L, titleGlow } from "@/src/ui/lux/tokens";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
 
 const CAT_NAME: Record<string, string> = { explorer: "Explorer", restorer: "Restorer", collector: "Collector", master: "Master", keeper: "Keeper", champion: "Champion", loyalty: "Loyalty", secrets: "Secrets" };
 
@@ -18,6 +20,8 @@ export default function Profile() {
   const [err, setErr] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
+  const t = useLoop(3000);
+  const halo = useAnimatedStyle(() => ({ opacity: 0.35 + Math.sin(t.value * Math.PI * 2) * 0.2, transform: [{ scale: 1 + Math.sin(t.value * Math.PI * 2) * 0.05 }] }));
   if (!p) return null;
   const now = Date.now();
   const lvl = keeperLevel(p.keeperXp);
@@ -25,24 +29,23 @@ export default function Profile() {
   const rare = LUMINS.filter((l) => p.lumins[l.id] && RARITY_ORDER.indexOf(l.rarity) >= 2);
   const ach = achievementStatus(p);
 
-  const Stat = ({ k, v }: { k: string; v: string | number }) => (
-    <View style={{ width: "33%", paddingVertical: 6 }}>
-      <Text style={{ color: C.ink, fontSize: 17, fontWeight: "800" }}>{v}</Text>
-      <Text style={{ color: C.inkFaint, fontSize: 11 }}>{k}</Text>
-    </View>
-  );
 
   const rank = keeperRank(p);
   return (
     <Screen title="Keeper" subtitle={`${rank.name} · ${p.profile.title}`}>
       <ErrorLine msg={err} />
-      <Card style={{ alignItems: "center", gap: 8, paddingVertical: 20, borderColor: C.gold }}>
-        <View style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: C.gold, backgroundColor: "#1d3a2f", alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: C.gold, fontSize: 32, fontFamily: font.display, fontWeight: "700" }}>{p.profile.keeperName[0]}</Text>
+      <Card style={{ alignItems: "center", gap: 8, paddingVertical: 20, borderColor: "rgba(246,211,138,0.85)" }}>
+        <View style={{ width: 92, height: 92, alignItems: "center", justifyContent: "center" }}>
+          <Animated.View style={[{ position: "absolute", width: 88, height: 88, borderRadius: 44, backgroundColor: L.gold, shadowColor: "#ffcf6a", shadowRadius: 18, shadowOpacity: 1 }, halo]} />
+          <View style={{ width: 78, height: 78, borderRadius: 39, padding: 3, backgroundColor: L.gold, borderWidth: 1, borderColor: L.goldLight }}>
+            <View style={{ flex: 1, borderRadius: 36, backgroundColor: L.night700, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(127,231,255,0.4)" }}>
+              <Text style={{ color: L.goldLight, fontSize: 34, fontFamily: F.display, ...titleGlow("#ffcf6a", 12) }}>{p.profile.keeperName[0]}</Text>
+            </View>
+          </View>
         </View>
         {editing ? (
           <Row>
-            <TextInput value={name} onChangeText={setName} maxLength={16} autoFocus placeholder="Keeper name" placeholderTextColor={C.inkFaint} style={{ color: C.ink, borderBottomWidth: 1, borderBottomColor: C.gold, minWidth: 140, fontSize: 18, paddingVertical: 4 }} />
+            <Field value={name} onChangeText={setName} maxLength={16} autoFocus placeholder="Keeper name" style={{ minWidth: 150 }} />
             <Pill label="SAVE" onPress={() => {
               const clean = name.trim().replace(/[^\p{L}\p{N} _-]/gu, "");
               if (clean.length >= 2) setPlayer((s) => ({ ...s, profile: { ...s.profile, keeperName: clean } }));
@@ -51,40 +54,40 @@ export default function Profile() {
           </Row>
         ) : (
           <Pressable onPress={() => { setName(p.profile.keeperName); setEditing(true); }}>
-            <Text style={{ color: C.ink, fontSize: 22, fontFamily: font.display, fontWeight: "700" }}>{p.profile.keeperName} ✎</Text>
+            <Text style={{ color: L.goldLight, fontSize: 22, fontFamily: F.title, letterSpacing: 1, ...titleGlow("#ffcf6a", 10) }}>{p.profile.keeperName} <Text style={{ color: L.mist, fontSize: 15 }}>✎</Text></Text>
           </Pressable>
         )}
-        <Text style={{ color: C.inkDim }}>Keeper {lvl.level} · {leagueName(p.league.id)}</Text>
+        <Text style={{ color: L.crystal, fontFamily: F.title, fontSize: 12, letterSpacing: 1.6 }}>KEEPER {lvl.level} · {leagueName(p.league.id).toUpperCase()}</Text>
         <View style={{ width: "80%" }}><Bar value={lvl.progress} /></View>
-        <Text style={{ color: C.inkFaint, fontSize: 11 }}>{lvl.into} / {lvl.need} XP to level {lvl.level + 1}</Text>
+        <Text style={{ color: L.mist, fontSize: 11.5, fontFamily: F.body }}>{lvl.into} / {lvl.need} XP to level {lvl.level + 1}</Text>
       </Card>
 
       <Card>
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          <Stat k="Heart Shards" v={p.heartShards.length} />
-          <Stat k="Islands restored" v={Object.keys(p.islands).length} />
-          <Stat k="Lumins rescued" v={Object.keys(p.lumins).length} />
-          <Stat k="Relics found" v={Object.keys(p.relics).length} />
-          <Stat k="Chronicle score" v={achievementScore(p)} />
-          <Stat k="Return streak" v={p.checkin.streak} />
-          <Stat k="Resonance" v={p.stats.resonance.toLocaleString()} />
-          <Stat k="Longest chain" v={p.stats.bestCascade} />
-          <Stat k="Trophies" v={p.trophies.length} />
-          <Stat k="Sanctuary" v={`${sanctuaryRating(p).pct}%`} />
-          <Stat k="Season level" v={pass?.tier ?? "–"} />
-          <Stat k="Rare Lumins" v={rare.map((l) => l.name).join(", ") || "–"} />
+        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 4 }}>
+          <Stat label="Heart Shards" value={p.heartShards.length} />
+          <Stat label="Islands restored" value={Object.keys(p.islands).length} />
+          <Stat label="Lumins rescued" value={Object.keys(p.lumins).length} />
+          <Stat label="Relics found" value={Object.keys(p.relics).length} />
+          <Stat label="Chronicle score" value={achievementScore(p)} />
+          <Stat label="Return streak" value={p.checkin.streak} />
+          <Stat label="Resonance" value={p.stats.resonance.toLocaleString()} />
+          <Stat label="Longest chain" value={p.stats.bestCascade} />
+          <Stat label="Trophies" value={p.trophies.length} />
+          <Stat label="Sanctuary" value={`${sanctuaryRating(p).pct}%`} />
+          <Stat label="Season level" value={pass?.tier ?? "–"} />
+          <Stat label="Rare Lumins" value={rare.map((l) => l.name).join(", ") || "–"} />
         </View>
       </Card>
 
       <Section title="Keeper Rank" note={`${rank.index + 1} of ${RANKS.length}`}>
         <Card>
           {T.h(rank.name)}
-          <Bar value={rank.score} color={C.gold} />
+          <Bar value={rank.score} color={L.gold} />
           {(Object.keys(rank.dimensions) as Dimension[]).map((k) => (
             <Row key={k} style={{ justifyContent: "space-between" }}>
-              <Text style={{ color: C.inkDim, fontSize: 12.5 }}>{DIMENSION_LABEL[k]}</Text>
+              <Text style={{ color: L.mist, fontSize: 12.5, fontFamily: F.body }}>{DIMENSION_LABEL[k]}</Text>
               <View style={{ width: 120 }}>
-                <Bar value={rank.dimensions[k]} color={C.portal} height={5} />
+                <Bar value={rank.dimensions[k]} color={L.crystal} height={5} />
               </View>
             </Row>
           ))}

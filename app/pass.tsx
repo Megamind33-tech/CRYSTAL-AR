@@ -4,8 +4,8 @@ import { useRouter } from "expo-router";
 import { activeEvents, claimPass, passStatus } from "@/src/meta/live";
 import { act, metaStore } from "@/src/state/meta";
 import { useStore } from "@/src/state/store";
-import { Bar, Card, ErrorLine, Pill, RewardLine, Row, Screen, Section, T } from "@/src/ui/kit";
-import { C } from "@/src/ui/theme";
+import { Bar, Card, ErrorLine, Label, Pill, RewardLine, Row, Screen, Section, T } from "@/src/ui/kit";
+import { F, L, titleGlow } from "@/src/ui/lux/tokens";
 
 export default function Pass() {
   const router = useRouter();
@@ -25,10 +25,10 @@ export default function Pass() {
       <Card>
         {T.p(st.season.theme)}
         <Row style={{ justifyContent: "space-between" }}>
-          <Text style={{ color: C.ink, fontWeight: "800", fontSize: 18 }}>Tier {st.tier}</Text>
-          <Text style={{ color: C.inkFaint }}>{next ? `${st.toNext} Season XP to tier ${st.tier + 1}` : "Complete"}</Text>
+          <Text style={{ color: L.goldLight, fontFamily: F.display, fontSize: 20, letterSpacing: 1.5, ...titleGlow("#ffcf6a", 10) }}>TIER {st.tier}</Text>
+          <Text style={{ color: L.mist, fontFamily: F.body, fontSize: 12.5 }}>{next ? `${st.toNext} Season XP to tier ${st.tier + 1}` : "Complete"}</Text>
         </Row>
-        <Bar value={within} color={C.portal} />
+        <Bar value={within} color={L.crystal} />
         {!st.premium && <Pill label="UNLOCK THE PREMIUM TRACK" tone="portal" onPress={() => router.push("/exchange")} />}
         {T.p("Season XP comes from islands, duties, missions and Trials. Heart Shards and the main story are never behind the pass.", true)}
       </Card>
@@ -40,13 +40,13 @@ export default function Pass() {
           const pClaimed = st.premium && !st.claimablePremium.includes(t.tier) && reached;
           return (
             <Card key={t.tier} style={{ opacity: reached ? 1 : 0.7 }}>
-              <Text style={{ color: reached ? C.gold : C.inkFaint, fontWeight: "800" }}>TIER {t.tier}</Text>
+              <Text style={[{ color: reached ? L.goldLight : L.mistDim, fontFamily: F.title, fontSize: 14, letterSpacing: 1.6 }, reached && titleGlow("#ffcf6a", 8)]}>TIER {t.tier}</Text>
               <Row style={{ justifyContent: "space-between" }}>
-                <View style={{ flex: 1 }}><Text style={{ color: C.inkFaint, fontSize: 11 }}>FREE</Text><RewardLine reward={t.free} /></View>
+                <View style={{ flex: 1 }}><Label color={L.mist}>FREE</Label><RewardLine reward={t.free} /></View>
                 <Pill label={fClaimed ? "✓" : "CLAIM"} disabled={!st.claimableFree.includes(t.tier)} onPress={() => setErr(act((s, n) => claimPass(s, t.tier, "free", n)))} />
               </Row>
               <Row style={{ justifyContent: "space-between" }}>
-                <View style={{ flex: 1 }}><Text style={{ color: C.portal, fontSize: 11 }}>CRYSTAL PASS</Text><RewardLine reward={t.premium} /></View>
+                <View style={{ flex: 1 }}><Label color={L.crystal}>CRYSTAL PASS</Label><RewardLine reward={t.premium} /></View>
                 <Pill tone="portal" label={pClaimed ? "✓" : st.premium ? "CLAIM" : "🔒"} disabled={!st.claimablePremium.includes(t.tier)} onPress={() => setErr(act((s, n) => claimPass(s, t.tier, "premium", n)))} />
               </Row>
             </Card>

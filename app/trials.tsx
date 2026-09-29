@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { LeaderboardResponse } from "@/src/backend/contracts";
 import { leagueName, trialDef, trialInstances } from "@/src/meta/competition";
@@ -8,8 +8,8 @@ import { levelOf } from "@/src/meta/core";
 import type { LeaderboardId } from "@/src/meta/types";
 import { backend, metaStore } from "@/src/state/meta";
 import { useStore } from "@/src/state/store";
-import { Bar, Card, Pill, RewardLine, Row, Screen, Section, T } from "@/src/ui/kit";
-import { C } from "@/src/ui/theme";
+import { Bar, Card, Chip, Pill, RewardLine, Row, Screen, Section, T } from "@/src/ui/kit";
+import { F, L, titleGlow } from "@/src/ui/lux/tokens";
 
 const KIND: Record<string, string> = { highScore: "Highest score on a shared board", resonanceRush: "Most Resonance before time runs out", limitedMoves: "Best result with the same few moves", cascade: "Deepest crystal chain", portal: "Stabilise a difficult portal" };
 
@@ -34,10 +34,10 @@ export default function Trials() {
   const nextLeague = LEAGUES[league + 1];
 
   const RankRow = ({ r, me }: { r: LeaderboardResponse["top10"][0]; me?: boolean }) => (
-    <Row style={{ paddingVertical: 5, paddingHorizontal: 6, borderRadius: 8, backgroundColor: me ? "rgba(242,196,107,0.14)" : "transparent" }}>
-      <Text style={{ color: r.rank <= 3 ? C.gold : C.inkDim, width: 44, fontWeight: "800" }}>#{r.rank}</Text>
-      <Text style={{ color: C.ink, flex: 1 }} numberOfLines={1}>{r.name} <Text style={{ color: C.inkFaint }}>· {r.level}</Text></Text>
-      <Text style={{ color: C.ink, fontWeight: "700" }}>{r.score.toLocaleString()}</Text>
+    <Row style={{ paddingVertical: 6, paddingHorizontal: 8, borderRadius: 10, backgroundColor: me ? "rgba(224,169,74,0.18)" : "transparent", borderWidth: me ? 1 : 0, borderColor: "rgba(246,211,138,0.5)" }}>
+      <Text style={[{ color: r.rank <= 3 ? L.goldLight : L.mist, width: 44, fontFamily: F.title, fontSize: 14 }, r.rank <= 3 && titleGlow("#ffcf6a", 6)]}>#{r.rank}</Text>
+      <Text style={{ color: L.ivory, flex: 1, fontFamily: F.body, fontSize: 13.5 }} numberOfLines={1}>{r.name} <Text style={{ color: L.mistDim }}>· {r.level}</Text></Text>
+      <Text style={{ color: L.ivory, fontFamily: F.number, fontSize: 13.5 }}>{r.score.toLocaleString()}</Text>
     </Row>
   );
 
@@ -75,11 +75,9 @@ export default function Trials() {
       </Section>
 
       <Section title="Rankings" note="simulated rivals until the online service exists">
-        <Row style={{ flexWrap: "wrap" }}>
+        <Row style={{ flexWrap: "wrap", gap: 8 }}>
           {LEADERBOARDS.map((l) => (
-            <Pressable key={l.id} onPress={() => setBoard(l.id)} style={{ paddingVertical: 5, paddingHorizontal: 10, borderRadius: 12, backgroundColor: board === l.id ? C.gold : "rgba(255,255,255,0.06)" }}>
-              <Text style={{ color: board === l.id ? "#1f160a" : C.inkDim, fontSize: 11.5, fontWeight: "700" }}>{l.name}</Text>
-            </Pressable>
+            <Chip key={l.id} label={l.name} active={board === l.id} onPress={() => setBoard(l.id)} />
           ))}
         </Row>
         {board === "regional" && !p.profile.country ? (
@@ -89,7 +87,7 @@ export default function Trials() {
             {lb.top10.map((r) => <RankRow key={r.keeperId} r={r} me={r.keeperId === p.profile.keeperId} />)}
             {lb.me && lb.me.rank > 10 && (
               <>
-                <Text style={{ color: C.inkFaint, textAlign: "center" }}>⋯</Text>
+                <Text style={{ color: L.goldPale, textAlign: "center", fontFamily: F.bold }}>⋯</Text>
                 {lb.neighbours.map((r) => <RankRow key={r.keeperId} r={r} me={r.keeperId === p.profile.keeperId} />)}
               </>
             )}

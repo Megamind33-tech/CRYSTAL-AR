@@ -1,7 +1,7 @@
 // HOME — luminous fantasy (Figma › Luminous v2 › "Home v2"). The Keeper stands before the island
 // they are restoring: a floating isle turning under a portal ring, notices as glass rows, a rail of
 // glowing orbs, and the gold PLAY crystal.
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -137,6 +137,8 @@ export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const player = useStore(metaStore, (m) => m.player);
+  // the hero island shrinks to the room the notices leave it, instead of spilling over the title
+  const [heroRoom, setHeroRoom] = useState(280);
 
   useEffect(() => {
     loadKeeper();
@@ -194,8 +196,10 @@ export default function Home() {
           <Text style={s.objective}>{nextObjective(player, now)}</Text>
         </View>
 
-        <View style={{ flex: 1, justifyContent: "center" }}>
-          <HeroIsland realm={nextLevel?.realm ?? "verdant"} />
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }} onLayout={(e) => setHeroRoom(e.nativeEvent.layout.height)}>
+          <View style={{ transform: [{ scale: Math.max(0.45, Math.min(1, heroRoom / 280)) }] }}>
+            <HeroIsland realm={nextLevel?.realm ?? "verdant"} />
+          </View>
         </View>
 
         {/* right rail */}

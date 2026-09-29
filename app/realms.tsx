@@ -243,7 +243,8 @@ function MapNode({ node, player, now, current, onPress }: { node: Node; player: 
       {finale && <Text style={[s.finale, titleGlow("#b07aff", 10)]} pointerEvents="none">◆</Text>}
       {secret && <Text style={[s.secret, titleGlow("#ffe070", 10)]} pointerEvents="none">✦</Text>}
       {current && (
-        <View style={s.sigilWrap} pointerEvents="none">
+        // beside the node, on the side facing the open sky (above it would sit on the next node)
+        <View style={[s.sigilWrap, { top: size / 2 - 34 }, x > Dimensions.get("window").width / 2 ? { right: size + 6 } : { left: size + 6 }]} pointerEvents="none">
           <Text style={s.here}>YOU ARE HERE</Text>
           <View style={s.sigil}>
             <Text style={s.sigilTxt}>{(player.profile.keeperName || "K")[0].toUpperCase()}</Text>
@@ -405,7 +406,7 @@ const s = StyleSheet.create({
   star: { fontFamily: F.bold },
   finale: { position: "absolute", top: -28, alignSelf: "center", fontSize: 20, color: "#d8b0ff" },
   secret: { position: "absolute", right: -8, bottom: -6, fontSize: 18, color: "#fff6c8" },
-  sigilWrap: { position: "absolute", top: -96, alignSelf: "center", alignItems: "center", width: 120, left: "50%", marginLeft: -60 },
+  sigilWrap: { position: "absolute", alignItems: "center", width: 110 },
   here: { color: L.goldPale, fontFamily: F.title, fontSize: 8.5, letterSpacing: 2.5, marginBottom: 4, ...titleGlow("#ffcf6a", 6) },
   sigil: { width: 46, height: 46, borderRadius: 23, backgroundColor: "#2a2070", borderWidth: 2.5, borderColor: L.gold, alignItems: "center", justifyContent: "center", shadowColor: "#ffcf6a", shadowOpacity: 0.9, shadowRadius: 12, elevation: 9 },
   sigilTxt: { color: L.goldPale, fontFamily: F.display, fontSize: 20 },

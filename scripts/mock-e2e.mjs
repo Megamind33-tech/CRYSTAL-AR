@@ -126,10 +126,12 @@ try {
     step("Keeper progress saved; home offers the next island", !!saved?.islands?.["waking-stones"] && text.includes(NEXT_NAME), JSON.stringify({ islands: Object.keys(saved?.islands ?? {}), lumins: Object.keys(saved?.lumins ?? {}), dust: saved?.wallet?.prismDust }));
     await home.screenshot({ path: `${outDir}/06-home.png` });
     // every meta screen renders with real state
-    const screens = [["/realms", /PLAY 2/], ["/sanctuary", /Heart Altar/], ["/archive", /Mossling/], ["/profile", /Chronicles/i], ["/duties", /Story/i], ["/trials", /Realm Trials/], ["/pass", /Crystal Pass/], ["/exchange", /Realm Exchange/], ["/sanctuary-view?autoplace=1", /Sanctuary/]];
+    const screens = [["/realms", /PLAY 2/], ["/sanctuary", /Heart Altar/], ["/archive", /Mossling/], ["/profile", /Chronicles/i], ["/duties", /Story/i], ["/trials", /Realm Trials/i], ["/pass", /Crystal Pass/i], ["/exchange", /Realm Exchange/i], ["/sanctuary-view?autoplace=1", /Sanctuary/]];
     for (const [route, expect] of screens) {
       await home.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
-      await sleep(1500);
+      // screen titles render in Cinzel caps; heavy 3D routes can take a while to mount under software GL
+      await home.waitForFunction((src, flags) => new RegExp(src, flags).test(document.body.innerText), { timeout: 15000 }, expect.source, expect.flags).catch(() => {});
+      await sleep(500);
       const t = await home.evaluate(() => document.body.innerText);
       step(`screen ${route} renders`, expect.test(t), t.slice(0, 80).replace(/\s+/g, " "));
       await home.screenshot({ path: `${outDir}/07${route.replace(/[/?=]/g, "-")}.png` });

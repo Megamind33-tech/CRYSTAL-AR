@@ -1,12 +1,12 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { arSession, requestResetPlacement } from "@/src/state/arSession";
 import { useStore } from "@/src/state/store";
 import { Button } from "@/src/ui/Button";
 import { SettingsList } from "@/src/ui/SettingsList";
 import { AccountSettings } from "@/src/ui/AccountSettings";
-import { C, font } from "@/src/ui/theme";
+import { Card, Screen, Section } from "@/src/ui/kit";
+import { F, L } from "@/src/ui/lux/tokens";
 
 /** Required attribution for CC-BY assets (and thanks for the CC0 ones). */
 const CREDITS = [
@@ -17,14 +17,16 @@ const CREDITS = [
 
 export default function Settings() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const placed = useStore(arSession, (s) => s.phase === "placed");
   return (
-    <ScrollView style={{ backgroundColor: C.bg }} contentContainerStyle={[s.root, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
-      <Text style={s.title}>Settings</Text>
-      <SettingsList />
-      <AccountSettings />
-      <View style={{ gap: 10, marginTop: 24 }}>
+    <Screen title="Settings" subtitle="Sound, view and the Keeper's account">
+      <Card>
+        <SettingsList />
+      </Card>
+      <Card>
+        <AccountSettings />
+      </Card>
+      <View style={{ gap: 10, marginTop: 6 }}>
         {placed && (
           <Button
             label="RESET AR POSITION"
@@ -36,17 +38,15 @@ export default function Settings() {
         )}
         <Button testID="settings-back" label="BACK" variant="primary" onPress={() => router.back()} />
       </View>
-      <Text style={s.creditsTitle}>Credits</Text>
-      <Text style={s.credits}>
-        {CREDITS}
-      </Text>
-    </ScrollView>
+      <Section title="Credits">
+        <Card>
+          <Text style={s.credits}>{CREDITS}</Text>
+        </Card>
+      </Section>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  root: { paddingHorizontal: 22 },
-  title: { color: C.ink, fontSize: 32, fontFamily: font.display, fontWeight: "700", marginBottom: 12 },
-  creditsTitle: { color: C.inkDim, fontSize: 12, letterSpacing: 1.6, textTransform: "uppercase", fontWeight: "700", marginTop: 28 },
-  credits: { color: C.inkFaint, fontSize: 12, lineHeight: 18, marginTop: 6 },
+  credits: { color: L.mist, fontSize: 12, lineHeight: 19, fontFamily: F.body },
 });

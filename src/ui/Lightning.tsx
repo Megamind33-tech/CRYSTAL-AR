@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
-import { Animated, StyleSheet } from "react-native";
+import { useEffect } from "react";
+import { StyleSheet } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 import { LEVELS } from "../game/level";
 import { WEATHER } from "../render/island/biomes";
 import { gameEvents, gameStore } from "../state/game";
@@ -11,18 +12,19 @@ import { useStore } from "../state/store";
  */
 export function Lightning() {
   const realm = useStore(gameStore, (s) => (s.session?.level ?? LEVELS[s.levelIndex]).realm ?? "verdant");
-  const flash = useRef(new Animated.Value(0)).current;
+  const flash = useSharedValue(0);
+  const st = useAnimatedStyle(() => ({ opacity: flash.value }));
 
   useEffect(() => {
     if (!WEATHER[realm]?.lightning) return;
     let t: ReturnType<typeof setTimeout>;
     const strike = () => {
-      Animated.sequence([
-        Animated.timing(flash, { toValue: 0.55, duration: 50, useNativeDriver: true }),
-        Animated.timing(flash, { toValue: 0.08, duration: 90, useNativeDriver: true }),
-        Animated.timing(flash, { toValue: 0.4, duration: 60, useNativeDriver: true }),
-        Animated.timing(flash, { toValue: 0, duration: 520, useNativeDriver: true }),
-      ]).start();
+      flash.value = withSequence(
+        withTiming(0.55, { duration: 50 }),
+        withTiming(0.08, { duration: 90 }),
+        withTiming(0.4, { duration: 60 }),
+        withTiming(0, { duration: 520 }),
+      );
       // thunder arrives after the light, as it would from a distant storm
       setTimeout(() => gameEvents.emit({ type: "haptic", kind: "light" }), 700 + Math.random() * 900);
       t = setTimeout(strike, 18000 + Math.random() * 27000);
@@ -31,5 +33,5 @@ export function Lightning() {
     return () => clearTimeout(t);
   }, [realm, flash]);
 
-  return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "#e8f2ff", opacity: flash }]} />;
+  return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "#e6ecff" }, st]} />;
 }

@@ -6,7 +6,7 @@ import type { StoreOffer } from "@/src/meta/types";
 import { act, analytics, backend, metaStore } from "@/src/state/meta";
 import { useStore } from "@/src/state/store";
 import { Card, ErrorLine, Pill, RewardLine, Row, Screen, Section, T, Wallet } from "@/src/ui/kit";
-import { C } from "@/src/ui/theme";
+import { F, L } from "@/src/ui/lux/tokens";
 
 const SECTIONS: { id: StoreOffer["section"]; name: string }[] = [
   { id: "pass", name: "Crystal Pass" },
@@ -53,7 +53,7 @@ export default function Exchange() {
   return (
     <Screen title="Realm Exchange" subtitle="Traders who drift between the realms" right={<Wallet />}>
       <ErrorLine msg={err} />
-      <Card style={{ borderColor: C.portal }}>{T.p("Development build: real-money offers use a test provider – nothing is charged.", true)}</Card>
+      <Card style={{ borderColor: "rgba(127,231,255,0.6)" }}>{T.p("Development build: real-money offers use a test provider – nothing is charged.", true)}</Card>
       {SECTIONS.map((sec) => {
         const list = items.filter((i) => i.offer.section === sec.id);
         if (!list.length) return null;
@@ -74,7 +74,7 @@ export default function Exchange() {
           </Section>
         );
       })}
-      <Text style={{ color: C.inkFaint, fontSize: 11, textAlign: "center" }}>Heart Shards and story islands are never sold.</Text>
+      <Text style={{ color: L.mist, fontSize: 11.5, textAlign: "center", fontFamily: F.body }}>Heart Shards and story islands are never sold.</Text>
     </Screen>
   );
 }

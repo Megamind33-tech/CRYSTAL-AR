@@ -9,7 +9,7 @@ import { act, metaStore } from "@/src/state/meta";
 import { useStore } from "@/src/state/store";
 import { Bar, Card, ErrorLine, Pill, Row, Screen, Section, T, Wallet } from "@/src/ui/kit";
 import { useRouter } from "expo-router";
-import { C } from "@/src/ui/theme";
+import { F, L } from "@/src/ui/lux/tokens";
 
 export default function Sanctuary() {
   const p = useStore(metaStore, (m) => m.player);
@@ -30,7 +30,7 @@ export default function Sanctuary() {
         {T.h("The Heart Altar")}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginVertical: 4 }}>
           {Array.from({ length: HEART_FACETS }, (_, i) => (
-            <View key={i} style={{ width: 20, height: 20, transform: [{ rotate: "45deg" }], borderWidth: 1, borderColor: C.gold, backgroundColor: i < p.heartShards.length ? C.gold : "transparent", opacity: i < p.heartShards.length ? 1 : 0.35 }} />
+            <View key={i} style={{ width: 20, height: 20, transform: [{ rotate: "45deg" }], borderWidth: 1.2, borderColor: L.goldPale, backgroundColor: i < p.heartShards.length ? L.gold : "rgba(7,9,32,0.6)", opacity: i < p.heartShards.length ? 1 : 0.45, shadowColor: "#ffcf6a", shadowRadius: 8, shadowOpacity: i < p.heartShards.length ? 0.9 : 0 }} />
           ))}
         </View>
         {T.p(p.heartShards.length ? `${p.heartShards.length} of ${HEART_FACETS} facets of the Prism Heart rest here.` : "The altar is empty. Heart Shards are found beyond the portals.", true)}
@@ -60,7 +60,7 @@ export default function Sanctuary() {
                   <Bar value={lvl / d.maxLevel} height={4} />
                   {d.effect && T.p(`${lvl ? "Now: " + effectText(d.effect.kind, d.effect.perLevel * lvl) + " · " : ""}Next: ${effectText(d.effect.kind, d.effect.perLevel * (lvl + 1))}`, true)}
                 </View>
-                {locked ? <Text style={{ color: C.inkFaint, fontSize: 12 }}>🔒 Keeper {d.minKeeperLevel}</Text> : (
+                {locked ? <Text style={{ color: L.mist, fontSize: 11, fontFamily: F.title, letterSpacing: 1 }}>🔒 KEEPER {d.minKeeperLevel}</Text> : (
                   <Pill label={maxed ? "RESTORED" : lvl ? "UPGRADE" : "RESTORE"} disabled={maxed} onPress={() => setErr(act((s, t) => upgradeSanctuary(s, d.id, t), ["sanctuary_upgrade", { item: d.id, level: lvl + 1 }]))} />
                 )}
               </Row>
