@@ -123,6 +123,12 @@ for (const realm of realms) {
   const src = { P: t.P2, N: t.N2, U, I };
   const hero = await decimateTextured(src, ISLAND_LOD.hero);
   const far = await decimateTextured(src, ISLAND_LOD.far);
+  // the window search samples the ground every 2 cm, so a thin spike can slip through: clamp anything under the dais
+  // (1 cm margin) below the dais top so nothing pokes through the slab
+  let clamped = 0;
+  for (let k = 0; k < hero.v.length; k += 3) {
+    if (Math.abs(hero.v[k]) < DAIS.halfX + 0.01 && hero.v[k + 2] > DAIS.zMin - 0.01 && hero.v[k + 2] < DAIS.zMax + 0.01 && hero.v[k + 1] > SURFACE_Y - 0.006) { hero.v[k + 1] = SURFACE_Y - 0.006; clamped++; }
+  }
   const pack = (m, d) => ({ v: m.v.map((x) => r(x, d)), n: m.n.map((x) => r(x, 2)), t: m.t.map((x) => r(x, 4)), i: m.i });
   const img = doc.getRoot().listMaterials()[0].getBaseColorTexture().getImage();
   await sharp(Buffer.from(img)).resize(ISLAND_LOD.tex, ISLAND_LOD.tex).jpeg({ quality: 80 }).toFile(`${GAME_TEX_DIR}island_${realm}.jpg`);
@@ -131,7 +137,7 @@ import type { MeshyIsland } from "./types";
 export const ISLAND: MeshyIsland = ${JSON.stringify({ realm, yaw, scale: r(s, 4), bottomY, hero: pack(hero, 4), far: pack(far, 3) })};
 `);
   const bridge = (m) => m.v.length + m.n.length + m.t.length + m.i.length;
-  console.log(`${realm.padEnd(10)} ${String(yaw).padStart(3)}  ${s.toFixed(3)}  ${w.range.toFixed(3)}m  ${bottomY.toFixed(3)}   ${hero.stats.tris}/${hero.stats.verts} (${bridge(pack(hero, 4))} nums)   ${far.stats.tris}   ${(statSync(`${GAME_TEX_DIR}island_${realm}.jpg`).size / 1024) | 0}`);
+  console.log(`${realm.padEnd(10)} ${String(yaw).padStart(3)}  ${s.toFixed(3)}  ${w.range.toFixed(3)}m  ${bottomY.toFixed(3)}   ${hero.stats.tris}/${hero.stats.verts} (${bridge(pack(hero, 4))} nums)   ${far.stats.tris}   clamped ${clamped}   ${(statSync(`${GAME_TEX_DIR}island_${realm}.jpg`).size / 1024) | 0}`);
 }
 const have = readdirSync(ISLAND_DIR).filter((f) => f.endsWith(".ts") && !["index.ts", "types.ts"].includes(f)).map((f) => f.slice(0, -3)).sort();
 writeFileSync(`${ISLAND_DIR}types.ts`, `export interface IslandMesh { v: number[]; n: number[]; t: number[]; i: number[] }

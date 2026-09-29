@@ -466,7 +466,7 @@ function buildProp(kind: PropKind, s: number, at: V3, yaw: number, rand: () => n
 export const DAIS = { halfX: 0.25, zMin: -0.33, zMax: 0.25, wall: 0.03 } as const;
 
 /**
- * What stands on a Meshy island where the board sits: a stone dais (slab down to `bottomY`, with a raised rim), the
+ * What stands on a Meshy island where the board sits: a stone dais (a slab down to `bottomY`), the
  * portal arch and its plinth. Deterministic in `seed`. A Meshy island is an organic hilly model, so instead of
  * levelling its ground the board gets a flat stone platform (like the plaza on the procedural islands); the island
  * is placed so its terrain sits below the dais top, and the slab hides whatever is left.
@@ -474,15 +474,10 @@ export const DAIS = { halfX: 0.25, zMin: -0.33, zMax: 0.25, wall: 0.03 } as cons
 export function buildDais(biome: Biome, seed: number, bottomY: number): MeshPart[] {
   const rand = prng(seed ^ 0x9e37);
   const stone = new Acc("stone", biome.stone.tile);
-  const { halfX, zMin, zMax, wall } = DAIS;
+  const { halfX, zMin, zMax } = DAIS;
   const top = SURFACE_Y;
   // slab: a box from bottomY up to the dais top (the top face is hidden by the board's own sockets in most places)
   stone.tris(boxT(halfX * 2, top - bottomY, zMax - zMin), xf(1, [0, 0, 0], [0, bottomY, (zMin + zMax) / 2]));
-  // low rim around the front and sides so the platform reads as built, not as a floating box
-  const rim = 0.008;
-  stone.tris(boxT(halfX * 2 + wall, rim, wall), xf(1, [0, 0, 0], [0, top, zMax + wall / 2]));
-  stone.tris(boxT(wall, rim, zMax - zMin), xf(1, [0, 0, 0], [-halfX - wall / 2, top, (zMin + zMax) / 2]));
-  stone.tris(boxT(wall, rim, zMax - zMin), xf(1, [0, 0, 0], [halfX + wall / 2, top, (zMin + zMax) / 2]));
   // portal arch, identical to the procedural islands'
   const [pcx, pcy, pcz] = PORTAL_CENTER;
   for (let i = 0; i < 13; i++) {

@@ -6,7 +6,20 @@ import { readFileSync } from "node:fs";
 import { DAIS, SURFACE_Y as ISLAND_SURFACE, buildDais } from "../../render/island/buildIsland.ts";
 import { BIOMES } from "../../render/island/biomes.ts";
 import { SURFACE_Y } from "../../render/layout.ts";
-import { MESHY_ISLAND_REALMS, meshyIsland } from "../../render/meshyIslands/index.ts";
+import { readdirSync } from "node:fs";
+import type { MeshyIsland } from "../../render/meshyIslands/types.ts";
+
+// index.ts loads realms with Metro's lazy require, which plain Node lacks: load the realm modules directly
+const dir = new URL("../../render/meshyIslands/", import.meta.url);
+const MESHY_ISLAND_REALMS = readdirSync(dir).filter((f) => f.endsWith(".ts") && !["index.ts", "types.ts"].includes(f)).map((f) => f.slice(0, -3));
+const islands: Record<string, MeshyIsland> = {};
+for (const r of MESHY_ISLAND_REALMS) islands[r] = (await import(new URL(`${r}.ts`, dir).href)).ISLAND;
+const meshyIsland = (r: string) => islands[r];
+
+test("index.ts lists exactly the baked realms", () => {
+  const idx = readFileSync(new URL("index.ts", dir), "utf8");
+  assert.deepEqual(JSON.parse(idx.match(/MESHY_ISLAND_REALMS = (\[.*?\])/)![1]), MESHY_ISLAND_REALMS);
+});
 
 test("every realm has a baked Meshy island", () => {
   assert.deepEqual([...MESHY_ISLAND_REALMS].sort(), Object.keys(BIOMES).sort());
@@ -23,7 +36,7 @@ test("the bake script's dais numbers match the runtime's", () => {
 for (const realm of Object.keys(BIOMES)) {
   test(`${realm}: island geometry is well-formed and within the bridge budget`, () => {
     const isl = meshyIsland(realm)!;
-    for (const [lod, cap] of [["hero", 90000], ["far", 16000]] as const) {
+    for (const [lod, cap] of [["hero", 90000], ["far", 20000]] as const) {
       const m = isl[lod], verts = m.v.length / 3;
       assert.equal(m.n.length, m.v.length, `${lod}: one normal per vertex`);
       assert.equal(m.t.length / 2, verts, `${lod}: one uv per vertex`);

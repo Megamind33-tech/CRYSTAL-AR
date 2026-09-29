@@ -4,12 +4,17 @@ import type { MeshyIsland } from "./types";
 export type { MeshyIsland } from "./types";
 const LOADERS: Record<string, () => MeshyIsland> = {
   canyon: () => require("./canyon").ISLAND,
+  caverns: () => require("./caverns").ISLAND,
   ember: () => require("./ember").ISLAND,
+  frozen: () => require("./frozen").ISLAND,
+  hollow: () => require("./hollow").ISLAND,
   sky: () => require("./sky").ISLAND,
+  solar: () => require("./solar").ISLAND,
   tide: () => require("./tide").ISLAND,
   verdant: () => require("./verdant").ISLAND,
+  void: () => require("./void").ISLAND,
 };
-export const MESHY_ISLAND_REALMS = ["canyon","ember","sky","tide","verdant"];
+export const MESHY_ISLAND_REALMS = ["canyon","caverns","ember","frozen","hollow","sky","solar","tide","verdant","void"];
 const cache = new Map<string, MeshyIsland>();
 export function meshyIsland(realm: string): MeshyIsland | null {
   let m = cache.get(realm);

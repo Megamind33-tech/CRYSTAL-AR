@@ -41,6 +41,16 @@ Budgets (`GAME_LOD` in `config.mjs`) are set by bridge cost: every `ViroGeometry
 Native bridge per instance. ~320 triangles / ~5.3k numbers per gem is ~1.7x the classic meshes; `meshy.test.ts`
 fails if a bake goes over. Settings > "Classic crystals" switches back to the built-in meshes.
 
+## Islands: `mid.mjs` then `bake-islands.mjs`
+
+`node --max-old-space-size=14000 mid.mjs <realm ...>` cuts each 2-8M triangle island to ~60k (slow, minutes each,
+cached in `.cache/mid`). `node bake-islands.mjs [realm ...]` then, per island: tries 4 yaws x every window, picks the
+flattest ground for the board's stone dais (`buildIsland.DAIS`; the unit test checks the numbers stay in sync), bakes
+scale/yaw/offset into the vertices so the dais top is exactly `SURFACE_Y`, clamps stray spikes under the dais, and
+decimates to a hero LOD (~4.5k triangles) and a far LOD (~700) with the texture kept. Output: `src/render/meshyIslands/`
+(lazy per realm) plus a 1024 px texture per realm. The runtime adds the dais and portal arch (`buildDais`).
+`gen-fx.mjs` generates the crystal effect sprites.
+
 ## Loading
 
 Load through `Model` in `src/render/LoadQueue.tsx` (one GLB at a time): many simultaneous background loads
