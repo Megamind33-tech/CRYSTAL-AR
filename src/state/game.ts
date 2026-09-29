@@ -178,12 +178,21 @@ export function startLevel(levelIndex: number, seedOverride?: number, movesOverr
   generation++;
   const base = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, levelIndex))];
 
-  // Apply boost effects: extra moves and spawn weights
+  // Apply boost effects: extra moves, surge spawn rate, point multiplier
   const effects = boostEffects(boosts);
   const boostedMoves = (movesOverride ?? base.moves) + effects.extraMoves;
-  const level = { ...base, moves: boostedMoves };
 
-  // Boost effects are applied; surge spawn rate would need engine modification
+  // Apply surge spawn rate boost by increasing surge gem (type 3) weight
+  let spawnWeights = base.spawnWeights?.slice();
+  if (effects.surgeSpawnRate !== 1 && spawnWeights) {
+    spawnWeights[3] = (spawnWeights[3] ?? 1) * effects.surgeSpawnRate;
+  }
+
+  // Apply starting clears boost: extra moves for board prep bonus
+  const totalMoves = boostedMoves + effects.startingClears;
+
+  const level = { ...base, moves: totalMoves, spawnWeights };
+
   const session = startSession(level, seedOverride);
 
   run = {
