@@ -77,6 +77,11 @@ export function registerMaterials() {
     auraBlast: { properties: { scaleX: 2.6, scaleY: 0.7, scaleZ: 1 }, duration: 230, easing: "EaseOut" },
     auraBreathUp: { properties: { scaleX: 1.07, scaleY: 1.07, scaleZ: 1.07 }, duration: 800, easing: "EaseInEaseOut" },
     auraBreathDown: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 800, easing: "EaseInEaseOut" },
+    // surge aura (Meshy ring): it turns in place around its own axis, which points along the clear; on
+    // activation two rings fly out along that axis (positionZ is the ring's local axis, yawed onto the row/column)
+    auraSpin: { properties: { rotateZ: 360 }, duration: 5200, easing: "Linear" },
+    auraSweepA: { properties: { positionZ: 0.18, scaleX: 1.4, scaleY: 1.4, scaleZ: 1.4 }, duration: 230, easing: "EaseOut" },
+    auraSweepB: { properties: { positionZ: -0.18, scaleX: 1.4, scaleY: 1.4, scaleZ: 1.4 }, duration: 230, easing: "EaseOut" },
     // idle bob of special gems (~5 mm) and the restrained selection pulse
     bobUp: { properties: { positionY: 0.005 }, duration: 900, easing: "EaseInEaseOut" },
     bobDown: { properties: { positionY: 0 }, duration: 900, easing: "EaseInEaseOut" },

@@ -26,6 +26,7 @@ import { trialDef, trialInstances } from "@/src/meta/competition";
 import { ISLANDS } from "@/src/meta/config/world";
 import { islandStatus } from "@/src/meta/progression";
 import { analytics, metaStore, setPlayContext } from "@/src/state/meta";
+import { settingsStore } from "@/src/state/settings";
 import { L } from "@/src/ui/lux/tokens";
 
 export default function Play() {
@@ -49,7 +50,7 @@ export default function Play() {
     setAmbientActive(true);
     const removePicking = Platform.OS === "web" ? installMockPicking() : () => {};
     // automation hook for DEV_AR_MOCK runs (CI / screenshots)
-    if (DEV_AR_MOCK) (globalThis as Record<string, unknown>).__crystals = { gameStore, arSession, attemptSwap, findValidMoves, cellToScreen, turnTabletop };
+    if (DEV_AR_MOCK) (globalThis as Record<string, unknown>).__crystals = { gameStore, arSession, attemptSwap, findValidMoves, cellToScreen, turnTabletop, settingsStore };
     if (DEV_AR_MOCK && params.autoplace) setTimeout(() => arSession.set({ phase: "placed", anchorId: "mock-table", yaw: 0 }), 300);
     return () => {
       removePicking();

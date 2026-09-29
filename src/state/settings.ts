@@ -10,6 +10,8 @@ export interface Settings {
   diagnostics: boolean;
   /** force Camera View even if ARCore reports support */
   cameraView: boolean;
+  /** the simple built-in crystal models instead of the Meshy-textured ones (fallback if a phone stutters) */
+  classicGems: boolean;
 }
 
 export interface Progress {
@@ -28,6 +30,7 @@ export const settingsStore = createStore<Settings & { loaded: boolean }>({
   haptics: true,
   diagnostics: __DEV__,
   cameraView: false,
+  classicGems: false,
   loaded: false,
 });
 

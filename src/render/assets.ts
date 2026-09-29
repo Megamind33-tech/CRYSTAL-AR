@@ -27,8 +27,9 @@ export const MODELS = {
 };
 
 /**
- * Optimised Meshy models (built by tools/asset-pipeline). Not used by the game yet: only the /dev/models
- * comparison page loads them, so nothing here changes play until a model is deliberately wired in.
+ * Optimised Meshy GLB files (built by tools/asset-pipeline). The game does NOT load these (it uses the baked
+ * in-memory geometry in meshyMeshes.ts, since a GLB per crystal crashed Viro): only the /dev/models
+ * comparison page loads them.
  */
 export const MESHY_MODELS = {
   gem_red: require("../../assets/models/meshy/gem_red.glb"),
@@ -39,6 +40,18 @@ export const MESHY_MODELS = {
   gem_prism: require("../../assets/models/meshy/gem_prism.glb"),
   gem_relic: require("../../assets/models/meshy/gem_relic.glb"),
   surge_aura: require("../../assets/models/meshy/surge_aura.glb"),
+};
+
+/** Base-colour maps of the game-LOD Meshy crystals (tools/asset-pipeline/bake-game.mjs), 256 px JPEG. */
+export const MESHY_TEXTURES: Record<string, number> = {
+  gem_red: require("../../assets/textures/meshy/gem_red.jpg"),
+  gem_blue: require("../../assets/textures/meshy/gem_blue.jpg"),
+  gem_green: require("../../assets/textures/meshy/gem_green.jpg"),
+  gem_purple: require("../../assets/textures/meshy/gem_purple.jpg"),
+  gem_gold: require("../../assets/textures/meshy/gem_gold.jpg"),
+  gem_prism: require("../../assets/textures/meshy/gem_prism.jpg"),
+  gem_relic: require("../../assets/textures/meshy/gem_relic.jpg"),
+  surge_aura: require("../../assets/textures/meshy/surge_aura.jpg"),
 };
 
 export const TEXTURES = {

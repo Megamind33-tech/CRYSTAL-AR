@@ -2,10 +2,12 @@ import { memo, useEffect, useState } from "react";
 import { ViroNode } from "@reactvision/react-viro";
 import type { CoverKind } from "../game/types";
 import type { CrystalView } from "../state/game";
-import { GEM_NAMES, GemMesh } from "./GemMesh";
+import { GEM_NAMES, GemMesh, useMeshyStyle } from "./GemMesh";
 import { cellToLocal, GEM_SCALE, GEM_TILT_DEG } from "./layout";
 import { moveAnim, popSteps } from "./registry";
 import { IDLE_MOTION, impactAnimation, useAlternate, useImpact } from "./useMotion";
+
+const AURA_SCALE: [number, number, number] = [GEM_SCALE * 1.15, GEM_SCALE * 1.15, GEM_SCALE * 1.15];
 
 type Props = {
   crystal: CrystalView;
@@ -94,9 +96,14 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
   const spin = popping ? (isPrism ? "spinFast" : isRelic ? "relicFlip" : undefined) : isSpecial ? "spinSlow" : undefined;
   const spinLoops = spin === "spinFast" || spin === "spinSlow";
 
-  // aura: yawed in code (0° horizontal, 90° vertical); breathes gently, stretches along its axis on activation
+  // aura, pointed along the clear in code. The Meshy ring's axis is its local Z and the classic plate's long
+  // axis is X, so the yaw differs: horizontal clears run along board X, vertical ones along board Z.
+  const meshy = useMeshyStyle();
+  const auraYaw = special === "surgeH" ? (meshy ? 90 : 0) : meshy ? 0 : 90;
+  // classic plate: breathes when idle, stretches along its axis on activation. Meshy ring: breathes and turns
+  // when idle, and on activation two rings fly out along the axis (see the sweep nodes below).
   const auraAnim = popping
-    ? { name: "auraBlast", run: true, interruptible: true }
+    ? meshy ? undefined : { name: "auraBlast", run: true, interruptible: true }
     : IDLE_MOTION
       ? { name: breath.up ? "auraBreathUp" : "auraBreathDown", run: true, interruptible: true, onFinish: breath.flip }
       : undefined;
@@ -116,8 +123,23 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
         </ViroNode>
       </ViroNode>
       {isSurge && (
-        <ViroNode position={[0, lift, 0]} rotation={[0, special === "surgeV" ? 90 : 0, 0]} animation={auraAnim}>
-          <GemMesh name="surge_aura" scale={[GEM_SCALE * 0.9, GEM_SCALE * 0.9, GEM_SCALE * 0.9]} />
+        <ViroNode position={[0, lift, 0]} rotation={[0, auraYaw, 0]} animation={auraAnim}>
+          {meshy ? (
+            <>
+              <ViroNode animation={popping ? { name: "auraSweepA", run: true, interruptible: true } : undefined}>
+                <ViroNode animation={IDLE_MOTION ? { name: "auraSpin", run: true, loop: true } : undefined}>
+                  <GemMesh name="surge_aura" scale={AURA_SCALE} />
+                </ViroNode>
+              </ViroNode>
+              {popping && (
+                <ViroNode animation={{ name: "auraSweepB", run: true, interruptible: true }}>
+                  <GemMesh name="surge_aura" scale={AURA_SCALE} />
+                </ViroNode>
+              )}
+            </>
+          ) : (
+            <GemMesh name="surge_aura" scale={AURA_SCALE} />
+          )}
         </ViroNode>
       )}
       {impact.shown > 0 && impact.tag !== "" && (

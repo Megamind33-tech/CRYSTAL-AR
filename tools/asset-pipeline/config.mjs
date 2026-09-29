@@ -20,7 +20,7 @@ export const OUT_DIR = new URL("../../assets/models/meshy/", import.meta.url).pa
  */
 export const ASSETS = [
   { name: "Ember Core", out: "gem_red", maxDim: 1.0, tris: 1500, tex: 256, doubleSided: false },
-  { name: "Tide Sapphire", out: "gem_blue", maxDim: 1.0, tris: 1500, tex: 256, doubleSided: false },
+  { name: "Tide Sapphire", out: "gem_blue", maxDim: 0.74, tris: 1500, tex: 256, doubleSided: false },
   { name: "Leaf Emerald", out: "gem_green", maxDim: 1.0, tris: 1500, tex: 256, doubleSided: false },
   { name: "Void Amethyst", out: "gem_purple", maxDim: 1.0, tris: 1500, tex: 256, doubleSided: false },
   { name: "Solar Shard", out: "gem_gold", maxDim: 1.0, tris: 1500, tex: 256, doubleSided: false },
@@ -36,3 +36,17 @@ export const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/
 
 /** Maps that survive. Normal maps are dropped (they render black on Viro geometry) and so is occlusion. */
 export const KEEP_NORMAL = false;
+
+/**
+ * Game LOD: what actually ships in the app. The game builds crystals from in-memory ViroGeometry (loading a GLB
+ * per crystal crashed Viro on the Tecno), and every instance sends its arrays across the React Native bridge.
+ * The classic meshes cost ~2-6k numbers per gem (96-280 triangles, unindexed); indexed geometry costs ~7 numbers
+ * per triangle, so ~400 triangles per gem keeps a full board at parity. Specials are few on a board.
+ */
+export const GAME_LOD = {
+  gem_red: { tris: 320, tex: 256 }, gem_blue: { tris: 320, tex: 256 }, gem_green: { tris: 320, tex: 256 },
+  gem_purple: { tris: 320, tex: 256 }, gem_gold: { tris: 320, tex: 256 },
+  gem_prism: { tris: 500, tex: 256 }, gem_relic: { tris: 500, tex: 256 }, surge_aura: { tris: 700, tex: 256 },
+};
+export const GAME_MESH_FILE = new URL("../../src/render/meshyMeshes.ts", import.meta.url).pathname;
+export const GAME_TEX_DIR = new URL("../../assets/textures/meshy/", import.meta.url).pathname;

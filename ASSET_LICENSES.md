@@ -68,3 +68,7 @@ reference images, then decimated by `tools/asset-pipeline`. Ownership and commer
 plan the tasks were generated under: **confirm the plan's terms before release**. They are not used by the game yet
 (only the `/dev/models` comparison page loads them).
 
+The game itself uses a decimated bake of the same eight models: geometry in `src/render/meshyMeshes.ts` and 256 px
+base-colour textures in `assets/textures/meshy/` (built by `tools/asset-pipeline/bake-game.mjs`). The same plan-terms
+caveat applies.
+

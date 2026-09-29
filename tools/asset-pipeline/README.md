@@ -26,6 +26,21 @@ The API key is read from the environment only. Never put it in a file.
 Models stay static: no rig, no animation, one mesh with one primitive (one draw call). Motion is code-driven
 on ViroNode wrappers (`src/render/CrystalNode.tsx`).
 
+## Game crystals: `bake-game.mjs` (what actually ships)
+
+The game builds crystals from **in-memory `ViroGeometry`**, not GLB files (a GLB per crystal crashed Viro on the
+Tecno). `node bake-game.mjs` turns the raw models into that format: `src/render/meshyMeshes.ts` (generated, indexed
+geometry) plus a 256 px base-colour JPEG per model in `assets/textures/meshy/`. `src/render/GemMesh.tsx` renders
+them; the materials are registered one at a time at boot (`materialsBoot.ts`).
+
+Meshy textures are cut into hundreds of UV islands, so ordinary simplifiers stall at ~5x the budget (every seam is
+a wall). `reproject.mjs` instead simplifies the position-welded mesh, then re-projects each output corner onto the
+original textured surface, keeping every triangle inside one UV island.
+
+Budgets (`GAME_LOD` in `config.mjs`) are set by bridge cost: every `ViroGeometry` sends its arrays over the React
+Native bridge per instance. ~320 triangles / ~5.3k numbers per gem is ~1.7x the classic meshes; `meshy.test.ts`
+fails if a bake goes over. Settings > "Classic crystals" switches back to the built-in meshes.
+
 ## Loading
 
 Load through `Model` in `src/render/LoadQueue.tsx` (one GLB at a time): many simultaneous background loads
