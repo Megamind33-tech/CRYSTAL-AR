@@ -2,20 +2,19 @@
 // gold-and-rarity bezel, with a foil sweep and drifting sparkles painted over the top.
 import { memo, useMemo } from "react";
 import { Image, View } from "react-native";
-import { BlurMask, Canvas, Group, LinearGradient, Path, RoundedRect, Skia, rect, rrect, vec } from "@shopify/react-native-skia";
+import { BlurMask, Canvas, Group, Path, Skia, rect, rrect, vec } from "@shopify/react-native-skia";
 import { useDerivedValue } from "react-native-reanimated";
 import type { Boost } from "@/src/game/boosts";
-import { BOOST_ICONS } from "./boostIcons";
-import { L } from "./lux/tokens";
+import { BOOST_ICONS, FRAMES } from "./boostIcons";
 import { useLoop } from "./lux/Lux";
 
-type Pal = { hi: string; mid: string; deep: string; glow: string };
+type Pal = { hi: string; mid: string; deep: string; glow: string; top: string; bottom: string; card: string };
 
-/** Case colour by rarity. */
+/** Case colours by rarity: jade, sapphire and amber. The backdrop is lit colour, never black. */
 export const RARITY_PAL: Record<Boost["rarity"], Pal> = {
-  common: { hi: "#c6fbd6", mid: "#3fbf7a", deep: "#0e3a2c", glow: "#5cf0a0" },
-  uncommon: { hi: "#cfe9ff", mid: "#4aa3ff", deep: "#0f2860", glow: "#5cc2ff" },
-  rare: { hi: "#fff0c4", mid: "#f0a83a", deep: "#4a2a0c", glow: "#ffc25c" },
+  common: { hi: "#c6fbd6", mid: "#3fbf7a", deep: "#0e3a2c", glow: "#5cf0a0", top: "#25a58a", bottom: "#0a4038", card: "#0b3336" },
+  uncommon: { hi: "#cfe9ff", mid: "#4aa3ff", deep: "#0f2860", glow: "#6cc8ff", top: "#3a7cf0", bottom: "#102a72", card: "#0e2258" },
+  rare: { hi: "#fff0c4", mid: "#f0a83a", deep: "#4a2a0c", glow: "#ffc25c", top: "#e8a038", bottom: "#5a220e", card: "#48200e" },
 };
 
 const poly = (pts: [number, number][]) => {
@@ -40,16 +39,21 @@ function BoostArtImpl({ boost, size, animate = true }: { boost: Boost; size: num
   const sparkOp = [phase(0), phase(0.33), phase(0.66), phase(0.5), phase(0.15)];
   const sweep = useDerivedValue(() => [{ translateX: -60 + t.value * 240 }, { rotate: 0.45 }]);
   const band = useMemo(() => poly([[-6, -60], [6, -60], [6, 160], [-6, 160]]), []);
+  const inset = size * 0.035;
+  const pip = Math.max(4, size * 0.028);
 
   return (
     <View style={{ width: size, height: size }}>
-      <View style={{ position: "absolute", left: size * 0.02, top: size * 0.02, right: size * 0.02, bottom: size * 0.02, borderRadius: size * 0.12, overflow: "hidden" }}>
+      {/* lit backdrop + gold bezel, baked to an image so it is there the instant the card is */}
+      <Image source={FRAMES[boost.rarity]} style={{ position: "absolute", left: 0, top: 0, width: size, height: size }} />
+      <View style={{ position: "absolute", left: inset, top: inset, right: inset, bottom: inset, borderRadius: size * 0.09, overflow: "hidden" }}>
         <Image source={BOOST_ICONS[boost.id]} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
       </View>
-      <Canvas style={{ position: "absolute", left: 0, top: 0, width: size, height: size }} pointerEvents="none">
-        <Group transform={[{ scale: size / 100 }]}>
-          {animate && (
-            <Group clip={rrect(rect(2, 2, 96, 96), 12, 12)}>
+      {/* animated sparkle and foil sweep on top; purely decorative, so it may mount late */}
+      {animate && (
+        <Canvas style={{ position: "absolute", left: 0, top: 0, width: size, height: size }} pointerEvents="none">
+          <Group transform={[{ scale: size / 100 }]}>
+            <Group clip={rrect(rect(4, 4, 92, 92), 10, 10)}>
               <Group transform={sweep} origin={vec(50, 50)} opacity={rare ? 0.22 : 0.1}>
                 <Path path={band} color="#ffffff"><BlurMask blur={5} style="normal" /></Path>
               </Group>
@@ -59,24 +63,14 @@ function BoostArtImpl({ boost, size, animate = true }: { boost: Boost; size: num
                 </Group>
               ))}
             </Group>
-          )}
-          <RoundedRect x={0.5} y={0.5} width={99} height={40} r={13} opacity={0.6}>
-            <LinearGradient start={vec(0, 0)} end={vec(0, 40)} colors={["rgba(255,255,255,0.10)", "rgba(255,255,255,0)"]} />
-          </RoundedRect>
-          {/* bezel: gold-and-rarity gradient, inner keyline, corner studs, tier pips */}
-          <RoundedRect x={1.5} y={1.5} width={97} height={97} r={13} style="stroke" strokeWidth={3}>
-            <LinearGradient start={vec(0, 0)} end={vec(100, 100)} colors={[L.goldLight, pal.mid, L.filigree, pal.hi, L.goldDeep]} />
-          </RoundedRect>
-          <RoundedRect x={4.5} y={4.5} width={91} height={91} r={10.5} style="stroke" strokeWidth={0.8} color="rgba(255,255,255,0.22)" />
-          {[[8, 8], [92, 8], [8, 92], [92, 92]].map(([x, y], i) => (
-            <Path key={i} path={poly([[x, y - 4], [x + 3, y], [x, y + 4], [x - 3, y]])} color={pal.hi} />
-          ))}
-          {[1, 2, 3].map((n) => {
-            const cx = 50 + (n - 2) * 9;
-            return <Path key={n} path={poly([[cx, 92], [cx + 2.6, 94.6], [cx, 97.2], [cx - 2.6, 94.6]])} color={n <= boost.tier ? pal.hi : "rgba(255,255,255,0.22)"} />;
-          })}
-        </Group>
-      </Canvas>
+          </Group>
+        </Canvas>
+      )}
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: size * 0.03, flexDirection: "row", justifyContent: "center", gap: pip * 0.9 }} pointerEvents="none">
+        {[1, 2, 3].map((n) => (
+          <View key={n} style={{ width: pip, height: pip, transform: [{ rotate: "45deg" }], backgroundColor: n <= boost.tier ? pal.hi : "rgba(255,255,255,0.25)" }} />
+        ))}
+      </View>
     </View>
   );
 }

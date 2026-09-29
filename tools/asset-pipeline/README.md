@@ -59,7 +59,7 @@ and slightly lower saturation to calm painted noise. At runtime each realm also 
 
 ## Armory item art: `render-icons.mjs`
 
-`node render-icons.mjs [id ...]` renders one icon per Armory boost into `assets/ui/armory/<id>.jpg`: the shipped Meshy crystals
+`node render-icons.mjs [id ...]` renders one transparent icon per Armory boost into `assets/ui/armory/<id>.webp` (rendered on black and on white, then difference-matted). `node render-frames.mjs` bakes the per-rarity card backdrops and bezels (`frame_<rarity>.webp`): the shipped Meshy crystals
 (`assets/models/meshy/*.glb`) lit with the studio HDRI, PBR clearcoat, bloom, a dais, floating numerals and a Surge Aura
 where the item calls for it, in headless Chromium with three.js (`icons/studio.html`). Compositions live in
 `icons/icons.config.mjs`. To give an item bespoke art, generate a model with Meshy, bake it, and change that entry's `gem`.

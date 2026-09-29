@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { Boost } from "@/src/game/boosts";
-import { BoostArt } from "./BoostArt";
+import { BoostArt, RARITY_PAL } from "./BoostArt";
 import { PressSpring } from "./kit";
 import { F, L } from "./lux/tokens";
 
@@ -16,7 +16,7 @@ export function BoostCard({ boost, owned, selected, disabled, onPress, right, te
   boost: Boost; owned?: number; selected?: boolean; disabled?: boolean; onPress?: () => void; right?: ReactNode; testID?: string;
 }) {
   const r = RARITY[boost.rarity];
-  const style = [s.card, { borderColor: selected ? L.crystal : "rgba(246,211,138,0.18)", backgroundColor: selected ? "rgba(127,231,255,0.10)" : "rgba(20,26,61,0.82)" }];
+  const style = [s.card, { borderColor: selected ? L.crystal : "rgba(246,211,138,0.18)", backgroundColor: selected ? "rgba(127,231,255,0.16)" : RARITY_PAL[boost.rarity].card + "e6" }];
   const content = (
     <>
       <BoostArt boost={boost} size={64} animate={false} />

@@ -52,7 +52,7 @@ function Detail({ boost, owned, coins, note, onBuy, onClose }: {
       <Animated.View entering={FadeIn.duration(160)} style={s.scrim}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
       </Animated.View>
-      <Animated.View entering={SlideInDown.duration(240)} style={[s.sheet, { paddingBottom: insets.bottom + 18, borderColor: pal.mid + "88" }]}>
+      <Animated.View entering={SlideInDown.duration(240)} style={[s.sheet, { paddingBottom: insets.bottom + 18, borderColor: pal.mid + "aa", backgroundColor: pal.card + "fa" }]}>
         <View style={s.artWrap}><BoostArt boost={boost} size={176} /></View>
         <Text style={s.dName}>{boost.name}</Text>
         <View style={s.tags}>
@@ -134,7 +134,7 @@ const s = StyleSheet.create({
   chipValue: { fontFamily: F.number, fontSize: 14, color: L.goldLight },
   foot: { fontFamily: F.body, fontSize: 12, lineHeight: 17, color: L.mistDim, textAlign: "center", marginTop: 4 },
   scrim: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(3,4,16,0.66)" },
-  sheet: { position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", paddingTop: 20, paddingHorizontal: 18, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderTopWidth: 1, backgroundColor: "rgba(11,14,36,0.98)" },
+  sheet: { position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", paddingTop: 20, paddingHorizontal: 18, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderTopWidth: 1 },
   artWrap: { marginTop: -70 },
   dName: { fontFamily: F.title, fontSize: 22, color: L.goldPale, marginTop: 12, textAlign: "center" },
   tags: { flexDirection: "row", gap: 8, marginTop: 8 },

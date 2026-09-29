@@ -1,5 +1,5 @@
 // Renders the Armory item icons: real textured Meshy crystals, lit with a studio HDRI, PBR gloss and bloom, in headless Chromium.
-//   cd tools/asset-pipeline && npm install && node render-icons.mjs [id ...]   -> assets/ui/armory/<id>.jpg
+//   cd tools/asset-pipeline && npm install && node render-icons.mjs [id ...]   -> assets/ui/armory/<id>.webp
 import { createServer } from "node:http";
 import { createReadStream, existsSync, mkdirSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
@@ -32,9 +32,21 @@ page.on("console", (m) => m.type() === "error" && console.error("[console]", m.t
 await page.goto(`http://localhost:${port}/studio.html`);
 await page.waitForFunction(() => window.__ready, { timeout: 120000 });
 const want = process.argv.slice(2);
+// Transparent output by difference matting: render on black and on white, then alpha = 1 - (white - black) / (W - B),
+// colour = black / alpha. Additive glow survives as soft translucent light instead of a solid backdrop.
+const raw = async (b64) => sharp(Buffer.from(b64.split(",")[1], "base64")).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 for (const spec of ICONS.filter((i) => !want.length || want.includes(i.id))) {
-  const url = await page.evaluate((s) => window.renderIcon(s), spec);
-  await sharp(Buffer.from(url.split(",")[1], "base64")).jpeg({ quality: 88, mozjpeg: true }).toFile(join(out, `${spec.id}.jpg`));
+  const [bk, wh] = [await raw(await page.evaluate((s) => window.renderIcon(s, false), spec)), await raw(await page.evaluate((s) => window.renderIcon(s, true), spec))];
+  const { width, height } = bk.info, n = width * height, outBuf = Buffer.alloc(n * 4);
+  const B = [bk.data[0], bk.data[1], bk.data[2]], W = [wh.data[0], wh.data[1], wh.data[2]];
+  for (let i = 0; i < n; i++) {
+    let a = 0;
+    for (let c = 0; c < 3; c++) a += 1 - (wh.data[i * 4 + c] - bk.data[i * 4 + c]) / Math.max(1, W[c] - B[c]);
+    a = Math.min(1, Math.max(0, a / 3));
+    for (let c = 0; c < 3; c++) outBuf[i * 4 + c] = a > 0.003 ? Math.min(255, Math.max(0, Math.round((bk.data[i * 4 + c] - B[c]) / a))) : 0;
+    outBuf[i * 4 + 3] = Math.round(a * 255);
+  }
+  await sharp(outBuf, { raw: { width, height, channels: 4 } }).webp({ quality: 92, alphaQuality: 95, effort: 5 }).toFile(join(out, `${spec.id}.webp`));
   console.log("rendered", spec.id);
 }
 await browser.close();

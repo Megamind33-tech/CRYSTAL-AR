@@ -11,7 +11,7 @@ export function BoostTile({ boost, width, owned, canAfford, onPress }: {
   const pal = RARITY_PAL[boost.rarity];
   return (
     <PressSpring onPress={onPress} testID={`tile-${boost.id}`} accessibilityLabel={boost.name} style={{ width }}>
-      <View style={[s.tile, { borderColor: pal.mid + "66", shadowColor: pal.glow }]}>
+      <View style={[s.tile, { borderColor: pal.mid + "88", shadowColor: pal.glow, backgroundColor: pal.card }]}>
         <View>
           <BoostArt boost={boost} size={width - 2} />
           {owned > 0 && (
@@ -20,7 +20,7 @@ export function BoostTile({ boost, width, owned, canAfford, onPress }: {
             </View>
           )}
         </View>
-        <View style={s.info}>
+        <View style={[s.info, { backgroundColor: pal.bottom + "88" }]}>
           <Text style={s.name} numberOfLines={1}>{boost.name}</Text>
           <Text style={[s.effect, { color: pal.hi }]} numberOfLines={1}>{boost.effect}</Text>
           <View style={[s.price, !canAfford && s.priceDim]}>
@@ -34,7 +34,7 @@ export function BoostTile({ boost, width, owned, canAfford, onPress }: {
 }
 
 const s = StyleSheet.create({
-  tile: { borderRadius: 18, borderWidth: 1, backgroundColor: "rgba(9,11,32,0.92)", overflow: "hidden", shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+  tile: { borderRadius: 18, borderWidth: 1, overflow: "hidden", shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
   info: { padding: 10, gap: 2 },
   name: { fontFamily: F.bold, fontSize: 13, color: L.ivory },
   effect: { fontFamily: F.bodyStrong, fontSize: 11, letterSpacing: 0.4 },
