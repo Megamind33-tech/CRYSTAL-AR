@@ -9,7 +9,7 @@ import { Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800Ext
 import { initAudio } from "@/src/audio/AudioManager";
 import { loadPersisted } from "@/src/state/settings";
 import { loadKeeper } from "@/src/state/meta";
-import { C } from "@/src/ui/theme";
+import { L } from "@/src/ui/lux/tokens";
 import { bootMaterials } from "@/src/render/materialsBoot";
 
 // Web mock mode: the Viro WASM renderer assets are served from public/viro (see scripts/copy-viro-web.mjs).
@@ -48,7 +48,7 @@ export default function RootLayout() {
   if (!skiaReady) return null;
   return (
     <>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg }, animation: "fade" }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: L.night900 }, animation: "fade" }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="play" options={{ gestureEnabled: false }} />
         <Stack.Screen name="sanctuary-view" options={{ gestureEnabled: false }} />

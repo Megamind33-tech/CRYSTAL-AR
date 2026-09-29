@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { arSession, requestResetPlacement } from "@/src/state/arSession";
 import { useStore } from "@/src/state/store";
-import { Button } from "@/src/ui/Button";
+import { LuxButton } from "@/src/ui/lux/Lux";
 import { SettingsList } from "@/src/ui/SettingsList";
 import { AccountSettings } from "@/src/ui/AccountSettings";
 import { Card, Screen, Section } from "@/src/ui/kit";
@@ -28,7 +28,8 @@ export default function Settings() {
       </Card>
       <View style={{ gap: 10, marginTop: 6 }}>
         {placed && (
-          <Button
+          <LuxButton
+            variant="glass"
             label="RESET AR POSITION"
             onPress={() => {
               requestResetPlacement();
@@ -36,7 +37,7 @@ export default function Settings() {
             }}
           />
         )}
-        <Button testID="settings-back" label="BACK" variant="primary" onPress={() => router.back()} />
+        <LuxButton testID="settings-back" label="BACK" hero onPress={() => router.back()} />
       </View>
       <Section title="Credits">
         <Card>

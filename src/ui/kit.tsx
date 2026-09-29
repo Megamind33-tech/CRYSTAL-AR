@@ -117,7 +117,7 @@ export const Section = ({ title, children, note }: { title: string; children: Re
  * across it and a spark rides its head; the hero Skia `Meter` stays for the HUD and loading veil.
  */
 export function Bar({ value, color = L.gold, height = 6 }: { value: number; color?: string; height?: number }) {
-  const gold = color === L.gold || color === "#f2c46b";
+  const gold = color === L.gold;
   const [a, b] = gold ? [L.gold, L.goldLight] : [L.aether, color];
   const h = Math.max(6, height);
   const v = useSharedValue(0);

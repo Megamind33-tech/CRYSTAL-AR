@@ -8,7 +8,6 @@ import { arSession, nudgeWorldScale } from "../state/arSession";
 import { arSupport, detectArSupport, effectiveViewMode } from "../state/arSupport";
 import { settingsStore } from "../state/settings";
 import { useStore } from "../state/store";
-import { C } from "../ui/theme";
 import { GlassOrb } from "../ui/lux/Orb";
 import { L } from "../ui/lux/tokens";
 import { materialsStore } from "../render/materialsStore";
@@ -44,8 +43,8 @@ export function WorldNavigator() {
 
   if (mode === "checking" || !materialsDone) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.bg }}>
-        <ActivityIndicator color={C.gold} />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: L.night900 }}>
+        <ActivityIndicator color={L.goldPale} />
       </View>
     );
   }

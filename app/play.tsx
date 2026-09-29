@@ -26,7 +26,7 @@ import { trialDef, trialInstances } from "@/src/meta/competition";
 import { ISLANDS } from "@/src/meta/config/world";
 import { islandStatus } from "@/src/meta/progression";
 import { analytics, metaStore, setPlayContext } from "@/src/state/meta";
-import { C } from "@/src/ui/theme";
+import { L } from "@/src/ui/lux/tokens";
 
 export default function Play() {
   const router = useRouter();
@@ -150,6 +150,6 @@ export default function Play() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1, backgroundColor: L.night900 },
   fill: { flex: 1 },
 });

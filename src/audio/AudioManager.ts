@@ -59,7 +59,9 @@ export function playSfx(name: SfxName) {
   pool.next = (pool.next + 1) % pool.players.length;
   try {
     p.seekTo(0).catch(() => {});
-    p.play();
+    // on web play() hands back the media element's promise, which rejects (NotSupportedError) while the
+    // source is still loading or the browser blocks autoplay: swallow it, a missed chime must never surface
+    Promise.resolve(p.play() as unknown).catch(() => {});
   } catch {
     // audio focus lost etc. – never let sound break gameplay
   }
@@ -86,7 +88,7 @@ export function setAmbientActive(active: boolean) {
 function syncAmbient() {
   if (!ambient) return;
   try {
-    if (ambientWanted && settingsStore.get().music) ambient.play();
+    if (ambientWanted && settingsStore.get().music) Promise.resolve(ambient.play() as unknown).catch(() => {});
     else ambient.pause();
   } catch {
     // ignore
