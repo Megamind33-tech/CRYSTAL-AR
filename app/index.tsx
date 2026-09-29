@@ -27,6 +27,7 @@ const RAIL: { feature: string; label: string; href: Href; glyph: string; color: 
   { feature: "duties", label: "Duties", href: "/duties", glyph: "✓", color: L.goldPale },
   { feature: "trials", label: "Trials", href: "/trials", glyph: "⚑", color: L.rose },
   { feature: "season", label: "Pass", href: "/pass", glyph: "✦", color: "#ffd08a" },
+  { feature: "store", label: "Armory", href: "/store", glyph: "⚔", color: "#ff9070" },
   { feature: "exchange", label: "Exchange", href: "/exchange", glyph: "⇄", color: L.aether },
 ];
 

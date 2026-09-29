@@ -3,8 +3,8 @@
 // All content is referenced by stable string IDs so it can later come from remote config.
 
 // ---------------------------------------------------------------- economy ---
-/** Prism Dust: main earned currency. Aether Crystals: premium (earnable slowly, purchasable). */
-export type CurrencyId = "prismDust" | "aether";
+/** Prism Dust: main earned currency. Aether Crystals: premium (earnable slowly, purchasable). Coins: shop currency. */
+export type CurrencyId = "prismDust" | "aether" | "coins";
 
 /** Consumable world items (not currencies). */
 export type ItemId =
@@ -14,7 +14,12 @@ export type ItemId =
   | "sanctuaryStone"   // Sanctuary construction resource
   | "streakRestore"    // repairs a missed Keeper's Return day (earned only)
   | "keepersCache"     // opens to a fixed, displayed bundle (never random)
-  | "starKey";         // opens hidden Realm Gates
+  | "starKey"          // opens hidden Realm Gates
+  | "moves_plus_5"     // boost: +5 moves
+  | "moves_plus_10"    // boost: +10 moves
+  | "gem_multiplier"   // boost: gem points ×1.25
+  | "surge_rate_up"    // boost: surges spawn 30% faster
+  | "starting_clears"; // boost: 2 free starting matches
 
 export type Rarity = "common" | "rare" | "epic" | "mythic" | "ancient";
 

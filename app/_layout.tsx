@@ -53,6 +53,7 @@ export default function RootLayout() {
         <Stack.Screen name="play" options={{ gestureEnabled: false }} />
         <Stack.Screen name="sanctuary-view" options={{ gestureEnabled: false }} />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="store" />
       </Stack>
       <StatusBar style="light" />
     </>

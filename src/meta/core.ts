@@ -16,7 +16,10 @@ const METRICS: Metric[] = [
   "relicsUsed", "memoriesFound", "heartShards", "noBoosterRestores", "sanctuaryUpgrades", "dutiesCompleted", "trialRounds",
   "trialsWon", "checkins", "rareFinds", "stars", "bestScore", "seasonLevels",
 ];
-const ITEMS: ItemId[] = ["relicCharge", "portalFragment", "luminFood", "sanctuaryStone", "streakRestore", "keepersCache", "starKey"];
+const ITEMS: ItemId[] = [
+  "relicCharge", "portalFragment", "luminFood", "sanctuaryStone", "streakRestore", "keepersCache", "starKey",
+  "moves_plus_5", "moves_plus_10", "gem_multiplier", "surge_rate_up", "starting_clears",
+];
 
 export function newPlayer(keeperId: string, now: number, keeperName = "Keeper"): PlayerState {
   return {
