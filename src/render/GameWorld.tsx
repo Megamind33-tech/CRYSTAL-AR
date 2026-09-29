@@ -1,4 +1,4 @@
-import { ViroAmbientLight, ViroDirectionalLight, ViroNode } from "@reactvision/react-viro";
+import { ViroAmbientLight, ViroNode } from "@reactvision/react-viro";
 import { Model, LightingEnvironment } from "./LoadQueue";
 import { arSession } from "../state/arSession";
 import { useStore } from "../state/store";
@@ -7,6 +7,7 @@ import { BoardView } from "./BoardView";
 import { Dragons } from "./Dragon";
 import { gameStore } from "../state/game";
 import { IslandWorld, useBiomeLight } from "./island/IslandWorld";
+import { DayLight } from "./island/Life";
 
 /**
  * The miniature world, identical in AR and mock mode.
@@ -35,19 +36,7 @@ export function GameWorld({ ambientIntensity, ambientColor }: { ambientIntensity
       <LightingEnvironment source={TEXTURES.environment} />
       {/* tabletop view mixes the room light with the realm mood; AR follows the real room */}
       <ViroAmbientLight color={ambientColor === "#ffffff" ? light.ambient : ambientColor} intensity={ambient} />
-      <ViroDirectionalLight
-        color={light.sun}
-        direction={[-0.45, -1, -0.5]}
-        intensity={sun}
-        castsShadow
-        shadowOpacity={0.55}
-        shadowOrthographicSize={0.9}
-        shadowOrthographicPosition={[0, 0.8, 0]}
-        shadowMapSize={2048}
-        shadowNearZ={0.05}
-        shadowFarZ={2.5}
-        shadowBias={0.0015}
-      />
+      <DayLight color={light.sun} intensity={sun} shadow />
       <ViroNode scale={[0.02, 0.02, 0.02]} animation={{ name: "materialize", run: true }}>
         <Model source={MODELS.groundShadow} position={[0.02, 0.001, 0.02]} renderingOrder={-1} ignoreEventHandling />
         <IslandWorld />

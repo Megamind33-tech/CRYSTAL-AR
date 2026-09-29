@@ -75,6 +75,10 @@ export const TEXTURES = {
   fxShard: require("../../assets/textures/fx_shard.png"),
   fxGlow: require("../../assets/textures/fx_glow.png"),
   fxStar: require("../../assets/textures/fx_star.png"),
+  fxBird: require("../../assets/textures/fx_bird.png"),
+  fxButterfly: require("../../assets/textures/fx_butterfly.png"),
+  fxManta: require("../../assets/textures/fx_manta.png"),
+  fxJelly: require("../../assets/textures/fx_jelly.png"),
   // CC0 studio HDRI (Poly Haven "Studio Small 09", resized to 512×256): soft boxes give crystal facets real highlights
   environment: require("../../assets/textures/studio_hdri.hdr"),
   tableWood: require("../../assets/textures/table_wood.png"),

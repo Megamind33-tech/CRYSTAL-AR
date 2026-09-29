@@ -53,7 +53,7 @@ export const GAME_TEX_DIR = new URL("../../assets/textures/meshy/", import.meta.
 
 /** Islands: hero = the island under the board, far = the horizon islands (triangle budgets, texture size). */
 export const REALMS = ["verdant", "canyon", "tide", "sky", "hollow", "caverns", "frozen", "solar", "ember", "void"];
-export const ISLAND_LOD = { hero: 4500, far: 700, tex: 1024, farTex: 256 };
+export const ISLAND_LOD = { hero: 6000, far: 800, tex: 1024, farTex: 256 };
 /** width the island is scaled to along X (the procedural islands are 0.74 wide; the dais needs room) */
 export const ISLAND_WIDTH = 1.12;
 export const ISLAND_DIR = new URL("../../src/render/meshyIslands/", import.meta.url).pathname;
