@@ -1,4 +1,4 @@
-// What lives on each realm's island. Pure data + helpers (no Viro), so it is unit-tested. The renderer is Life.tsx.
+// What lives on each realm's island. Pure data + helpers (no Viro), so it is unit-tested. The renderer is Life.tsx (kept as lifeData.ts so it never clashes with Life.tsx on case-insensitive disks).
 //
 // Every creature is one flat or billboarded sprite on a node that a native loop animation turns around the island, so
 // motion is smooth and costs no JS per frame. Only a few near creatures flap (a shared 240 ms toggle, see Life.tsx);

@@ -1,9 +1,9 @@
-// The living environment (render/island/life.ts) is data + placement; these checks keep every realm alive, keep the
+// The living environment (render/island/lifeData.ts) is data + placement; these checks keep every realm alive, keep the
 // creatures where the camera can see them, and make sure everything the renderer needs is registered.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { BIOMES } from "../../render/island/biomes.ts";
-import { EXCITED_MS, LIFE, lifeMaterial, lifeMaterialSet, ORBIT_MS, placeCritters, TINTS } from "../../render/island/life.ts";
+import { EXCITED_MS, LIFE, lifeMaterial, lifeMaterialSet, ORBIT_MS, placeCritters, TINTS } from "../../render/island/lifeData.ts";
 
 test("every realm has creatures, and only realms that exist", () => {
   assert.deepEqual(Object.keys(LIFE).sort(), Object.keys(BIOMES).sort());

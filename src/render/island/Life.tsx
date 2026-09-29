@@ -6,7 +6,7 @@ import { ViroDirectionalLight, ViroNode, ViroQuad } from "@reactvision/react-vir
 import { gameStore } from "../../state/game";
 import { settingsStore } from "../../state/settings";
 import { createStore, useStore } from "../../state/store";
-import { EXCITED_MS, lifeMaterial, placeCritters, type Placed } from "./life";
+import { EXCITED_MS, lifeMaterial, placeCritters, type Placed } from "./lifeData";
 
 // ------------------------------------------------------------- shared beats --
 // A creature that flaps or bobs needs an "up" and a "down" step (a looped to-value animation snaps back). Rather than

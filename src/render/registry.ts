@@ -2,7 +2,7 @@
 // (the web bridge ignores relative "+=" values), keyed by target so the set stays bounded.
 import { ViroAnimations, ViroMaterials } from "@reactvision/react-viro";
 import { CRYSTAL_COLORS, TEXTURES } from "./assets";
-import { lifeMaterial, lifeMaterialSet, ORBIT_MS, TINTS, type Sprite } from "./island/life";
+import { lifeMaterial, lifeMaterialSet, ORBIT_MS, TINTS, type Sprite } from "./island/lifeData";
 
 const LIFE_TEXTURE: Record<Sprite, number> = { bird: TEXTURES.fxBird, butterfly: TEXTURES.fxButterfly, manta: TEXTURES.fxManta, jelly: TEXTURES.fxJelly, wisp: TEXTURES.fxGlow, shard: TEXTURES.fxShard };
 
@@ -69,7 +69,7 @@ export function registerMaterials() {
     fxTwinkle: { lightingModel: "Constant", diffuseTexture: TEXTURES.fxStar, diffuseColor: "#ffffff", blendMode: "Add", writesToDepthBuffer: false },
     fxGate: { lightingModel: "Constant", diffuseTexture: TEXTURES.ringGlow, diffuseColor: "rgba(130,240,255,0.95)", blendMode: "Alpha", writesToDepthBuffer: false },
     fxGateCore: { lightingModel: "Constant", diffuseTexture: TEXTURES.fxGlow, diffuseColor: "rgba(70,190,235,0.6)", blendMode: "Alpha", writesToDepthBuffer: false },
-    // living environment: one tinted sprite material per (creature, tint) actually used (island/life.ts)
+    // living environment: one tinted sprite material per (creature, tint) actually used (island/lifeData.ts)
     ...Object.fromEntries(
       lifeMaterialSet().map(({ sprite, tint }) => [
         lifeMaterial(sprite, tint),
