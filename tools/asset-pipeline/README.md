@@ -57,6 +57,13 @@ and slightly lower saturation to calm painted noise. At runtime each realm also 
 (`MeshyIsland.tsx`), drifting mist discs and a slow sun swing (`Life.tsx`), and its own creatures (`life.ts`, tested by
 `life.test.ts`).
 
+## Armory item art: `render-icons.mjs`
+
+`node render-icons.mjs [id ...]` renders one icon per Armory boost into `assets/ui/armory/<id>.jpg`: the shipped Meshy crystals
+(`assets/models/meshy/*.glb`) lit with the studio HDRI, PBR clearcoat, bloom, a dais, floating numerals and a Surge Aura
+where the item calls for it, in headless Chromium with three.js (`icons/studio.html`). Compositions live in
+`icons/icons.config.mjs`. To give an item bespoke art, generate a model with Meshy, bake it, and change that entry's `gem`.
+
 ## Loading
 
 Load through `Model` in `src/render/LoadQueue.tsx` (one GLB at a time): many simultaneous background loads

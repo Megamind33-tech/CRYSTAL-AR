@@ -1,0 +1,140 @@
+<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+const SIZE = 768;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(SIZE, SIZE);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.8;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const gltf = new GLTFLoader();
+const load = (u) => new Promise((res, rej) => gltf.load(u, res, undefined, rej));
+const hdr = await new Promise((res, rej) => new RGBELoader().load("/repo/assets/textures/studio_hdri.hdr", res, undefined, rej));
+const pm = new THREE.PMREMGenerator(renderer);
+const envMap = pm.fromEquirectangular(hdr).texture;
+
+const rand = (seed) => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+const col = (h) => new THREE.Color(h);
+
+function radialTexture(stops, size = 512, rad = 0.75, cy = 0.46) {
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const g = c.getContext("2d"); const gr = g.createRadialGradient(size / 2, size * cy, 0, size / 2, size * cy, size * rad);
+  stops.forEach(([p, s]) => gr.addColorStop(p, s)); g.fillStyle = gr; g.fillRect(0, 0, size, size);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function softDot() {
+  const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.25, "rgba(255,255,255,.7)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
+}
+function plaque(text, glow) {
+  const c = document.createElement("canvas"); c.width = 1024; c.height = 384; const g = c.getContext("2d");
+  g.textAlign = "center"; g.textBaseline = "middle"; g.font = "900 250px 'Cinzel','Trajan Pro',Georgia,serif";
+  g.shadowColor = glow; g.shadowBlur = 60; g.fillStyle = glow; g.fillText(text, 512, 200);
+  g.shadowBlur = 0; g.lineJoin = "round"; g.lineWidth = 26; g.strokeStyle = "#3a1a04"; g.strokeText(text, 512, 200);
+  const gr = g.createLinearGradient(0, 70, 0, 330); gr.addColorStop(0, "#fffbe8"); gr.addColorStop(0.35, "#ffd873"); gr.addColorStop(0.7, "#d98a1e"); gr.addColorStop(1, "#7a4308");
+  g.fillStyle = gr; g.fillText(text, 512, 200);
+  g.lineWidth = 5; g.strokeStyle = "rgba(255,246,210,.9)"; g.strokeText(text, 512, 200);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+
+function glossy(orig, tint, glow, opts = {}) {
+  return new THREE.MeshPhysicalMaterial({
+    map: orig.map, color: 0xffffff, roughness: opts.rough ?? 0.06, metalness: opts.metal ?? 0.05,
+    clearcoat: 1, clearcoatRoughness: 0.03, envMap, envMapIntensity: opts.env ?? 1.5,
+    iridescence: opts.irid ?? 0.35, iridescenceIOR: 1.6, sheen: 0.2, sheenColor: col(tint),
+    emissive: col(glow), emissiveMap: orig.map, emissiveIntensity: opts.emit ?? 0.12,
+  });
+}
+
+window.renderIcon = async (spec) => {
+  const rnd = rand(spec.seed ?? 7);
+  const scene = new THREE.Scene();
+  scene.environment = envMap; scene.environmentIntensity = 0.55;
+  scene.background = radialTexture([[0, spec.bg[0]], [0.5, spec.bg[1]], [1, "#03040d"]]);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+  cam.position.set(0, 2.3, 8.6); cam.lookAt(0, 1.1, 0);
+
+  const glow = col(spec.glow);
+  const key = new THREE.DirectionalLight(0xfff2dc, 2.4); key.position.set(-3.5, 6, 4.5); key.castShadow = true; key.shadow.mapSize.set(1024, 1024); scene.add(key);
+  const rimA = new THREE.DirectionalLight(glow, 2.6); rimA.position.set(4, 3, -4); scene.add(rimA);
+  const rimB = new THREE.DirectionalLight(0x9fc0ff, 1.4); rimB.position.set(-5, 2, -3); scene.add(rimB);
+  const inner = new THREE.PointLight(col(spec.gemGlow), 4, 7, 1.8); inner.position.set(0, 1.5, 1.2); scene.add(inner);
+
+  // pedestal: dark carved stone disc with an inlaid glowing ring and rune ticks
+  const ped = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.95, 0.36, 96), new THREE.MeshStandardMaterial({ color: 0x151831, metalness: 0.85, roughness: 0.32, envMap, envMapIntensity: 1.4 }));
+  ped.position.y = -0.18; ped.receiveShadow = true; scene.add(ped);
+  const trim = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.035, 16, 128), new THREE.MeshStandardMaterial({ color: 0xffe3a0, metalness: 1, roughness: 0.2, envMap }));
+  trim.rotation.x = Math.PI / 2; trim.position.y = 0.0; scene.add(trim);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.045, 12, 128), new THREE.MeshBasicMaterial({ color: glow.clone().multiplyScalar(1.5) }));
+  ring.rotation.x = Math.PI / 2; ring.position.y = 0.005; scene.add(ring);
+  for (let i = 0; i < 36; i++) {
+    const a = (i / 36) * Math.PI * 2; const r = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.012, i % 3 ? 0.12 : 0.22), new THREE.MeshBasicMaterial({ color: glow.clone().multiplyScalar(i % 3 ? 0.8 : 1.4) }));
+    r.position.set(Math.cos(a) * 1.6, 0.006, Math.sin(a) * 1.6); r.rotation.y = -a; scene.add(r);
+  }
+  const pool = new THREE.Mesh(new THREE.CircleGeometry(1.4, 64), new THREE.MeshBasicMaterial({ map: radialTexture([[0, "rgba(255,255,255,.95)"], [0.5, "rgba(255,255,255,.25)"], [1, "rgba(255,255,255,0)"]], 256, 0.5, 0.5), color: glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.45 }));
+  pool.rotation.x = -Math.PI / 2; pool.position.y = 0.012; scene.add(pool);
+  // light shafts
+  for (let i = 0; i < 2; i++) {
+    const beam = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 6.4), new THREE.MeshBasicMaterial({ map: radialTexture([[0, "rgba(255,255,255,.55)"], [0.6, "rgba(255,255,255,.12)"], [1, "rgba(255,255,255,0)"]], 256, 0.5, 0.5), color: glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.12 }));
+    beam.position.set(0, 2.6, -0.6); beam.rotation.y = i * 1.1; scene.add(beam);
+  }
+
+  // hero crystals
+  const src = await load(`/repo/assets/models/meshy/${spec.gem}.glb`);
+  let base; src.scene.traverse((o) => { if (o.isMesh && !base) base = o; });
+  base.geometry.computeBoundingBox(); const bb = base.geometry.boundingBox; const sz = new THREE.Vector3(); bb.getSize(sz);
+  const unit = 1.7 / Math.max(sz.x, sz.y, sz.z);
+  const layouts = { 1: [[0, 1.55, 0, 1]], 2: [[-0.82, 1.4, 0.1, 0.82], [0.8, 1.75, -0.2, 0.92]], 3: [[0, 1.95, -0.2, 0.95], [-1.05, 1.25, 0.3, 0.74], [1.05, 1.3, 0.25, 0.74]], 4: [[0, 2.0, -0.25, 0.95], [-1.15, 1.35, 0.2, 0.7], [1.15, 1.45, 0.2, 0.7], [0, 1.0, 0.85, 0.5]] };
+  const mat = glossy(base.material, spec.gemTint, spec.gemGlow, spec.mat);
+  for (const [x, y, z, s] of layouts[spec.count]) {
+    const m = new THREE.Mesh(base.geometry, mat); m.scale.setScalar(unit * s * (spec.gemScale ?? 1));
+    m.position.set(x, y, z); m.rotation.set((rnd() - 0.5) * 0.35, rnd() * Math.PI * 2, (rnd() - 0.5) * 0.3); m.castShadow = true; scene.add(m);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDot(), color: col(spec.gemGlow), blending: THREE.AdditiveBlending, transparent: true, opacity: 0.16, depthWrite: false }));
+    halo.position.set(x, y, z - 0.3); halo.scale.setScalar(2.4 * s); scene.add(halo);
+  }
+  if (spec.shards) { // broken fragments flung outward
+    for (let i = 0; i < spec.shards; i++) {
+      const a = rnd() * Math.PI * 2, r = 1.7 + rnd() * 1.0;
+      const m = new THREE.Mesh(base.geometry, mat); m.scale.setScalar(unit * (0.12 + rnd() * 0.16));
+      m.position.set(Math.cos(a) * r, 0.7 + rnd() * 2.3, Math.sin(a) * r * 0.6 + 0.4); m.rotation.set(rnd() * 6, rnd() * 6, rnd() * 6); scene.add(m);
+    }
+  }
+  if (spec.aura) { // Surge Aura rings orbiting the crystal
+    const aura = await load(`/repo/assets/models/meshy/surge_aura.glb`); let am; aura.scene.traverse((o) => { if (o.isMesh && !am) am = o; });
+    const amat = new THREE.MeshBasicMaterial({ map: am.material.map, color: col(spec.gemGlow).multiplyScalar(1.5), transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
+    for (let i = 0; i < spec.aura; i++) {
+      const m = new THREE.Mesh(am.geometry, amat); m.scale.setScalar((spec.auraScale ?? 1) * (1.15 + i * 0.45)); m.position.set(0, 1.55 + i * 0.05, 0);
+      m.rotation.set(0.55 + i * 0.5, i * 1.3, 0.3 * i); scene.add(m);
+    }
+  }
+  // motes
+  const N = 140, pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) { const a = rnd() * 6.28, r = 0.4 + rnd() * 2.6; pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = 0.2 + rnd() * 3.6; pos[i * 3 + 2] = Math.sin(a) * r * 0.7; }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(pg, new THREE.PointsMaterial({ map: softDot(), color: col(spec.mote ?? spec.glow).multiplyScalar(1.3), size: 0.09, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })));
+
+  // numeral plaque floating in front of the dais
+  if (spec.label) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.2), new THREE.MeshBasicMaterial({ map: plaque(spec.label, spec.plaqueGlow ?? "#ffb43a"), transparent: true, toneMapped: false }));
+    p.position.set(0, 0.55, 2.0); p.rotation.x = -0.16; p.renderOrder = 20; p.material.depthTest = false; scene.add(p);
+  }
+
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, cam));
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(SIZE, SIZE), (spec.bloom ?? 0.4) * 0.5, 0.5, 0.88));
+  composer.addPass(new OutputPass());
+  composer.render();
+  return renderer.domElement.toDataURL("image/png");
+};
+window.__ready = true;
+</script>
