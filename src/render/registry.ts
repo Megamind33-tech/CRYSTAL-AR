@@ -1,7 +1,19 @@
 // Viro material + animation registration. Animations with absolute targets are registered lazily
 // (the web bridge ignores relative "+=" values), keyed by target so the set stays bounded.
 import { ViroAnimations, ViroMaterials } from "@reactvision/react-viro";
-import { TEXTURES } from "./assets";
+import { CRYSTAL_COLORS, TEXTURES } from "./assets";
+
+/** colour scaled toward black: added on top of pale tiles it would otherwise wash out to white */
+const dim = (hex: string, k: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * k));
+  return `rgb(${c.join(",")})`;
+};
+/** the same colour as an rgba() string: alpha-blended tints stay visible on pale tiles where additive light washes out */
+const tint = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+};
 
 let materialsReady = false;
 export function registerMaterials() {
@@ -44,6 +56,16 @@ export function registerMaterials() {
       blendMode: "Add",
       writesToDepthBuffer: false,
     },
+    // crystal effects: light pooled under each gem, the flash ring when one breaks, the twinkle, the spawn gates
+    ...Object.fromEntries(
+      CRYSTAL_COLORS.flatMap((c, i) => [
+        [`fxGlow${i}`, { lightingModel: "Constant", diffuseTexture: TEXTURES.fxGlow, diffuseColor: tint(c, 0.62), blendMode: "Alpha", writesToDepthBuffer: false }],
+        [`fxFlash${i}`, { lightingModel: "Constant", diffuseTexture: TEXTURES.ringGlow, diffuseColor: dim(c, 1), blendMode: "Add", writesToDepthBuffer: false }],
+      ]),
+    ),
+    fxTwinkle: { lightingModel: "Constant", diffuseTexture: TEXTURES.fxStar, diffuseColor: "#ffffff", blendMode: "Add", writesToDepthBuffer: false },
+    fxGate: { lightingModel: "Constant", diffuseTexture: TEXTURES.ringGlow, diffuseColor: "rgba(130,240,255,0.95)", blendMode: "Alpha", writesToDepthBuffer: false },
+    fxGateCore: { lightingModel: "Constant", diffuseTexture: TEXTURES.fxGlow, diffuseColor: "rgba(70,190,235,0.6)", blendMode: "Alpha", writesToDepthBuffer: false },
     shadowCatcher: { lightingModel: "Lambert", diffuseColor: "#ffffff", writesToDepthBuffer: true },
   });
 
@@ -80,8 +102,14 @@ export function registerMaterials() {
     // surge aura (Meshy ring): it turns in place around its own axis, which points along the clear; on
     // activation two rings fly out along that axis (positionZ is the ring's local axis, yawed onto the row/column)
     auraSpin: { properties: { rotateZ: 360 }, duration: 5200, easing: "Linear" },
-    auraSweepA: { properties: { positionZ: 0.18, scaleX: 1.4, scaleY: 1.4, scaleZ: 1.4 }, duration: 230, easing: "EaseOut" },
-    auraSweepB: { properties: { positionZ: -0.18, scaleX: 1.4, scaleY: 1.4, scaleZ: 1.4 }, duration: 230, easing: "EaseOut" },
+    auraSweepA: { properties: { positionZ: 0.16, scaleX: 1.3, scaleY: 1.3, scaleZ: 1.3 }, duration: 230, easing: "EaseOut" },
+    auraSweepB: { properties: { positionZ: -0.16, scaleX: 1.3, scaleY: 1.3, scaleZ: 1.3 }, duration: 230, easing: "EaseOut" },
+    // the ring around a surge gem swells outward in place when it fires
+    auraExpand: { properties: { scaleX: 2.1, scaleY: 2.1, scaleZ: 2.1 }, duration: 230, easing: "EaseOut" },
+    // break: the flash ring swells and fades; the twinkle grows while fading; a gate blooms then settles
+    fxFlash: { properties: { scaleX: 2.2, scaleY: 2.2, scaleZ: 2.2, opacity: 0 }, duration: 320, easing: "EaseOut" },
+    fxTwinkle: { properties: { scaleX: 1.5, scaleY: 1.5, scaleZ: 1.5, opacity: 0 }, duration: 380, easing: "EaseOut" },
+    fxGateSettle: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 420, easing: "EaseOut" },
     // idle bob of special gems (~5 mm) and the restrained selection pulse
     bobUp: { properties: { positionY: 0.005 }, duration: 900, easing: "EaseInEaseOut" },
     bobDown: { properties: { positionY: 0 }, duration: 900, easing: "EaseInEaseOut" },

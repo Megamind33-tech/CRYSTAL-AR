@@ -25,7 +25,9 @@ function closestOnTri(p, a, b, c) {
   if (vb <= 0 && d2 >= 0 && d6 <= 0) { const w = d2 / (d2 - d6); return fin(1 - w, 0, w); }
   const va = d3*d6 - d5*d4;
   if (va <= 0 && (d4 - d3) >= 0 && (d5 - d6) >= 0) { const w = (d4 - d3) / ((d4 - d3) + (d5 - d6)); return fin(0, 1 - w, w); }
-  const den = 1 / (va + vb + vc), v = vb * den, w = vc * den;
+  const sum = va + vb + vc;
+  if (!(Math.abs(sum) > 1e-30)) return fin(1, 0, 0); // degenerate (zero-area) source triangle
+  const den = 1 / sum, v = vb * den, w = vc * den;
   return fin(1 - v - w, v, w);
 }
 
@@ -112,7 +114,9 @@ export async function decimateTextured(src, budget, { cells = 40 } = {}) {
       let vi = weld.get(wk);
       if (vi === undefined) {
         const q = island[hits[k].t] === win ? hits[k] : nearest(grid, S, pts[k], win);
-        const s = uvAt(q), l = Math.hypot(...s.n) || 1;
+        const s = uvAt(q);
+        if (![s.u, s.v, ...s.n].every(Number.isFinite)) { s.u = 0.5; s.v = 0.5; s.n = [0, 1, 0]; }
+        const l = Math.hypot(...s.n) || 1;
         vi = verts.length; weld.set(wk, vi);
         verts.push({ p: pts[k], u: s.u, v: s.v, n: s.n.map((x) => x / l) });
       }

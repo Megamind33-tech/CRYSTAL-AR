@@ -2,6 +2,7 @@ import { memo, useMemo } from "react";
 import { ViroGeometry, ViroMaterials, ViroNode, ViroParticleEmitter } from "@reactvision/react-viro";
 import { LEVELS } from "../../game/level";
 import { gameStore } from "../../state/game";
+import { settingsStore } from "../../state/settings";
 import { useStore } from "../../state/store";
 import { PBR, TEXTURES } from "../assets";
 import { Reactive, Shockwave } from "../ForestWorld";
@@ -10,7 +11,8 @@ import { Gated, Model } from "../LoadQueue";
 import { materialsStore } from "../materialsStore";
 import { MODELS } from "../assets";
 import { BIOMES, biomeFor, WEATHER, type Biome, type Surface } from "./biomes";
-import { buildIsland, PORTAL_CENTER, type MeshPart, type Slot } from "./buildIsland";
+import { buildDais, buildIsland, PORTAL_CENTER, SURFACE_Y, type MeshPart, type Slot } from "./buildIsland";
+import { MeshyIslandMesh, useMeshyIsland } from "./MeshyIsland";
 
 /**
  * Normal maps give the CC0 surfaces their relief. Viro derives tangents for custom geometry on
@@ -76,8 +78,13 @@ const IslandPart = memo(function IslandPart({ part, material }: { part: MeshPart
 
 /** turret stands beside and behind the board, turned toward it: [x, z, yaw°] */
 const TURRETS: [number, number, number][] = [[-0.27, -0.1, 55], [0.28, -0.04, -60]];
+/** on a Meshy island the turrets stand on the dais rim instead */
+const DAIS_TURRETS: [number, number, number][] = [[-0.225, -0.12, 55], [0.225, -0.12, -55]];
 
 const stageValue = <T,>(stage: number, values: [T, T, T, T, T]) => values[stage];
+
+/** Reactive crystal outcrops on the dais rim (a Meshy island has no procedural anchors): [x, z] */
+const DAIS_CLUSTERS: [number, number][] = [[0.215, -0.1], [-0.215, -0.03], [0.215, 0.16]];
 
 /**
  * The level's island: generated terrain, underside, portal arch and props for its realm, plus the
@@ -87,7 +94,10 @@ export function IslandWorld() {
   const level = useStore(gameStore, (s) => s.session?.level ?? LEVELS[s.levelIndex]);
   const biome = biomeFor(level.realm);
   const seed = level.islandSeed ?? level.seed;
+  // a Meshy island under the board (fitted with a stone dais), or the procedural one when off / not yet registered
+  const meshy = useMeshyIsland(biome.id);
   const island = useMemo(() => buildIsland(biome, seed), [biome, seed]);
+  const dais = useMemo(() => (meshy ? buildDais(biome, seed, meshy.bottomY) : null), [meshy, biome, seed]);
   // materials are registered ahead of time (materialsBoot); draw the ground once this realm is ready
   const ready = useStore(materialsStore, (m) => m.realms.includes(biome.id));
   const key = `${biome.id}_${seed}`;
@@ -105,9 +115,18 @@ export function IslandWorld() {
 
   return (
     <ViroNode ignoreEventHandling>
-      {ready && island.parts.map((part) => (
-        <IslandPart key={`${key}_${part.slot}`} part={part} material={matName(biome, part.slot)} />
-      ))}
+      {meshy && ready ? (
+        <>
+          <MeshyIslandMesh realm={biome.id} lod="hero" />
+          {dais!.map((part) => (
+            <IslandPart key={`${key}_dais`} part={part} material={matName(biome, part.slot)} />
+          ))}
+        </>
+      ) : (
+        ready && island.parts.map((part) => (
+          <IslandPart key={`${key}_${part.slot}`} part={part} material={matName(biome, part.slot)} />
+        ))
+      )}
 
       {/* portal: dormant → awakening → open */}
       <Reactive position={PORTAL_CENTER} base={[portalBase, portalBase, 1]} trigger={portalPulse} peak={[1.25, 1.25, 1]}>
@@ -130,12 +149,12 @@ export function IslandWorld() {
       )}
 
       {/* glowing crystal outcrops answer every match */}
-      {island.anchors.clusters.map((pos, i) => (
+      {(meshy ? DAIS_CLUSTERS.map(([x, z]) => [x, SURFACE_Y + 0.006, z] as [number, number, number]) : island.anchors.clusters).map((pos, i) => (
         <Reactive key={`${key}_c${i}`} position={pos} rotation={[0, i * 70, 0]} base={[clusterBase, clusterBase, clusterBase]} trigger={portalPulse + plantPulse} peak={[1.15, 1.35, 1.15]}>
           <GemMesh name="glow_cluster" />
         </Reactive>
       ))}
-      {biome.blooms &&
+      {biome.blooms && !meshy &&
         island.anchors.blooms.map((pos, i) => (
           <Reactive key={`${key}_b${i}`} position={pos} rotation={[0, i * 47, 0]} base={[bloomBase, bloomBase, bloomBase]} trigger={plantPulse} peak={[1.3, 1.45, 1.3]}>
             <GemMesh name="bloom" />
@@ -144,8 +163,8 @@ export function IslandWorld() {
 
       {/* Ember Deep: flamethrower turrets (CC-BY 3.0, Zsky) guard the burning ruins */}
       {biome.id === "ember" &&
-        TURRETS.map(([x, z, yaw], i) => (
-          <ViroNode key={`${key}_t${i}`} position={[x, island.heightAt(x, z) - 0.002, z]} rotation={[0, yaw, 0]} scale={[0.014, 0.014, 0.014]} ignoreEventHandling>
+        (meshy ? DAIS_TURRETS : TURRETS).map(([x, z, yaw], i) => (
+          <ViroNode key={`${key}_t${i}`} position={[x, (meshy ? SURFACE_Y : island.heightAt(x, z)) - 0.002, z]} rotation={[0, yaw, 0]} scale={[0.014, 0.014, 0.014]} ignoreEventHandling>
             <Model source={MODELS.flameTurret} ignoreEventHandling />
           </ViroNode>
         ))}
@@ -195,6 +214,8 @@ const REALM_ORDER = Object.keys(BIOMES);
  */
 export function DistantIslands() {
   const realmsReady = useStore(materialsStore, (m) => m.realms);
+  const islandsReady = useStore(materialsStore, (m) => m.islands);
+  const classic = useStore(settingsStore, (s) => s.classicGems);
   const level = useStore(gameStore, (s) => s.session?.level ?? LEVELS[s.levelIndex]);
   const here = Math.max(0, REALM_ORDER.indexOf(level.realm ?? "verdant"));
   const seed = level.islandSeed ?? level.seed;
@@ -210,9 +231,16 @@ export function DistantIslands() {
     <ViroNode ignoreEventHandling>
       {islands.map((isl, i) => (
         <ViroNode key={`${seed}_${i}`} position={isl.pos} scale={[isl.scale, isl.scale, isl.scale]} rotation={[0, isl.yaw, 0]} ignoreEventHandling>
-          {realmsReady.includes(isl.biome.id) && isl.mesh.parts.map((part) => (
-            <IslandPart key={part.slot} part={part} material={matName(isl.biome, part.slot)} />
-          ))}
+          {!classic && islandsReady.includes(isl.biome.id) ? (
+            // Meshy islands are wider than the procedural ones, so they are drawn smaller on the horizon
+            <ViroNode scale={[0.66, 0.66, 0.66]} ignoreEventHandling>
+              <MeshyIslandMesh realm={isl.biome.id} lod="far" />
+            </ViroNode>
+          ) : (
+            realmsReady.includes(isl.biome.id) && isl.mesh.parts.map((part) => (
+              <IslandPart key={part.slot} part={part} material={matName(isl.biome, part.slot)} />
+            ))
+          )}
         </ViroNode>
       ))}
     </ViroNode>

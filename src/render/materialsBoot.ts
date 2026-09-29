@@ -8,6 +8,7 @@
 import { MESHY_NAMES, registerGemMaterials, registerMeshyMaterial } from "./GemMesh";
 import { BIOMES } from "./island/biomes";
 import { registerBiome } from "./island/IslandWorld";
+import { registerMeshyIslandMaterial } from "./island/MeshyIsland";
 import { materialsStore } from "./materialsStore";
 import { registerMaterials } from "./registry";
 
@@ -35,6 +36,12 @@ export function bootMaterials(first = "verdant") {
     ...order.map((id) => () => {
       registerBiome(BIOMES[id]);
       materialsStore.set((s) => ({ realms: [...s.realms, id] }));
+      // the realm's Meshy island texture goes in the same step; a failure just keeps the procedural island
+      try {
+        if (registerMeshyIslandMaterial(id)) materialsStore.set((s) => ({ islands: [...s.islands, id] }));
+      } catch {
+        // classic island stays
+      }
     }),
     ...MESHY_NAMES.map((name) => () => {
       if (!registerMeshyMaterial(name)) meshyFailed = true;
@@ -61,4 +68,5 @@ export function ensureRealm(id: string) {
   if (materialsStore.get().realms.includes(id)) return;
   registerBiome(BIOMES[id] ?? BIOMES.verdant);
   materialsStore.set((s) => ({ realms: [...s.realms, id] }));
+  if (registerMeshyIslandMaterial(id)) materialsStore.set((s) => ({ islands: [...s.islands, id] }));
 }

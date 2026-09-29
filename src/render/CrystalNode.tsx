@@ -2,12 +2,22 @@ import { memo, useEffect, useState } from "react";
 import { ViroNode } from "@reactvision/react-viro";
 import type { CoverKind } from "../game/types";
 import type { CrystalView } from "../state/game";
+import { GlowPad } from "./GemFx";
 import { GEM_NAMES, GemMesh, useMeshyStyle } from "./GemMesh";
-import { cellToLocal, GEM_SCALE, GEM_TILT_DEG } from "./layout";
+import { cellToLocal, GEM_SCALE, GEM_TILT_DEG, spawnGate } from "./layout";
 import { moveAnim, popSteps } from "./registry";
 import { IDLE_MOTION, impactAnimation, useAlternate, useImpact } from "./useMotion";
 
-const AURA_SCALE: [number, number, number] = [GEM_SCALE * 1.15, GEM_SCALE * 1.15, GEM_SCALE * 1.15];
+/** classic plate */
+const AURA_SCALE: [number, number, number] = [GEM_SCALE * 0.9, GEM_SCALE * 0.9, GEM_SCALE * 0.9];
+/**
+ * The Meshy ring is 1.84 units across. At 0.66 x GEM_SCALE it is ~4.4 cm, 0.85 of a 5.2 cm cell, so a ring
+ * (even tilted or mid-swell in place) stays inside its own cell and never reaches a neighbour.
+ */
+const RING_SCALE: [number, number, number] = [GEM_SCALE * 0.66, GEM_SCALE * 0.66, GEM_SCALE * 0.66];
+const SWEEP_SCALE: [number, number, number] = [GEM_SCALE * 0.4, GEM_SCALE * 0.4, GEM_SCALE * 0.4];
+/** how far the ring leans from flat, like a planet's ring seen at an angle */
+const RING_TILT = 24;
 
 type Props = {
   crystal: CrystalView;
@@ -25,7 +35,11 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
   const [settled, setSettled] = useState(0);
   // clear pop runs in two steps (swell → vanish); `vanishing` is the seq whose swell has finished
   const [vanishing, setVanishing] = useState(0);
+  // a spawned crystal stays hidden in the chute until it reaches the gate, then materialises there (see spawnGate)
+  const [emerged, setEmerged] = useState(0);
   const active = anim && anim.seq !== settled ? anim : undefined;
+  const gate = active?.kind === "spawn" ? spawnGate(active.fromX, active.fromY, x, y) : null;
+  const leadMs = gate && active?.kind === "spawn" ? Math.round((active.ms * gate.lead) / gate.len) : 0;
   const popping = active?.kind === "pop";
   const pop = popping ? popSteps(special, active.ms) : undefined;
 
@@ -35,6 +49,14 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
     if (active.kind === "pop") {
       const t = setTimeout(() => setVanishing(active.seq), (pop?.swellMs ?? 70) + 40);
       return () => clearTimeout(t);
+    }
+    if (active.kind === "spawn" && leadMs > 0) {
+      const e = setTimeout(() => setEmerged(active.seq), leadMs);
+      const t = setTimeout(() => setSettled(active.seq), active.ms + 80);
+      return () => {
+        clearTimeout(e);
+        clearTimeout(t);
+      };
     }
     const t = setTimeout(() => setSettled(active.seq), active.ms + 80);
     return () => clearTimeout(t);
@@ -53,9 +75,21 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
         animation = { name: moveAnim(target, active.ms), run: true, onFinish: done };
         break;
       case "spawn":
-        position = cellToLocal(active.fromX, active.fromY);
-        scale = [0.25, 0.25, 0.25];
-        animation = { name: moveAnim(target, active.ms, true), run: true, onFinish: done };
+        if (!gate) {
+          // no flow (a reshuffle spawn): grows in place
+          position = cellToLocal(active.fromX, active.fromY);
+          scale = [0.25, 0.25, 0.25];
+          animation = { name: moveAnim(target, active.ms, true), run: true, onFinish: done };
+        } else if (leadMs > 0 && emerged !== active.seq) {
+          // still in the chute behind the gate: invisible
+          position = cellToLocal(gate.gx, gate.gy);
+          scale = [0.001, 0.001, 0.001];
+        } else {
+          // out of the gate: small and glowing, growing to full size as it falls into its cell
+          position = cellToLocal(gate.gx, gate.gy);
+          scale = [0.3, 0.3, 0.3];
+          animation = { name: moveAnim(target, Math.max(60, active.ms - leadMs), true), run: true, onFinish: done };
+        }
         break;
       case "pop":
         // swell first, then shrink away; the controller removes the node after TIMING.pop as before
@@ -96,12 +130,12 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
   const spin = popping ? (isPrism ? "spinFast" : isRelic ? "relicFlip" : undefined) : isSpecial ? "spinSlow" : undefined;
   const spinLoops = spin === "spinFast" || spin === "spinSlow";
 
-  // aura, pointed along the clear in code. The Meshy ring's axis is its local Z and the classic plate's long
-  // axis is X, so the yaw differs: horizontal clears run along board X, vertical ones along board Z.
+  // aura, pointed along the clear in code. Classic plate: long axis X, so horizontal = no yaw. Meshy ring: it
+  // circles the gem like a planet's ring and leans toward the clear direction (below); the small comet rings
+  // that fly out on activation are yawed so their local Z is the clear axis (horizontal = along board X).
   const meshy = useMeshyStyle();
-  const auraYaw = special === "surgeH" ? (meshy ? 90 : 0) : meshy ? 0 : 90;
-  // classic plate: breathes when idle, stretches along its axis on activation. Meshy ring: breathes and turns
-  // when idle, and on activation two rings fly out along the axis (see the sweep nodes below).
+  const horizontal = special === "surgeH";
+  const auraYaw = meshy ? (horizontal ? 90 : 0) : horizontal ? 0 : 90;
   const auraAnim = popping
     ? meshy ? undefined : { name: "auraBlast", run: true, interruptible: true }
     : IDLE_MOTION
@@ -116,29 +150,39 @@ function CrystalNodeImpl({ crystal, selected }: Props) {
 
   return (
     <ViroNode position={position} scale={scale} animation={animation}>
+      <GlowPad type={type} boost={selected ? 2 : isSpecial ? 1 : 0} />
       <ViroNode position={[0, lift, 0]} animation={liftAnim}>
         {/* rotation flips between two values so that stopping a spin re-applies a clean facing */}
         <ViroNode rotation={[0, spin ? 0 : 0.001, 0]} animation={spin ? { name: spin, run: true, loop: spinLoops, interruptible: true } : undefined}>
           <GemMesh name={gem} scale={[GEM_SCALE, GEM_SCALE, GEM_SCALE]} rotation={[isPrism || isRelic ? 0 : GEM_TILT_DEG, 0, 0]} />
         </ViroNode>
       </ViroNode>
-      {isSurge && (
+      {isSurge && !meshy && (
         <ViroNode position={[0, lift, 0]} rotation={[0, auraYaw, 0]} animation={auraAnim}>
-          {meshy ? (
-            <>
-              <ViroNode animation={popping ? { name: "auraSweepA", run: true, interruptible: true } : undefined}>
-                <ViroNode animation={IDLE_MOTION ? { name: "auraSpin", run: true, loop: true } : undefined}>
-                  <GemMesh name="surge_aura" scale={AURA_SCALE} />
-                </ViroNode>
+          <GemMesh name="surge_aura" scale={AURA_SCALE} />
+        </ViroNode>
+      )}
+      {isSurge && meshy && (
+        <ViroNode position={[0, lift, 0]}>
+          {/* the ring: flat around the gem, leaning about the clear axis so its long side points along the row or
+              column; it turns in place and swells outward when the gem fires */}
+          <ViroNode rotation={horizontal ? [RING_TILT, 0, 0] : [0, 0, RING_TILT]} animation={auraAnim}>
+            <ViroNode rotation={[-90, 0, 0]} animation={popping ? { name: "auraExpand", run: true, interruptible: true } : undefined}>
+              <ViroNode animation={IDLE_MOTION ? { name: "auraSpin", run: true, loop: true } : undefined}>
+                <GemMesh name="surge_aura" scale={RING_SCALE} />
               </ViroNode>
-              {popping && (
-                <ViroNode animation={{ name: "auraSweepB", run: true, interruptible: true }}>
-                  <GemMesh name="surge_aura" scale={AURA_SCALE} />
-                </ViroNode>
-              )}
-            </>
-          ) : (
-            <GemMesh name="surge_aura" scale={AURA_SCALE} />
+            </ViroNode>
+          </ViroNode>
+          {/* on activation two small rings fly out along the clear, ahead of the line that is about to clear */}
+          {popping && (
+            <ViroNode rotation={[0, auraYaw, 0]}>
+              <ViroNode animation={{ name: "auraSweepA", run: true, interruptible: true }}>
+                <GemMesh name="surge_aura" scale={SWEEP_SCALE} />
+              </ViroNode>
+              <ViroNode animation={{ name: "auraSweepB", run: true, interruptible: true }}>
+                <GemMesh name="surge_aura" scale={SWEEP_SCALE} />
+              </ViroNode>
+            </ViroNode>
           )}
         </ViroNode>
       )}

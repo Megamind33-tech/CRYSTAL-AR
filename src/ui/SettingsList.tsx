@@ -8,7 +8,7 @@ const ROWS: { key: keyof Settings; label: string; hint: string }[] = [
   { key: "sfx", label: "Sound effects", hint: "Crystal chimes and world sounds" },
   { key: "haptics", label: "Haptics", hint: "Vibration on swaps and matches" },
   { key: "cameraView", label: "Tabletop View", hint: "Play on a virtual table without AR tracking. Use this if AR crashes or can’t find surfaces." },
-  { key: "classicGems", label: "Classic crystals", hint: "Simple built-in crystal models instead of the detailed ones. Turn on if the game stutters." },
+  { key: "classicGems", label: "Classic look", hint: "Simple built-in crystals and islands instead of the detailed ones. Turn on if the game stutters." },
   { key: "diagnostics", label: "Diagnostics", hint: "Developer overlay (FPS, tracking, board)" },
 ];
 

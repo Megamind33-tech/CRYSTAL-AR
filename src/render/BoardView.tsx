@@ -8,6 +8,7 @@ import { CRYSTAL_COLORS, MODELS, TEXTURES } from "./assets";
 import { CrystalNode } from "./CrystalNode";
 import { BOARD_OFFSET, BOARD_SIZE, BOARD_TILT_DEG, CELL, cellToLocal, rollFor } from "./layout";
 import { GemMesh } from "./GemMesh";
+import { FlashRings, ShardPool, SpawnGates, Twinkles } from "./GemFx";
 import { impactAnimation, useImpact } from "./useMotion";
 
 const CLICK_DOWN = 1;
@@ -185,12 +186,16 @@ export function BoardView() {
       <Sockets voids={voids} />
       <Obstacles key={runId} blocks={blocks} floor={floor} />
       <CellPads selKey={selKey} hintKey={hintKey} voids={voids} />
+      <SpawnGates />
       {crystals.map((c) => (
         <ViroNode key={`${runId}:${c.id}`} onClickState={JS_PICKING ? undefined : onCell(c.x, c.y)}>
           <CrystalNode crystal={c} selected={!!selected && selected.x === c.x && selected.y === c.y} />
         </ViroNode>
       ))}
       <BurstPool bursts={bursts} />
+      <ShardPool bursts={bursts} />
+      <FlashRings bursts={bursts} />
+      <Twinkles />
     </TiltingBoard>
   );
 }
