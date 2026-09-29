@@ -1,3 +1,4 @@
+import type { BoostId } from "../game/boosts.ts";
 // Crystals AR meta-game domain model. Pure data: no React, no Viro, no I/O.
 // Fiction: the Prism Heart shattered into the Shattered Realms; the player is a Keeper restoring them.
 // All content is referenced by stable string IDs so it can later come from remote config.
@@ -15,11 +16,7 @@ export type ItemId =
   | "streakRestore"    // repairs a missed Keeper's Return day (earned only)
   | "keepersCache"     // opens to a fixed, displayed bundle (never random)
   | "starKey"          // opens hidden Realm Gates
-  | "moves_plus_5"     // boost: +5 moves
-  | "moves_plus_10"    // boost: +10 moves
-  | "gem_multiplier"   // boost: gem points ×1.25
-  | "surge_rate_up"    // boost: surges spawn 30% faster
-  | "starting_clears"; // boost: 2 free starting matches
+  | BoostId;            // Armory boosts (see game/boosts.ts)
 
 export type Rarity = "common" | "rare" | "epic" | "mythic" | "ancient";
 

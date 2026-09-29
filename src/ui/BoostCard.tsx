@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { Boost } from "@/src/game/boosts";
+import { BoostArt } from "./BoostArt";
 import { PressSpring } from "./kit";
 import { F, L } from "./lux/tokens";
 
@@ -18,9 +19,7 @@ export function BoostCard({ boost, owned, selected, disabled, onPress, right, te
   const style = [s.card, { borderColor: selected ? L.crystal : "rgba(246,211,138,0.18)", backgroundColor: selected ? "rgba(127,231,255,0.10)" : "rgba(20,26,61,0.82)" }];
   const content = (
     <>
-      <View style={[s.badge, { borderColor: r.color }]}>
-        <Text style={s.icon}>{boost.icon}</Text>
-      </View>
+      <BoostArt boost={boost} size={64} animate={false} />
       <View style={s.body}>
         <Text style={s.name}>{boost.name}</Text>
         <Text style={s.desc}>{boost.description}</Text>

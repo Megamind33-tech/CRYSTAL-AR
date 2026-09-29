@@ -167,6 +167,7 @@ function prepMatches(s: Session, count: number): { session: Session; steps: Reso
 export function startBoostedSession(level: LevelDef, seed: number | undefined, boosts: readonly BoostId[]): { session: Session; steps: ResolveStep[] } {
   const e = boostEffects(boosts);
   let session = startSession(applyBoostsToLevel(level, boosts), seed);
+  if (e.startCharge) session = { ...session, charge: session.charge + e.startCharge };
   if (e.startSurges) session = seedSurges(session, e.startSurges);
   return e.startingClears ? prepMatches(session, e.startingClears) : { session, steps: [] };
 }

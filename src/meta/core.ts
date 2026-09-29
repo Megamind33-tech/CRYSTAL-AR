@@ -3,7 +3,7 @@ import { LUMINS, RARITY_ORDER, RELICS, RELIC_SETS } from "./config/collection.ts
 import { ECONOMY, NOTIFICATIONS } from "./config/live.ts";
 import { FEATURE_UNLOCKS, MAX_KEEPER_LEVEL, SANCTUARY, xpToNext } from "./config/progression.ts";
 import { ISLANDS } from "./config/world.ts";
-import { BOOSTS, invalidLoadout, type BoostId } from "../game/boosts.ts";
+import { BOOSTS, BOOST_IDS, invalidLoadout, type BoostId } from "../game/boosts.ts";
 import type { CurrencyId, ItemId, Metric, NotificationClass, PlayerState, Reward } from "./types.ts";
 
 export type Result<T = PlayerState> = { ok: true; state: T } | { ok: false; error: string };
@@ -19,7 +19,7 @@ const METRICS: Metric[] = [
 ];
 const ITEMS: ItemId[] = [
   "relicCharge", "portalFragment", "luminFood", "sanctuaryStone", "streakRestore", "keepersCache", "starKey",
-  "moves_plus_5", "moves_plus_10", "gem_multiplier", "surge_rate_up", "starting_clears",
+  ...BOOST_IDS,
 ];
 
 export function newPlayer(keeperId: string, now: number, keeperName = "Keeper"): PlayerState {

@@ -33,9 +33,9 @@ function playRun(boosts: BoostId[], levelIndex = 0, seed = 1101): RunReport {
 }
 
 test("boost effects are exact and stack", () => {
-  assert.deepEqual(boostEffects([]), { extraMoves: 0, scoreMultiplier: 1, startSurges: 0, startingClears: 0 });
+  assert.deepEqual(boostEffects([]), { extraMoves: 0, scoreMultiplier: 1, startSurges: 0, startingClears: 0, startCharge: 0 });
   const e = boostEffects(["moves_plus_5", "moves_plus_10", "gem_multiplier", "surge_rate_up", "starting_clears"]);
-  assert.deepEqual(e, { extraMoves: 15, scoreMultiplier: 1.25, startSurges: 2, startingClears: 2 });
+  assert.deepEqual(e, { extraMoves: 15, scoreMultiplier: 1.25, startSurges: 2, startingClears: 2, startCharge: 0 });
   assert.equal(BOOST_IDS.length, Object.keys(BOOSTS).length);
 });
 
@@ -62,7 +62,7 @@ test("Surge Rush forges two surges, Board Prep clears for free", () => {
 
 test("boosted runs replay-verify; forged loadouts do not", () => {
   const all: BoostId[] = ["moves_plus_5", "gem_multiplier", "starting_clears"];
-  for (const set of [[], ["moves_plus_10"], ["surge_rate_up"], all] as BoostId[][]) {
+  for (const set of [[], ["moves_plus_10"], ["surge_rate_up"], all, ["score_x15", "surge_four", "prep_four"], ["charge_start", "moves_plus_3"]] as BoostId[][]) {
     const r = playRun(set);
     const v = replayRun(r);
     assert.ok(v.ok, `${set.join("+") || "none"}: ${v.reasons.join(", ")}`);
@@ -101,4 +101,10 @@ test("old saves gain coins and boost counts without losing anything", () => {
   assert.equal(n.wallet.coins, 500);
   assert.equal(n.items.moves_plus_5, 0);
   assert.equal(n.wallet.prismDust, 999);
+});
+
+test("Portal Spark stores 25 energy up front and it counts", () => {
+  assert.equal(startBoostedSession(LEVELS[0], 1101, ["charge_start"]).session.charge, 25);
+  assert.equal(startBoostedSession(LEVELS[0], 1101, []).session.charge, 0);
+  assert.equal(startBoostedSession(LEVELS[0], 1101, ["prep_four"]).steps.length >= startBoostedSession(LEVELS[0], 1101, ["starting_clears"]).steps.length, true);
 });
