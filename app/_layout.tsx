@@ -10,6 +10,7 @@ import { initAudio } from "@/src/audio/AudioManager";
 import { loadPersisted } from "@/src/state/settings";
 import { loadKeeper } from "@/src/state/meta";
 import { L } from "@/src/ui/lux/tokens";
+import { loadSkia } from "@/src/ui/lux/loadSkia";
 import { bootMaterials } from "@/src/render/materialsBoot";
 
 // Web mock mode: the Viro WASM renderer assets are served from public/viro (see scripts/copy-viro-web.mjs).
@@ -32,8 +33,7 @@ export default function RootLayout() {
   const [skiaReady, setSkiaReady] = useState(Platform.OS !== "web");
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    import("@shopify/react-native-skia/lib/module/web")
-      .then(({ LoadSkiaWeb }) => LoadSkiaWeb({ locateFile: () => "/canvaskit.wasm" }))
+    loadSkia()
       .then(() => setSkiaReady(true))
       .catch(() => setSkiaReady(true)); // never block the app on the preview renderer
   }, []);
