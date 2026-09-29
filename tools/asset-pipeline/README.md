@@ -1,0 +1,42 @@
+# Asset pipeline (offline, not part of the app)
+
+Turns raw Meshy GLBs (20-260 MB, millions of triangles, 4096 px textures) into phone-sized GLBs.
+Its dependencies live only in this folder; nothing here is imported by the app or shipped.
+
+```bash
+cd tools/asset-pipeline && npm install
+MESHY_API_KEY=msy_... node fetch-meshy.mjs      # raw GLBs -> .cache/src/ (git-ignored). Links expire after ~3 days
+node optimize.mjs [out_name ...]                 # -> assets/models/meshy/*.glb + report.json
+node validate.mjs                                # budgets + Viro rules, exit 1 on any failure
+```
+
+The API key is read from the environment only. Never put it in a file.
+
+## What it does, and why
+
+| Step | Reason |
+|---|---|
+| weld, simplify (meshoptimizer) to a per-asset triangle budget | the game's shipped GLBs are 6-70 KB; a board holds up to 36 crystals plus covers |
+| drop **normal** and occlusion maps | normal maps render black on Viro geometry |
+| bake rotation, centring and scale into the vertices | node transforms stay identity, so the model is a drop-in for the game's own mesh (gems span ~1 unit and are scaled by `GEM_SCALE` at runtime, origin = visual centre) |
+| resize textures to 256 / 512 px, re-encode as JPEG | 22-37 MB of textures per model was the bulk of the size |
+| renormalise normals | simplification leaves non-unit normals (the glTF validator flags them) |
+| **no** Draco / meshopt / quantization / WebP | those glTF extensions are not known to load in Viro, so "compression" is decimation + smaller textures in plain glTF 2.0 |
+
+Models stay static: no rig, no animation, one mesh with one primitive (one draw call). Motion is code-driven
+on ViroNode wrappers (`src/render/CrystalNode.tsx`).
+
+## Loading
+
+Load through `Model` in `src/render/LoadQueue.tsx` (one GLB at a time): many simultaneous background loads
+crashed Viro on the Tecno Camon 19. A board of 36 GLB crystals would queue 36 loads, which is why the game
+still builds crystals from in-memory geometry (`GemMesh`). Wiring these in needs a plan for that.
+
+## Preview
+
+`/dev/models` in the web preview shows the optimised models (top row) against the meshes the game uses today.
+
+## Current results
+
+See `assets/models/meshy/report.json`. The aura stays near 5.6k triangles: its textured ring is cut into many
+UV islands and the simplifier will not collapse across seams.

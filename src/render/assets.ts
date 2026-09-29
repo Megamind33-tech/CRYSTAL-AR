@@ -26,6 +26,21 @@ export const MODELS = {
   flameTurret: require("../../assets/models/flame_turret.glb"),
 };
 
+/**
+ * Optimised Meshy models (built by tools/asset-pipeline). Not used by the game yet: only the /dev/models
+ * comparison page loads them, so nothing here changes play until a model is deliberately wired in.
+ */
+export const MESHY_MODELS = {
+  gem_red: require("../../assets/models/meshy/gem_red.glb"),
+  gem_blue: require("../../assets/models/meshy/gem_blue.glb"),
+  gem_green: require("../../assets/models/meshy/gem_green.glb"),
+  gem_purple: require("../../assets/models/meshy/gem_purple.glb"),
+  gem_gold: require("../../assets/models/meshy/gem_gold.glb"),
+  gem_prism: require("../../assets/models/meshy/gem_prism.glb"),
+  gem_relic: require("../../assets/models/meshy/gem_relic.glb"),
+  surge_aura: require("../../assets/models/meshy/surge_aura.glb"),
+};
+
 export const TEXTURES = {
   spark: require("../../assets/textures/spark.png"),
   ringGlow: require("../../assets/textures/ring_glow.png"),

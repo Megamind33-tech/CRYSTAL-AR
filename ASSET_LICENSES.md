@@ -61,3 +61,10 @@ Runtime-bundled third-party content (not game assets):
 
 The match logic is an original TypeScript implementation. `sanyabeast/match3` (ISC) was inspected as a
 reference only; no code or assets were copied.
+
+## Meshy AI-generated models (assets/models/meshy/)
+Eight crystal models (five gems, Prism, Relic, Surge Aura) generated with Meshy from this project's own prompts and
+reference images, then decimated by `tools/asset-pipeline`. Ownership and commercial-use rights depend on the Meshy
+plan the tasks were generated under: **confirm the plan's terms before release**. They are not used by the game yet
+(only the `/dev/models` comparison page loads them).
+

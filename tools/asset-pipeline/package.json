@@ -1,0 +1,19 @@
+{
+  "name": "crystals-asset-pipeline",
+  "private": true,
+  "type": "module",
+  "description": "Offline tool: turns raw Meshy GLBs into phone-sized GLBs. Not part of the app; nothing here ships.",
+  "scripts": {
+    "fetch": "node fetch-meshy.mjs",
+    "build": "node optimize.mjs",
+    "validate": "node validate.mjs"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "^4.1.0",
+    "@gltf-transform/extensions": "^4.1.0",
+    "@gltf-transform/functions": "^4.1.0",
+    "gltf-validator": "^2.0.0-dev.3.10",
+    "meshoptimizer": "^0.22.0",
+    "sharp": "^0.33.5"
+  }
+}
