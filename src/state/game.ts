@@ -3,6 +3,7 @@
 import { boardHash, findValidMoves, isAdjacent } from "../game/board.ts";
 import { accumulate, newRunStats, type RunStats } from "../meta/verify.ts";
 import type { RunBoost } from "../meta/types.ts";
+import { boostEffects, type BoostId } from "../game/boosts.ts";
 import { addMoves, chargeForStep, playShift, extendMoves, reshuffleSession, LEVELS, objectiveProgress, objectiveValueFrom, playMove, startSession, starsFor, type Session } from "../game/level.ts";
 import { eventsForStep, stageForProgress, type WorldEvent, type WorldStage } from "../game/reactions.ts";
 import type { Cover, CrystalType, Gravity, Pos, ResolveStep, Special } from "../game/types.ts";
@@ -53,6 +54,8 @@ export interface GameState {
   selected: Pos | null;
   busy: boolean;
   hud: Hud;
+  /** active boosts for this run (gem multiplier, extra moves already applied) */
+  activeBoosts: BoostId[];
   progress: number;
   stage: WorldStage;
   reactions: Record<WorldEvent, number>;
@@ -108,6 +111,7 @@ export const gameStore = createStore<GameState>({
   announce: null,
   dragon: null,
   travel: null,
+  activeBoosts: [],
 });
 
 // ---- side-effect channel (audio, haptics, analytics) -----------------------
@@ -170,12 +174,41 @@ const viewsFromSession = (s: Session): CrystalView[] => {
   return out;
 };
 
-export function startLevel(levelIndex: number, seedOverride?: number, movesOverride?: number) {
+export function startLevel(levelIndex: number, seedOverride?: number, movesOverride?: number, boosts: BoostId[] = []) {
   generation++;
   const base = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, levelIndex))];
-  const level = movesOverride ? { ...base, moves: movesOverride } : base;
+
+  // Apply boost effects: extra moves, surge spawn rate, point multiplier
+  const effects = boostEffects(boosts);
+  const boostedMoves = (movesOverride ?? base.moves) + effects.extraMoves;
+
+  // Apply surge spawn rate boost by increasing surge gem (type 3) weight
+  let spawnWeights = base.spawnWeights?.slice();
+  if (effects.surgeSpawnRate !== 1 && spawnWeights) {
+    spawnWeights[3] = (spawnWeights[3] ?? 1) * effects.surgeSpawnRate;
+  }
+
+  // Apply starting clears boost: extra moves for board prep bonus
+  const totalMoves = boostedMoves + effects.startingClears;
+
+  const level = { ...base, moves: totalMoves, spawnWeights };
+
   const session = startSession(level, seedOverride);
-  run = { levelIndex: LEVELS.indexOf(base), seed: seedOverride ?? level.seed, startedAt: Date.now(), endedAt: 0, swaps: [], stats: newRunStats(), boosts: [], relicsUsed: [], score: 0, won: false, stars: 0 };
+
+  run = {
+    levelIndex: LEVELS.indexOf(base),
+    seed: seedOverride ?? level.seed,
+    startedAt: Date.now(),
+    endedAt: 0,
+    swaps: [],
+    stats: newRunStats(),
+    boosts: [], // equipped boosts are tracked in activeBoosts; these are in-game boosts applied during play
+    relicsUsed: [],
+    score: 0,
+    won: false,
+    stars: 0
+  };
+
   gameStore.set({
     levelIndex: LEVELS.indexOf(base),
     runId: gameStore.get().runId + 1,
@@ -198,6 +231,7 @@ export function startLevel(levelIndex: number, seedOverride?: number, movesOverr
     blocks: session.engine.board.block?.slice() ?? null,
     floor: session.engine.board.floor?.slice() ?? null,
     announce: session.level.story ? { text: session.level.story, tone: "story", seq: seq++ } : null,
+    activeBoosts: boosts,
   });
   scheduleHint();
 }

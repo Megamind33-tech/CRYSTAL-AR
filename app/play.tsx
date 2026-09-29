@@ -3,11 +3,13 @@ import { Platform, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useViewMode, ViewControls, WorldNavigator } from "@/src/ar/WorldNavigator";
 import { GravityControl } from "@/src/ui/GravityControl";
+import { BoostSelector } from "@/src/ui/BoostSelector";
 import { setAmbientActive } from "@/src/audio/AudioManager";
 import { DEV_AR_MOCK } from "@/src/config";
 import { Diagnostics } from "@/src/dev/Diagnostics";
 import { cellToScreen, installMockPicking } from "@/src/dev/mockPicking";
 import { LEVELS } from "@/src/game/level";
+import { type BoostId } from "@/src/game/boosts";
 import { arSession, requestResetPlacement } from "@/src/state/arSession";
 import { endSession, gameEvents, gameStore, respawnView, restartLevel, startLevel } from "@/src/state/game";
 import { useStore } from "@/src/state/store";
@@ -43,6 +45,15 @@ export default function Play() {
   const viewMode = useViewMode();
   const travelling = useStore(gameStore, (s) => !!s.travel);
   const [paused, setPaused] = useState(false);
+  const [showBoostSelector, setShowBoostSelector] = useState(false);
+  const player = useStore(metaStore, (s) => s.player);
+
+  const handleBoostsEquipped = (boosts: BoostId[]) => {
+    setShowBoostSelector(false);
+    setPlayContext({ islandId: island?.id ?? null, trialInstanceId: trial?.instanceId ?? null });
+    analytics.track(trial ? "tournament_joined" : "island_started", { id: trial?.trialId ?? island?.id ?? String(level) });
+    startLevel(level, seed, moves, boosts);
+  };
 
   useEffect(() => {
     arSession.set({ phase: DEV_AR_MOCK ? "surfaceFound" : "scanning", planes: 0, anchorId: null, yaw: 0, lastError: "" });
@@ -60,14 +71,12 @@ export default function Play() {
     };
   }, []);
 
-  // Start the level the moment the world lands; on a re-placement keep the session.
+  // Show boost selector when the world lands; on a re-placement keep the session.
   useEffect(() => {
     if (phase !== "placed") return;
     const s = gameStore.get();
     if (!s.session) {
-      setPlayContext({ islandId: island?.id ?? null, trialInstanceId: trial?.instanceId ?? null });
-      analytics.track(trial ? "tournament_joined" : "island_started", { id: trial?.trialId ?? island?.id ?? String(level) });
-      startLevel(level, seed, moves);
+      setShowBoostSelector(true);
     }
     else respawnView();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,7 +115,6 @@ export default function Play() {
   };
 
   const exit = () => (router.canGoBack() ? router.back() : router.replace("/"));
-  const player = useStore(metaStore, (m) => m.player);
   const nextIsland = !trial && player ? ISLANDS.find((i) => i.id !== island?.id && !player.islands[i.id] && islandStatus(player, i, Date.now()).status === "available") : undefined;
 
   return (
@@ -119,6 +127,11 @@ export default function Play() {
       {phase === "placed" && <ViewControls column />}
       {phase === "placed" && !trial && <Coach />}
       {phase === "placed" && <Announce />}
+      {showBoostSelector && phase === "placed" && player && (
+        <View style={{ position: "absolute", bottom: 60, left: 0, right: 0 }}>
+          <BoostSelector ownedBoosts={player.items} onEquip={handleBoostsEquipped} />
+        </View>
+      )}
       <RisingOverlay />
       <PlacementGuide mock={viewMode !== "ar"} cameraView={viewMode === "camera"} onPlaceMock={placeMock} />
       <Diagnostics mock={viewMode !== "ar"} />

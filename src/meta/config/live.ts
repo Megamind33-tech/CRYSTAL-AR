@@ -4,7 +4,7 @@ import type { GameEvent, LeaderboardDef, LeagueId, NotificationClass, PassTier, 
 
 // ---- economy balance -----------------------------------------------------------------------------
 export const ECONOMY = {
-  startingWallet: { prismDust: 150, aether: 0 },
+  startingWallet: { prismDust: 150, aether: 0, coins: 500 },
   /** Prism Dust per star multiplier on island replays */
   starMultiplier: [1, 1, 1.2, 1.4],
   /** duplicate collectibles convert to Prism Dust */
