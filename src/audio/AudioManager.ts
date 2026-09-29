@@ -31,6 +31,14 @@ let ambientWanted = false;
 export function initAudio() {
   if (started) return;
   started = true;
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    // expo-audio's web player calls media.play() and drops the promise, so a clip that isn't ready surfaces
+    // as an unhandled NotSupportedError we cannot catch at the call site. It is harmless: absorb exactly that.
+    window.addEventListener("unhandledrejection", (ev) => {
+      const r = ev.reason as { name?: string; message?: string } | undefined;
+      if (r?.name === "NotSupportedError" && /no supported sources/i.test(r.message ?? "")) ev.preventDefault();
+    });
+  }
   setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false, interruptionMode: "mixWithOthers" }).catch(() => {});
   for (const name of Object.keys(SFX) as SfxName[]) {
     const players = Array.from({ length: VOICES[name] ?? 1 }, () => {
@@ -57,6 +65,8 @@ export function playSfx(name: SfxName) {
   if (!pool) return;
   const p = pool.players[pool.next];
   pool.next = (pool.next + 1) % pool.players.length;
+  // web: a clip that is still loading has "no supported sources" yet; skip that chime rather than throw
+  if (Platform.OS === "web" && !p.isLoaded) return;
   try {
     p.seekTo(0).catch(() => {});
     // on web play() hands back the media element's promise, which rejects (NotSupportedError) while the
