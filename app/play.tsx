@@ -9,7 +9,7 @@ import { DEV_AR_MOCK } from "@/src/config";
 import { Diagnostics } from "@/src/dev/Diagnostics";
 import { cellToScreen, installMockPicking } from "@/src/dev/mockPicking";
 import { LEVELS } from "@/src/game/level";
-import { type BoostId } from "@/src/game/boosts";
+import { BOOST_IDS, type BoostId } from "@/src/game/boosts";
 import { arSession, requestResetPlacement } from "@/src/state/arSession";
 import { endSession, gameEvents, gameStore, respawnView, restartLevel, startLevel } from "@/src/state/game";
 import { useStore } from "@/src/state/store";
@@ -27,7 +27,7 @@ import { RisingOverlay } from "@/src/ui/RisingOverlay";
 import { trialDef, trialInstances } from "@/src/meta/competition";
 import { ISLANDS } from "@/src/meta/config/world";
 import { islandStatus } from "@/src/meta/progression";
-import { analytics, metaStore, setPlayContext } from "@/src/state/meta";
+import { analytics, equipBoosts, metaStore, setPlayContext } from "@/src/state/meta";
 import { settingsStore } from "@/src/state/settings";
 import { L } from "@/src/ui/lux/tokens";
 
@@ -48,11 +48,23 @@ export default function Play() {
   const [showBoostSelector, setShowBoostSelector] = useState(false);
   const player = useStore(metaStore, (s) => s.player);
 
-  const handleBoostsEquipped = (boosts: BoostId[]) => {
-    setShowBoostSelector(false);
+  const beginRun = (boosts: BoostId[]) => {
     setPlayContext({ islandId: island?.id ?? null, trialInstanceId: trial?.instanceId ?? null });
     analytics.track(trial ? "tournament_joined" : "island_started", { id: trial?.trialId ?? island?.id ?? String(level) });
-    startLevel(level, seed, moves, boosts);
+    // boosts are spent as the run starts; if that fails (not owned) the run simply starts without them
+    const used = equipBoosts(boosts) === null ? boosts : [];
+    startLevel(level, seed, moves, used);
+  };
+  const handleBoostsEquipped = (boosts: BoostId[]) => {
+    setShowBoostSelector(false);
+    beginRun(boosts);
+  };
+  /** Restart with the same loadout, using whichever of those boosts the Keeper still owns. */
+  const restart = () => {
+    const owned = metaStore.get().player?.items;
+    const again = gameStore.get().activeBoosts.filter((id) => (owned?.[id] ?? 0) > 0);
+    const used = equipBoosts(again) === null ? again : [];
+    restartLevel(used);
   };
 
   useEffect(() => {
@@ -61,7 +73,7 @@ export default function Play() {
     setAmbientActive(true);
     const removePicking = Platform.OS === "web" ? installMockPicking() : () => {};
     // automation hook for DEV_AR_MOCK runs (CI / screenshots)
-    if (DEV_AR_MOCK) (globalThis as Record<string, unknown>).__crystals = { gameStore, arSession, attemptSwap, findValidMoves, cellToScreen, turnTabletop, settingsStore };
+    if (DEV_AR_MOCK) (globalThis as Record<string, unknown>).__crystals = { gameStore, metaStore, arSession, attemptSwap, findValidMoves, cellToScreen, turnTabletop, settingsStore };
     if (DEV_AR_MOCK && params.autoplace) setTimeout(() => arSession.set({ phase: "placed", anchorId: "mock-table", yaw: 0 }), 300);
     return () => {
       removePicking();
@@ -75,10 +87,9 @@ export default function Play() {
   useEffect(() => {
     if (phase !== "placed") return;
     const s = gameStore.get();
-    if (!s.session) {
-      setShowBoostSelector(true);
-    }
-    else respawnView();
+    if (s.session) respawnView();
+    else if (!trial && BOOST_IDS.some((id) => (metaStore.get().player?.items[id] ?? 0) > 0)) setShowBoostSelector(true);
+    else beginRun([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -127,11 +138,7 @@ export default function Play() {
       {phase === "placed" && <ViewControls column />}
       {phase === "placed" && !trial && <Coach />}
       {phase === "placed" && <Announce />}
-      {showBoostSelector && phase === "placed" && player && (
-        <View style={{ position: "absolute", bottom: 60, left: 0, right: 0 }}>
-          <BoostSelector ownedBoosts={player.items} onEquip={handleBoostsEquipped} />
-        </View>
-      )}
+      {showBoostSelector && phase === "placed" && player && <BoostSelector ownedBoosts={player.items} onEquip={handleBoostsEquipped} />}
       <RisingOverlay />
       <PlacementGuide mock={viewMode !== "ar"} cameraView={viewMode === "camera"} onPlaceMock={placeMock} />
       <Diagnostics mock={viewMode !== "ar"} />
@@ -141,7 +148,7 @@ export default function Play() {
         onNext={nextIsland ? () => continueTo(nextIsland.id) : null}
         onReplay={() => {
           metaStore.set({ lastOutcome: null });
-          restartLevel();
+          restart();
         }}
         onExit={exit}
       />}
@@ -150,7 +157,7 @@ export default function Play() {
         onResume={() => setPaused(false)}
         onRestart={() => {
           setPaused(false);
-          restartLevel();
+          restart();
         }}
         onResetWorld={() => {
           setPaused(false);

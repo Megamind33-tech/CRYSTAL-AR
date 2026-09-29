@@ -3,6 +3,7 @@ import { LUMINS, RARITY_ORDER, RELICS, RELIC_SETS } from "./config/collection.ts
 import { ECONOMY, NOTIFICATIONS } from "./config/live.ts";
 import { FEATURE_UNLOCKS, MAX_KEEPER_LEVEL, SANCTUARY, xpToNext } from "./config/progression.ts";
 import { ISLANDS } from "./config/world.ts";
+import { BOOSTS, invalidLoadout, type BoostId } from "../game/boosts.ts";
 import type { CurrencyId, ItemId, Metric, NotificationClass, PlayerState, Reward } from "./types.ts";
 
 export type Result<T = PlayerState> = { ok: true; state: T } | { ok: false; error: string };
@@ -202,19 +203,19 @@ export function setSeasonResolver(fn: (now: number) => string | null) {
 
 export function spend(state: PlayerState, cost: Partial<Record<CurrencyId | ItemId, number>>): Result {
   for (const [k, v] of Object.entries(cost)) {
-    const have = k === "prismDust" || k === "aether" ? state.wallet[k] : state.items[k as ItemId];
+    const have = k in state.wallet ? state.wallet[k as CurrencyId] : state.items[k as ItemId];
     if ((have ?? 0) < (v ?? 0)) return fail(`Not enough ${label(k)}`);
   }
   const s = clone(state);
   for (const [k, v] of Object.entries(cost)) {
-    if (k === "prismDust" || k === "aether") s.wallet[k] -= v ?? 0;
+    if (k in s.wallet) s.wallet[k as CurrencyId] -= v ?? 0;
     else s.items[k as ItemId] -= v ?? 0;
   }
   return ok(s);
 }
 
 export const LABELS: Record<string, string> = {
-  prismDust: "Prism Dust", aether: "Aether Crystals", relicCharge: "Relic Charge", portalFragment: "Portal Fragment",
+  coins: "Coins", prismDust: "Prism Dust", aether: "Aether Crystals", relicCharge: "Relic Charge", portalFragment: "Portal Fragment",
   luminFood: "Lumin Food", sanctuaryStone: "Sanctuary Stone", streakRestore: "Streak Restore", keepersCache: "Keeper's Cache", starKey: "Star Key",
 };
 export const label = (k: string) => LABELS[k] ?? k;
@@ -233,4 +234,39 @@ export function describeReward(r: Reward): string[] {
   if (r.heartShards?.length) out.push("Heart Shard");
   if (r.cosmetics?.length) out.push(`${r.cosmetics.length} cosmetic${r.cosmetics.length > 1 ? "s" : ""}`);
   return out;
+}
+
+// ---- Armory boosts ------------------------------------------------------------------------------------------
+/** Saves from before the Armory lack coins and boost counts: fill them in without touching anything else. */
+export function normalizePlayer(state: PlayerState): PlayerState {
+  const missingItems = ITEMS.some((i) => typeof state.items[i] !== "number");
+  if (typeof state.wallet.coins === "number" && !missingItems) return state;
+  const s = clone(state);
+  s.wallet.coins ??= ECONOMY.startingWallet.coins;
+  for (const i of ITEMS) s.items[i] ??= 0;
+  return s;
+}
+
+/** Buys one boost with coins. */
+export function buyBoost(state: PlayerState, id: BoostId): Result {
+  const boost = BOOSTS[id];
+  if (!boost) return fail("Unknown boost");
+  const paid = spend(state, { coins: boost.cost });
+  if (!paid.ok) return paid;
+  const s = clone(paid.state);
+  s.items[id] += 1;
+  return ok(s);
+}
+
+/** Uses up one of each equipped boost when a run starts. */
+export function consumeBoosts(state: PlayerState, ids: readonly BoostId[]): Result {
+  const bad = invalidLoadout(ids);
+  if (bad) return fail(bad);
+  const paid = spend(state, Object.fromEntries(ids.map((id) => [id, 1])));
+  return paid.ok ? paid : fail("You do not own that boost");
+}
+
+/** Coins earned by a finished, verified run. */
+export function coinsForRun(won: boolean, stars: number): number {
+  return won ? 40 + stars * 20 : 10;
 }

@@ -3,8 +3,8 @@
 import { boardHash, findValidMoves, isAdjacent } from "../game/board.ts";
 import { accumulate, newRunStats, type RunStats } from "../meta/verify.ts";
 import type { RunBoost } from "../meta/types.ts";
-import { boostEffects, type BoostId } from "../game/boosts.ts";
-import { addMoves, chargeForStep, playShift, extendMoves, reshuffleSession, LEVELS, objectiveProgress, objectiveValueFrom, playMove, startSession, starsFor, type Session } from "../game/level.ts";
+import type { BoostId } from "../game/boosts.ts";
+import { addMoves, chargeForStep, scoreOf, startBoostedSession, playShift, extendMoves, reshuffleSession, LEVELS, objectiveProgress, objectiveValueFrom, playMove, startSession, starsFor, type Session } from "../game/level.ts";
 import { eventsForStep, stageForProgress, type WorldEvent, type WorldStage } from "../game/reactions.ts";
 import type { Cover, CrystalType, Gravity, Pos, ResolveStep, Special } from "../game/types.ts";
 import { neighbourToward } from "../render/layout.ts";
@@ -54,7 +54,7 @@ export interface GameState {
   selected: Pos | null;
   busy: boolean;
   hud: Hud;
-  /** active boosts for this run (gem multiplier, extra moves already applied) */
+  /** boosts equipped for this run (their effects are already part of the session) */
   activeBoosts: BoostId[];
   progress: number;
   stage: WorldStage;
@@ -129,6 +129,8 @@ export interface RunRecord {
   swaps: [number, number, number, number][];
   stats: RunStats;
   boosts: RunBoost[];
+  /** pre-match Armory boosts equipped for this run */
+  equipped: BoostId[];
   relicsUsed: string[];
   score: number;
   won: boolean;
@@ -174,26 +176,16 @@ const viewsFromSession = (s: Session): CrystalView[] => {
   return out;
 };
 
+/** What the current run was started with, so a restart replays the exact same setup. */
+let lastStart: { seed?: number; moves?: number } = {};
+
 export function startLevel(levelIndex: number, seedOverride?: number, movesOverride?: number, boosts: BoostId[] = []) {
   generation++;
+  lastStart = { seed: seedOverride, moves: movesOverride };
   const base = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, levelIndex))];
-
-  // Apply boost effects: extra moves, surge spawn rate, point multiplier
-  const effects = boostEffects(boosts);
-  const boostedMoves = (movesOverride ?? base.moves) + effects.extraMoves;
-
-  // Apply surge spawn rate boost by increasing surge gem (type 3) weight
-  let spawnWeights = base.spawnWeights?.slice();
-  if (effects.surgeSpawnRate !== 1 && spawnWeights) {
-    spawnWeights[3] = (spawnWeights[3] ?? 1) * effects.surgeSpawnRate;
-  }
-
-  // Apply starting clears boost: extra moves for board prep bonus
-  const totalMoves = boostedMoves + effects.startingClears;
-
-  const level = { ...base, moves: totalMoves, spawnWeights };
-
-  const session = startSession(level, seedOverride);
+  const played = movesOverride ? { ...base, moves: movesOverride } : base;
+  const { session, steps: prepSteps } = startBoostedSession(played, seedOverride, boosts);
+  const level = session.level;
 
   run = {
     levelIndex: LEVELS.indexOf(base),
@@ -202,12 +194,15 @@ export function startLevel(levelIndex: number, seedOverride?: number, movesOverr
     endedAt: 0,
     swaps: [],
     stats: newRunStats(),
-    boosts: [], // equipped boosts are tracked in activeBoosts; these are in-game boosts applied during play
+    boosts: [],
+    equipped: [...boosts],
     relicsUsed: [],
     score: 0,
     won: false,
     stars: 0
   };
+  accumulate(run.stats, prepSteps);
+  const progress0 = objectiveProgress(session);
 
   gameStore.set({
     levelIndex: LEVELS.indexOf(base),
@@ -216,9 +211,9 @@ export function startLevel(levelIndex: number, seedOverride?: number, movesOverr
     crystals: viewsFromSession(session).map((c) => ({ ...c, anim: { kind: "spawn", fromX: c.x, fromY: c.y - 7, ms: 380 + c.y * 40, seq: seq++ } })),
     selected: null,
     busy: false,
-    hud: { score: 0, movesLeft: session.movesLeft, charge: 0, collected: [0, 0, 0, 0, 0], tally: emptyTally() },
-    progress: 0,
-    stage: 0,
+    hud: { score: session.score, movesLeft: session.movesLeft, charge: session.charge, collected: session.collected.slice(), tally: { ...session.tally, cover: { ...session.tally.cover } } },
+    progress: progress0,
+    stage: stageForProgress(progress0),
     reactions: emptyReactions(),
     bursts: [],
     comboText: null,
@@ -236,7 +231,8 @@ export function startLevel(levelIndex: number, seedOverride?: number, movesOverr
   scheduleHint();
 }
 
-export const restartLevel = () => startLevel(gameStore.get().levelIndex, run?.seed, gameStore.get().session?.level.moves);
+/** Replays the current level from scratch with the given boosts (the caller has already paid for them). */
+export const restartLevel = (boosts: BoostId[] = []) => startLevel(gameStore.get().levelIndex, lastStart.seed, lastStart.moves, boosts);
 
 /** "Stabilize Portal": resume a lost board with extra moves (payment is handled by the meta layer). */
 export function stabilizeLevel(moves: number) {
@@ -323,7 +319,7 @@ function finishTurn(s: GameState, session: Session, countsAsMove: boolean) {
       gameEvents.emit({ type: "haptic", kind: "success" });
     }
     if (run) Object.assign(run, { endedAt: Date.now(), score: session.score, won: result.won, stars: result.stars, secretFound: session.secretFound });
-    gameEvents.emit({ type: "levelEnd", won: result.won, stars: result.stars, level: session.level.id, run: { ...run!, swaps: [...run!.swaps], stats: { ...run!.stats }, boosts: [...run!.boosts], relicsUsed: [...run!.relicsUsed] } });
+    gameEvents.emit({ type: "levelEnd", won: result.won, stars: result.stars, level: session.level.id, run: { ...run!, swaps: [...run!.swaps], stats: { ...run!.stats }, boosts: [...run!.boosts], equipped: [...run!.equipped], relicsUsed: [...run!.relicsUsed] } });
   }
   scheduleHint();
   gameStore.set({
@@ -437,7 +433,7 @@ async function playSteps(steps: ResolveStep[], gen: number) {
           step.combo ? "Resonance!" : step.cascade >= 4 ? "Crystal Storm!" : step.cascade === 3 ? "Radiant!" : step.cascade === 2 ? "Chain!" : null;
         gameStore.set((s) => {
           const hud = { ...s.hud, collected: s.hud.collected.slice(), tally: { ...s.hud.tally, cover: { ...s.hud.tally.cover } } };
-          hud.score += step.score;
+          hud.score += scoreOf(s.session!.level, step.score);
           hud.charge += chargeForStep(step);
           for (const c of step.cleared) hud.collected[c.type]++;
           let blocks = s.blocks, floor = s.floor;

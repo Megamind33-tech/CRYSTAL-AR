@@ -5,9 +5,10 @@ import { Platform } from "react-native";
 import type { SignedRun } from "../backend/contracts";
 import { createBufferedAnalytics, createMockBackend, DEV_SIGNING_KEY } from "../backend/mockBackend";
 import { trialDef, trialInstances, trialPoints, leagueFor } from "../meta/competition";
-import { newPlayer, grant, markSeen, type Result } from "../meta/core";
+import { buyBoost, coinsForRun, consumeBoosts, newPlayer, normalizePlayer, grant, markSeen, type Result } from "../meta/core";
 import { ISLANDS } from "../meta/config/world";
 import { applyRun, recordEvent, refreshCycles, type RunOutcome } from "../meta/progression";
+import type { BoostId } from "../game/boosts";
 import type { PlayerState, RunReport, Reward } from "../meta/types";
 import { GAME_VERSION, makeRunId, mockSign, replayRun } from "../meta/verify";
 import { gameEvents, type RunRecord } from "./game";
@@ -76,7 +77,7 @@ export function loadKeeper() {
     } else {
       analytics.track("game_started", { first: false });
     }
-    metaStore.set({ player: refreshCycles(player, now()), pending, loaded: true });
+    metaStore.set({ player: refreshCycles(normalizePlayer(player), now()), pending, loaded: true });
     await persist();
     void flushQueue();
   })();
@@ -134,6 +135,7 @@ function toReport(rec: RunRecord, keeperId: string, ctx: PlayContext): RunReport
     swaps: rec.swaps,
     relicsUsed: rec.relicsUsed,
     boosts: rec.boosts,
+    ...(rec.equipped.length ? { equipped: rec.equipped } : {}),
     claimed: { won: rec.won, stars: rec.stars, score: rec.score, ...rec.stats, ...(rec.secretFound ? { secretFound: true } : {}) },
     trialInstanceId: ctx.trialInstanceId ?? undefined,
     buildFlags: { debug: __DEV__, emulator: false },
@@ -174,6 +176,7 @@ async function onRunFinished(rec: RunRecord) {
   }
 
   const outcome = applyRun(player, report, now());
+  outcome.state = { ...outcome.state, wallet: { ...outcome.state.wallet, coins: outcome.state.wallet.coins + coinsForRun(report.claimed.won, report.claimed.stars) } };
   metaStore.set((m) => ({ player: outcome.state, lastOutcome: { ...outcome, verified: true }, pending: [...m.pending, signed] }));
   if (outcome.firstRestore) analytics.track("portal_opened", { island: report.islandId });
   for (const l of outcome.log?.newLumins ?? []) analytics.track("lumin_rescued", { lumin: l });
@@ -190,3 +193,9 @@ gameEvents.on((e) => {
 export function rewardTotal(r: Reward) {
   return (r.prismDust ?? 0) + (r.aether ?? 0) * 10;
 }
+
+/** Armory purchase. Returns the error message, if any. */
+export const buyBoostItem = (id: BoostId) => act((s) => buyBoost(s, id));
+
+/** Spends the equipped boosts as a run starts. Returns the error message, if any. */
+export const equipBoosts = (ids: BoostId[]) => (ids.length ? act((s) => consumeBoosts(s, ids)) : null);

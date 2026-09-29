@@ -1,79 +1,72 @@
-// Boost selector: choose which boosts to equip before a level starts.
+// Pre-match loadout: pick up to BOOST_SLOTS owned boosts. Each one equipped is used up when the run starts.
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { BOOSTS, type BoostId } from "@/src/game/boosts";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { useRouter } from "expo-router";
+import { BOOSTS, BOOST_SLOTS, type BoostId } from "@/src/game/boosts";
+import { BoostCard } from "./BoostCard";
 import { PressSpring } from "./kit";
 import { LuxButton } from "./lux/Lux";
 import { F, L } from "./lux/tokens";
 
-const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: "rgba(0,0,0,0.8)", borderRadius: 12, marginHorizontal: 12, marginBottom: 12 },
-  title: { fontSize: 16, fontFamily: "CinzelBold", color: L.crystal, marginBottom: 12 },
-  grid: { gap: 8 },
-  boostRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#0f0f2e", paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, borderLeftWidth: 2 },
-  boostRare: { borderLeftColor: "#ffd0a0" },
-  boostUncommon: { borderLeftColor: "#a0d0ff" },
-  boostCommon: { borderLeftColor: "#90f090" },
-  boostInfo: { flex: 1, marginLeft: 8 },
-  boostName: { fontSize: 13, fontFamily: "PoppinsBold", color: "#ffffff" },
-  boostDesc: { fontSize: 11, fontFamily: "PoppinsMedium", color: "#b0b0d0", marginTop: 2 },
-  icon: { fontSize: 18 },
-  checkbox: { width: 24, height: 24, borderRadius: 4, borderWidth: 2, borderColor: L.crystal, alignItems: "center", justifyContent: "center" },
-  checkboxChecked: { backgroundColor: L.crystal },
-  checkmark: { fontSize: 12, color: L.night900, fontFamily: "PoppinsBold" },
-  footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#333366" },
-  coinsUsed: { fontSize: 12, fontFamily: "PoppinsMedium", color: L.goldPale },
-  button: { flex: 1, marginLeft: 12 },
-});
-
 export function BoostSelector({ ownedBoosts, onEquip }: { ownedBoosts: Record<string, number>; onEquip: (boosts: BoostId[]) => void }) {
+  const router = useRouter();
   const [equipped, setEquipped] = useState<BoostId[]>([]);
-  const coinsUsed = equipped.reduce((sum, id) => sum + BOOSTS[id].cost, 0);
+  const list = Object.values(BOOSTS).filter((b) => (ownedBoosts[b.id] ?? 0) > 0).sort((a, b) => a.cost - b.cost);
+  const full = equipped.length >= BOOST_SLOTS;
 
-  const toggle = (id: BoostId) => {
-    setEquipped((e) => (e.includes(id) ? e.filter((x) => x !== id) : [...e, id]));
-  };
-
-  const canEquip = (id: BoostId) => (ownedBoosts[id] ?? 0) > 0;
-  const boostList = Object.values(BOOSTS).sort((a, b) => a.cost - b.cost);
+  const toggle = (id: BoostId) => setEquipped((e) => (e.includes(id) ? e.filter((x) => x !== id) : e.length >= BOOST_SLOTS ? e : [...e, id]));
 
   return (
-    <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.container}>
-      <Text style={styles.title}>Equip Boosts</Text>
-      <ScrollView style={styles.grid} scrollEnabled={false}>
-        {boostList.map((boost) => {
-          const isEquipped = equipped.includes(boost.id);
-          const owned = ownedBoosts[boost.id] ?? 0;
-          const rarityStyle =
-            boost.rarity === "rare" ? styles.boostRare : boost.rarity === "uncommon" ? styles.boostUncommon : styles.boostCommon;
-          return (
-            <Animated.View key={boost.id} entering={FadeIn.delay(boostList.indexOf(boost) * 30)}>
-              <PressSpring
-                onPress={() => canEquip(boost.id) && toggle(boost.id)}
-                disabled={!canEquip(boost.id)}
-                style={[styles.boostRow, rarityStyle]}>
-                <View style={{ flexDirection: "row", flex: 1, alignItems: "center" }}>
-                  <Text style={styles.icon}>{boost.icon}</Text>
-                  <View style={styles.boostInfo}>
-                    <Text style={styles.boostName}>{boost.name}</Text>
-                    <Text style={styles.boostDesc}>{boost.description}</Text>
-                  </View>
-                </View>
-                <View style={[styles.checkbox, isEquipped && styles.checkboxChecked]}>
-                  {isEquipped && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-              </PressSpring>
-            </Animated.View>
-          );
-        })}
-      </ScrollView>
-      <View style={styles.footer}>
-        <Text style={styles.coinsUsed}>Cost: {coinsUsed} coins</Text>
-        <View style={styles.button}>
-          <LuxButton label="Start Level" onPress={() => onEquip(equipped)} />
+    <View style={s.scrim} pointerEvents="box-none">
+      <Animated.View entering={FadeIn.duration(180)} style={s.sheet}>
+        <View style={s.head}>
+          <Text style={s.title}>Prepare your run</Text>
+          <Text style={s.slots}>{equipped.length}/{BOOST_SLOTS} equipped</Text>
         </View>
-      </View>
-    </Animated.View>
+        <Text style={s.hint}>Equipped boosts are used up when the level begins.</Text>
+        <ScrollView style={s.list} contentContainerStyle={s.listContent} showsVerticalScrollIndicator={false}>
+          {list.map((boost) => {
+            const on = equipped.includes(boost.id);
+            return (
+              <BoostCard
+                key={boost.id}
+                boost={boost}
+                owned={ownedBoosts[boost.id]}
+                selected={on}
+                disabled={!on && full}
+                onPress={() => toggle(boost.id)}
+                testID={`equip-${boost.id}`}
+                right={<View style={[s.check, on && s.checkOn]}>{on && <Text style={s.tick}>✓</Text>}</View>}
+              />
+            );
+          })}
+        </ScrollView>
+        <View style={s.foot}>
+          <PressSpring onPress={() => router.push("/store")} style={s.link} accessibilityLabel="Visit the Armory">
+            <Text style={s.linkText}>Armory</Text>
+          </PressSpring>
+          <LuxButton testID="start-level" label={equipped.length ? "Begin with boosts" : "Begin"} onPress={() => onEquip(equipped)} style={s.go} />
+        </View>
+      </Animated.View>
+    </View>
   );
 }
+
+const s = StyleSheet.create({
+  scrim: { ...StyleSheet.absoluteFill, justifyContent: "flex-end", backgroundColor: "rgba(4,5,18,0.55)" },
+  sheet: { maxHeight: "72%", padding: 16, paddingBottom: 24, borderTopLeftRadius: 26, borderTopRightRadius: 26, backgroundColor: "rgba(11,14,36,0.97)", borderTopWidth: 1, borderColor: "rgba(246,211,138,0.3)" },
+  head: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  title: { fontFamily: F.title, fontSize: 20, color: L.goldPale },
+  slots: { fontFamily: F.bodyStrong, fontSize: 12, color: L.crystal },
+  hint: { fontFamily: F.body, fontSize: 12, color: L.mist, marginTop: 2, marginBottom: 10 },
+  list: { flexGrow: 0 },
+  listContent: { gap: 10, paddingBottom: 6 },
+  check: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: L.mistDim, alignItems: "center", justifyContent: "center" },
+  checkOn: { backgroundColor: L.crystal, borderColor: L.crystal },
+  tick: { fontFamily: F.bold, fontSize: 14, color: L.night900 },
+  foot: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14 },
+  link: { paddingHorizontal: 14, paddingVertical: 12 },
+  linkText: { fontFamily: F.bodyStrong, fontSize: 14, color: L.aether },
+  go: { flex: 1 },
+});

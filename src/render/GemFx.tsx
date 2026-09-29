@@ -163,16 +163,16 @@ export const SpawnGates = memo(function SpawnGates() {
     const [gx, gy] = gravity === "down" ? [i, -1] : gravity === "left" ? [BOARD_SIZE, i] : [-1, i];
     const [px, , pz] = cellToLocal(gx, gy);
     const fed = lane[i] > 0;
+    // the gate itself never remounts (remounting its quads reads as flicker); only a fading halo is keyed to the feed
     gates.push(
-      <ViroNode
-        key={`${gravity}_${i}_${lane[i]}`}
-        position={[px, 0.03, pz]}
-        scale={fed ? [1.7, 1.7, 1.7] : [1, 1, 1]}
-        animation={fed ? { name: "fxGateSettle", run: true } : undefined}
-        ignoreEventHandling
-      >
+      <ViroNode key={`${gravity}_${i}`} position={[px, 0.03, pz]} ignoreEventHandling>
         <ViroQuad rotation={[-90, 0, 0]} width={CELL * 1.5} height={CELL * 1.5} materials={["fxGateCore"]} ignoreEventHandling />
         <ViroQuad position={[0, 0.0006, 0]} rotation={[-90, 0, 0]} width={CELL * 1.05} height={CELL * 1.05} materials={["fxGate"]} ignoreEventHandling />
+        {fed && (
+          <ViroNode key={lane[i]} scale={[1.7, 1.7, 1.7]} animation={{ name: "fxGateBloom", run: true }} ignoreEventHandling>
+            <ViroQuad position={[0, 0.0012, 0]} rotation={[-90, 0, 0]} width={CELL * 1.05} height={CELL * 1.05} materials={["fxGate"]} ignoreEventHandling />
+          </ViroNode>
+        )}
       </ViroNode>,
     );
   }

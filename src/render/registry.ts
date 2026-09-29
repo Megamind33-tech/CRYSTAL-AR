@@ -123,7 +123,7 @@ export function registerMaterials() {
     // break: the flash ring swells and fades; the twinkle grows while fading; a gate blooms then settles
     fxFlash: { properties: { scaleX: 2.2, scaleY: 2.2, scaleZ: 2.2, opacity: 0 }, duration: 320, easing: "EaseOut" },
     fxTwinkle: { properties: { scaleX: 1.5, scaleY: 1.5, scaleZ: 1.5, opacity: 0 }, duration: 380, easing: "EaseOut" },
-    fxGateSettle: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 420, easing: "EaseOut" },
+    fxGateBloom: { properties: { scaleX: 1, scaleY: 1, scaleZ: 1, opacity: 0 }, duration: 420, easing: "EaseOut" },
     // living environment: creatures lap the island (a rotating parent, the creature offset by its radius); mist turns
     ...Object.fromEntries(ORBIT_MS.map((ms) => [`orbit${ms}`, { properties: { rotateY: 360 }, duration: ms, easing: "Linear" }])),
     mistSpinA: { properties: { rotateY: 360 }, duration: 260000, easing: "Linear" },

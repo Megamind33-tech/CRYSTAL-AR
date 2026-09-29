@@ -116,14 +116,14 @@ export const Mist = memo(function Mist() {
 // ------------------------------------------------------------------- light --
 /**
  * The sun crosses the sky slowly: over a couple of minutes the light warms and cools and the shadows swing across
- * the board and island. It lives in its own component so only this re-renders (every 1.5 s).
+ * the board and island. It lives in its own component so only this re-renders (every 5 s).
  */
 export function DayLight({ color, intensity, shadow }: { color: string; intensity: number; shadow: boolean }) {
   const classic = useStore(settingsStore, (s) => s.classicGems);
   const [t, setT] = useState(0);
   useEffect(() => {
     if (classic) return;
-    const id = setInterval(() => setT(Date.now() / 1000), 1500);
+    const id = setInterval(() => setT(Date.now() / 1000), 5000);
     return () => clearInterval(id);
   }, [classic]);
   const phase = classic ? 0 : (t % 150) / 150;

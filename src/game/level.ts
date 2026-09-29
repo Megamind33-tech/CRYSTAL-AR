@@ -1,6 +1,7 @@
-import { cloneState, createEngine, parseMask, reshuffle, type BoardSetup, type EngineState } from "./board.ts";
+import { applyBoostsToLevel, boostEffects, type BoostId } from "./boosts.ts";
+import { cloneState, createEngine, findValidMoves, parseMask, reshuffle, type BoardSetup, type EngineState } from "./board.ts";
 import { rotatedGravity, shiftGravity, spreadCover, trySwap } from "./resolve.ts";
-import { createRng } from "./rng.ts";
+import { createRng, nextInt } from "./rng.ts";
 import { buildCampaign } from "./campaign.ts";
 import { applyTwist, revealsSecret, type Secret, type Twist } from "./twists.ts";
 import { islandStory } from "./lore.ts";
@@ -29,6 +30,8 @@ export interface LevelDef {
   gravityCharges?: number;
   /** spawn weight per crystal kind (default 1 each) */
   spawnWeights?: number[];
+  /** points multiplier applied to every match (set by the Gem Multiplier boost) */
+  scoreMultiplier?: number;
   /** board size (default 6 × 6) */
   width?: number;
   height?: number;
@@ -125,6 +128,47 @@ export function startSession(level: LevelDef, seedOverride?: number): Session {
     twistsFired: 0,
     secretFound: false,
   };
+}
+
+/** Points a match is worth on this level (boosts may scale it). */
+export const scoreOf = (level: LevelDef, base: number) => Math.round(base * (level.scoreMultiplier ?? 1));
+
+/** Forges `count` Surge crystals on distinct plain cells, chosen with the session's own RNG (deterministic). */
+function seedSurges(s: Session, count: number): Session {
+  const b = s.engine.board;
+  const cells = b.cells.slice();
+  const rng = { state: s.engine.rng.state };
+  const free = cells.map((c, i) => (c && c.special === "none" && !c.cover ? i : -1)).filter((i) => i >= 0);
+  for (let n = 0; n < count && free.length; n++) {
+    const i = free.splice(nextInt(rng, free.length), 1)[0];
+    cells[i] = { ...cells[i]!, special: n % 2 ? "surgeV" : "surgeH" };
+  }
+  return { ...s, engine: { ...s.engine, rng, board: { ...b, cells } } };
+}
+
+/** Board Prep: clears the first valid matches for free (no move spent, no twist tick). */
+function prepMatches(s: Session, count: number): { session: Session; steps: ResolveStep[] } {
+  let cur = s;
+  const steps: ResolveStep[] = [];
+  for (let i = 0; i < count; i++) {
+    const mv = findValidMoves(cur.engine.board)[0];
+    if (!mv) break;
+    const r = trySwap(cur.engine, mv[0], mv[1]);
+    if (!r.valid) break;
+    const next: Session = { ...cur, engine: r.state, collected: cur.collected.slice(), tally: cloneTally(cur.tally) };
+    account(next, r.steps);
+    steps.push(...r.steps);
+    cur = next;
+  }
+  return { session: cur, steps };
+}
+
+/** A session with the equipped boosts applied. `steps` are the free Board Prep matches (already resolved). */
+export function startBoostedSession(level: LevelDef, seed: number | undefined, boosts: readonly BoostId[]): { session: Session; steps: ResolveStep[] } {
+  const e = boostEffects(boosts);
+  let session = startSession(applyBoostsToLevel(level, boosts), seed);
+  if (e.startSurges) session = seedSurges(session, e.startSurges);
+  return e.startingClears ? prepMatches(session, e.startingClears) : { session, steps: [] };
 }
 
 /** Portal energy granted by a clear step: crystals, specials and cascades all feed the portal. */
@@ -232,7 +276,7 @@ function account(next: Session, steps: ResolveStep[]) {
       else if (h.layer === "block") next.tally.stone++;
       else next.tally.rune++;
     }
-    next.score += step.score;
+    next.score += scoreOf(next.level, step.score);
     next.charge += chargeForStep(step);
     next.bestCascade = Math.max(next.bestCascade, step.cascade);
     for (const c of step.cleared) next.collected[c.type]++;

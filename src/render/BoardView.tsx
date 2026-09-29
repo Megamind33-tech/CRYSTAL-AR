@@ -15,10 +15,21 @@ const CLICK_DOWN = 1;
 const PAD_Y = 0.016;
 const CLICK_UP = 2;
 
-const onCell = (x: number, y: number) => (state: number, position?: number[]) => {
-  if (DEV_AR_MOCK) ((globalThis as Record<string, unknown>).__hits as unknown[] | undefined)?.push({ x, y, state, position });
-  if (state === CLICK_DOWN) pressCell({ x, y });
-  else if (state === CLICK_UP) releaseCell({ x, y });
+type CellHandler = (state: number, position?: number[]) => void;
+const handlers = new Map<number, CellHandler>();
+/** One handler per cell, created once: a fresh function every render would re-send props to every node. */
+const onCell = (x: number, y: number): CellHandler => {
+  const key = y * 64 + x;
+  let h = handlers.get(key);
+  if (!h) {
+    h = (state, position) => {
+      if (DEV_AR_MOCK) ((globalThis as Record<string, unknown>).__hits as unknown[] | undefined)?.push({ x, y, state, position });
+      if (state === CLICK_DOWN) pressCell({ x, y });
+      else if (state === CLICK_UP) releaseCell({ x, y });
+    };
+    handlers.set(key, h);
+  }
+  return h;
 };
 
 /** Invisible per-cell touch pads: native hit-testing resolves which cell a finger is on. */

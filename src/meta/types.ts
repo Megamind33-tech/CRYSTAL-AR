@@ -349,6 +349,8 @@ export interface RunReport {
   relicsUsed: string[];
   /** in-run effects in order, applied before swap #atSwap on replay (Stabilize Portal, relics) */
   boosts?: RunBoost[];
+  /** pre-match boosts equipped for this run (Armory power-ups) */
+  equipped?: string[];
   claimed: {
     won: boolean;
     stars: number;

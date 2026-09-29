@@ -16,6 +16,7 @@ export const FEATURE_UNLOCKS: { feature: string; level: number; name: string; bl
   { feature: "leaderboards", level: 6, name: "Rankings", blurb: "See how other Keepers are faring." },
   { feature: "trials", level: 7, name: "Realm Trials", blurb: "Fair, fixed-board competitions between Keepers." },
   { feature: "season", level: 8, name: "Season & Events", blurb: "The Eclipse Realm drifts closer." },
+  { feature: "store", level: 2, name: "Keeper's Armory", blurb: "Spend coins on boosts that give a run a head start." },
   { feature: "exchange", level: 8, name: "Realm Exchange", blurb: "Trade for cosmetics, expeditions and Aether." },
 ];
 

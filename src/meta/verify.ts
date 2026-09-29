@@ -1,7 +1,8 @@
 // Anti-cheat. The match engine is deterministic, so the authority replays seed + swap list and compares
 // every claimed number. Local validation is for honest-client UX only – it is NOT security: the real
 // checks (signature with a server-held key, duplicate run IDs, trial windows) must run on the backend.
-import { addMoves, LEVELS, playMove, playShift, reshuffleSession, startSession, starsFor } from "../game/level.ts";
+import { applyBoostsToLevel, invalidLoadout, type BoostId } from "../game/boosts.ts";
+import { addMoves, LEVELS, playMove, playShift, reshuffleSession, startBoostedSession, starsFor } from "../game/level.ts";
 import { ECONOMY } from "./config/live.ts";
 import { trialDef, trialInstances } from "./competition.ts";
 import { hash } from "./core.ts";
@@ -43,7 +44,11 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
   const reasons: string[] = [];
   const base = LEVELS[r.levelIndex];
   if (!base) return { ok: false, reasons: ["unknown level"] };
-  const level = opts.moves ? { ...base, moves: opts.moves } : base;
+  const loadout = r.equipped ?? [];
+  const loadoutError = invalidLoadout(loadout);
+  if (loadoutError) reasons.push(loadoutError);
+  const equipped = loadoutError ? [] : (loadout as BoostId[]);
+  const level = applyBoostsToLevel(opts.moves ? { ...base, moves: opts.moves } : base, equipped);
   const boosts = [...(r.boosts ?? [])].sort((a, b) => a.atSwap - b.atSwap);
   if (boosts.filter((b) => b.source === "stabilize").length > ECONOMY.stabilize.perRunLimit) reasons.push("too many stabilizations");
   if (boosts.some((b) => b.source === "stabilize" && (b.kind !== "moves" || b.value !== ECONOMY.stabilize.moves))) reasons.push("invalid stabilization");
@@ -59,8 +64,10 @@ export function replayRun(r: RunReport, opts: { moves?: number } = {}): Verdict 
   const duration = r.endedAt - r.startedAt;
   if (duration < r.swaps.length * MIN_MS_PER_SWAP) reasons.push("swaps faster than humanly possible");
   if (r.endedAt < r.startedAt) reasons.push("clock went backwards");
-  let s = startSession(level, r.seed);
+  const start = startBoostedSession(opts.moves ? { ...base, moves: opts.moves } : base, r.seed, equipped);
+  let s = start.session;
   const acc = newRunStats();
+  accumulate(acc, start.steps);
   let bi = 0;
   const applyBoosts = (i: number) => {
     for (; bi < boosts.length && boosts[bi].atSwap <= i; bi++) {
@@ -111,6 +118,7 @@ export function verifyTrialRun(r: RunReport, now: number): Verdict {
   if (!inst) return { ok: false, reasons: ["trial instance not open"] };
   const def = trialDef(inst.trialId)!;
   const reasons: string[] = [];
+  if (r.equipped?.length) reasons.push("boosts are not allowed in ranked trials");
   if (r.seed !== inst.seed) reasons.push("seed does not match the trial board");
   if (r.levelIndex !== def.levelIndex) reasons.push("wrong trial level");
   if (r.startedAt < inst.opensAt || r.endedAt > inst.closesAt || now > inst.closesAt + 5 * 60000) reasons.push("outside trial window");
