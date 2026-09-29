@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Viro3DSceneNavigator, ViroARSceneNavigator } from "@reactvision/react-viro";
 import { DEV_AR_MOCK } from "../config";
@@ -8,7 +8,9 @@ import { arSession, nudgeWorldScale } from "../state/arSession";
 import { arSupport, detectArSupport, effectiveViewMode } from "../state/arSupport";
 import { settingsStore } from "../state/settings";
 import { useStore } from "../state/store";
-import { C, ui } from "../ui/theme";
+import { C } from "../ui/theme";
+import { GlassOrb } from "../ui/lux/Orb";
+import { L } from "../ui/lux/tokens";
 import { materialsStore } from "../render/materialsStore";
 import { bootMaterials } from "../render/materialsBoot";
 import ARGameScene from "./ARGameScene";
@@ -58,24 +60,20 @@ export function ViewControls({ column = false }: { column?: boolean }) {
   const placed = useStore(arSession, (s) => s.phase === "placed");
   if (mode === "ar" || mode === "checking" || !placed) return null;
   const turn = (d: number) => arSession.set((s) => ({ yaw: (s.yaw + d) % 360 }));
-  const Btn = ({ label, onPress, a11y }: { label: string; onPress: () => void; a11y: string }) => (
-    <Pressable accessibilityRole="button" accessibilityLabel={a11y} onPress={onPress} style={({ pressed }) => [ui.glass, s.btn, pressed && { opacity: 0.7 }]}>
-      <Text style={s.txt}>{label}</Text>
-    </Pressable>
-  );
   return (
     <View pointerEvents="box-none" style={column ? [s.col, { top: insets.top + 150 }] : [s.wrap, { bottom: insets.bottom + 18 }]}>
-      <Btn label="↶" a11y="Turn world left" onPress={() => turn(-30)} />
-      <Btn label="↷" a11y="Turn world right" onPress={() => turn(30)} />
-      <Btn label="−" a11y="Smaller world" onPress={() => nudgeWorldScale(-0.1)} />
-      <Btn label="+" a11y="Larger world" onPress={() => nudgeWorldScale(0.1)} />
+      <GlassOrb size={42} glyph="↶" accessibilityLabel="Turn world left" onPress={() => turn(-30)} breathe={false} />
+      <GlassOrb size={42} glyph="↷" accessibilityLabel="Turn world right" onPress={() => turn(30)} breathe={false} />
+      <View style={column ? s.sepCol : s.sepRow} />
+      <GlassOrb size={42} glyph="−" tone={L.goldLight} accessibilityLabel="Smaller world" onPress={() => nudgeWorldScale(-0.1)} breathe={false} />
+      <GlassOrb size={42} glyph="+" tone={L.goldLight} accessibilityLabel="Larger world" onPress={() => nudgeWorldScale(0.1)} breathe={false} />
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  wrap: { position: "absolute", left: 14, flexDirection: "row", gap: 8 },
-  col: { position: "absolute", right: 12, gap: 8 },
-  btn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  txt: { color: C.ink, fontSize: 20, fontWeight: "700" },
+  wrap: { position: "absolute", left: 14, flexDirection: "row", alignItems: "center", gap: 2 },
+  col: { position: "absolute", right: 8, alignItems: "center", gap: 2 },
+  sepCol: { width: 18, height: 1, marginVertical: 3, backgroundColor: "rgba(246,211,138,0.45)" },
+  sepRow: { width: 1, height: 18, marginHorizontal: 3, backgroundColor: "rgba(246,211,138,0.45)" },
 });
