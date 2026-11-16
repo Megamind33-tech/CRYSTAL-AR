@@ -1,0 +1,267 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to a pull request cancels its older run; main and tags always finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GODOT_VERSION: "4.7.2"
+  GODOT_RELEASE: "4.7.2-stable"
+  # Pinned to Godot 4.7.2's Android template (platform/android/java/app/config.gradle).
+  ANDROID_PLATFORM: "android-36"
+  ANDROID_BUILD_TOOLS: "36.1.0"
+  ANDROID_NDK: "29.0.14206865"
+
+# Pull requests run `test` only. After merging (main), on v* tags and by hand,
+# the desktop/web and Android builds run in parallel once the tests pass;
+# a v* tag then drafts its GitHub release from both (`release`).
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/godot-project
+        with:
+          native: linux
+
+      - name: Layer check (simulation/presentation split)
+        run: python3 tools/check_layers.py
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          timeout 600 godot --headless -s addons/gut/gut_cmdln.gd -gconfig=.gutconfig.json -gexit 2>&1 | tee gut.log
+          grep -q -- "---- All tests passed! ----" gut.log
+
+  build-desktop:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/godot-project
+        with:
+          native: linux windows
+
+      - name: EOS credentials from secrets
+        env:
+          EOS_PRODUCT_ID: ${{ secrets.EOS_PRODUCT_ID }}
+          EOS_SANDBOX_ID: ${{ secrets.EOS_SANDBOX_ID }}
+          EOS_DEPLOYMENT_ID: ${{ secrets.EOS_DEPLOYMENT_ID }}
+          EOS_CLIENT_ID: ${{ secrets.EOS_CLIENT_ID }}
+          EOS_CLIENT_SECRET: ${{ secrets.EOS_CLIENT_SECRET }}
+        run: bash tools/ci_eos_credentials.sh
+
+      - name: Export desktop and web builds
+        env:
+          IONFALL_BUILD_NUMBER: "0"
+        run: |
+          set -euo pipefail
+          export_preset() {
+            python3 tools/write_build_info.py --platform "$2" --arch "$3" --config "$4"
+            mkdir -p "$(dirname "$5")"
+            timeout 900 godot --headless --export-$4 "$1" "$5" 2>&1 | tee export.log
+            if grep -q "ERROR" export.log; then echo "::error::export of $1 logged errors"; exit 1; fi
+          }
+          export_preset "Linux" linux x86_64 release build/linux/ionfall.x86_64
+          export_preset "Windows" windows x86_64 release build/windows/IONFALL.exe
+          export_preset "Web" web wasm32 release build/web/index.html
+          # The desktop builds ship the native extension; the web build doesn't.
+          test -f build/linux/libionfall_native.linux.template_release.x86_64.so
+          test -f build/windows/libionfall_native.windows.template_release.x86_64.dll
+          ! ls build/web | grep -q ionfall_native
+
+      # Server builds aren't released any more; the exported game runs the
+      # same server (--server), so every map and mode is still checked.
+      - name: Smoke test the exported game as a server (every map and mode)
+        run: |
+          set -euo pipefail
+          for map in station spire foundry; do
+            for mode in ffa tdm ctf waves; do
+              timeout 60 build/linux/ionfall.x86_64 --headless -- --server --map $map --mode $mode --no-discovery --smoke-test 2>&1 | tee smoke.log
+              grep -q "native rewind on" smoke.log
+            done
+          done
+          # The scripted fight gives the same events with and without it.
+          timeout 300 build/linux/ionfall.x86_64 --headless -- --native-parity 2>&1 | tee parity.log
+          grep -q "NATIVE_PARITY OK" parity.log
+
+      - name: Package for the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for p in linux windows web; do
+            (cd build/$p && zip -qr "$GITHUB_WORKSPACE/dist/ionfall-$VERSION-$p.zip" .)
+          done
+
+      # Release files pass to the `release` job as artifacts, which it deletes
+      # once they're on the draft (the free plan's Actions storage is 500 MB).
+      - name: Hand the release files on
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-desktop
+          path: dist/
+          retention-days: 1
+          compression-level: 0  # already zipped
+
+      # Builds are ~280 MB, so they're kept only for manual runs; every push
+      # still builds and checks them.
+      - name: Upload builds
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ionfall-${{ github.run_number }}-desktop
+          path: build/
+          retention-days: 3  # ~280 MB per run; 14 days hit the storage quota in M4
+
+  build-android:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      # Godot reads JAVA_HOME when it first creates its editor settings (import step).
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Before the project setup: the NDK also builds the native extension.
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "platform-tools" "platforms;$ANDROID_PLATFORM" "build-tools;$ANDROID_BUILD_TOOLS" "ndk;$ANDROID_NDK" >/dev/null
+
+      # linux too, so the editor doing the export loads the extension.
+      - uses: ./.github/actions/godot-project
+        with:
+          native: linux android
+
+      - name: EOS credentials from secrets
+        env:
+          EOS_PRODUCT_ID: ${{ secrets.EOS_PRODUCT_ID }}
+          EOS_SANDBOX_ID: ${{ secrets.EOS_SANDBOX_ID }}
+          EOS_DEPLOYMENT_ID: ${{ secrets.EOS_DEPLOYMENT_ID }}
+          EOS_CLIENT_ID: ${{ secrets.EOS_CLIENT_ID }}
+          EOS_CLIENT_SECRET: ${{ secrets.EOS_CLIENT_SECRET }}
+        run: bash tools/ci_eos_credentials.sh
+
+      # Release tags are signed with the Play upload key when its secrets are
+      # set (ANDROID_UPLOAD_KEYSTORE_BASE64, ANDROID_UPLOAD_KEY_ALIAS,
+      # ANDROID_UPLOAD_KEY_PASSWORD; docs/release/releasing.md). Everything
+      # else is debug-signed.
+      - name: Export Android and run 16 KB checks
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CONFIG=debug
+          if [[ "$GITHUB_REF" == refs/tags/v* && -n "$KEYSTORE_BASE64" ]]; then
+            CONFIG=release
+            (umask 077; echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks")
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/upload.jks"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_USER="$KEY_ALIAS"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$KEY_PASSWORD"
+          fi
+          python3 tools/write_build_info.py --platform android --arch arm64 --config $CONFIG
+          mkdir -p build/android
+          timeout 1800 godot --headless --install-android-build-template --export-$CONFIG "Android" build/android/ionfall.apk 2>&1 | tee export.log
+          if grep -q "ERROR" export.log; then echo "::error::Android export logged errors"; exit 1; fi
+          rm -f "$RUNNER_TEMP/upload.jks"
+          test -f build/android/ionfall.apk
+          unzip -l build/android/ionfall.apk | grep -q "lib/arm64-v8a/libionfall_native"
+          bash tools/check_16kb.sh build/android/ionfall.apk
+          if [ "$CONFIG" = release ]; then
+            mkdir -p dist
+            cp build/android/ionfall.apk "dist/ionfall-$VERSION-android-arm64.apk"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "::warning::No Android upload key secrets: the release has no APK"
+          fi
+
+      - name: Hand the release files on
+        if: startsWith(github.ref, 'refs/tags/v') && hashFiles('dist/*') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-android
+          path: dist/
+          retention-days: 1
+
+      - name: Upload builds
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ionfall-${{ github.run_number }}-android
+          path: build/android/
+          retention-days: 3
+
+  # A v* tag drafts its GitHub release with every download (release assets
+  # don't count against the Actions storage quota). Publishing the draft
+  # deploys its web build to GitHub Pages (pages.yml).
+  release:
+    needs: [build-desktop, build-android]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write  # drafts the release
+      actions: write  # deletes the hand-over artifacts
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            docs/release
+            tools
+            project.godot
+          sparse-checkout-cone-mode: false
+
+      - name: Version
+        run: bash tools/ci_version.sh
+
+      - name: Collect the release files
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Draft the GitHub release
+        run: |
+          set -euo pipefail
+          D="$GITHUB_WORKSPACE/dist"
+          (cd "$D" && shopt -s nullglob && sha256sum ./*.zip ./*.apk > SHA256SUMS)
+          ls -la "$D"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$D"/* --clobber
+          else
+            sed "s/{{VERSION}}/$VERSION/g" docs/release/notes-template.md > "$RUNNER_TEMP/notes.md"
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag ${PRERELEASE:-} --title "IONFALL $VERSION" \
+              --notes-file "$RUNNER_TEMP/notes.md" --generate-notes "$D"/*
+          fi
+
+      - name: Delete the hand-over artifacts
+        if: always()
+        run: |
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+              -q '.artifacts[] | select(.name | startswith("release-")) | .id'); do
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+          done

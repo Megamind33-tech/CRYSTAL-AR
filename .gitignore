@@ -1,51 +1,28 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Godot
+.godot/
+/android/
+*.translation
 
-# dependencies
-node_modules/
+# Build outputs
+/build/
+/export/
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
-
-# Native
-.kotlin/
-*.orig.*
+# Secrets: never commit signing material or credentials
+*.keystore
 *.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+export_credentials.cfg
+eos_credentials.cfg
+.env
 
-# Generated native directories (CNG workflow)
-android/
-ios/
+# Generated at export time
+/build_info.json
 
-# Metro
-.metro-health-check*
+# Python
+__pycache__/
+meshy_output/
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-# generated copy of the Viro WASM renderer
-public/viro/
-
-# build outputs
-dist/
-e2e-out/
-android/
-ios/
-builds/
+# Native extension (native/build.sh)
+/native/godot-cpp
+/native/bin/
+/native/src/*.os
+/native/.sconsign.dblite

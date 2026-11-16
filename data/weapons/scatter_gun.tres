@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"scatter_gun"
+display_name = "Scatter Gun"
+fire_mode = 1
+is_power_weapon = false
+ticks_between_shots = 48
+burst_count = 1
+burst_spacing_ticks = 0
+reload_ticks = 30
+raise_ticks = 24
+damage = 12.0
+headshot_multiplier = 1.0
+precision = false
+full_damage_range = 5.0
+min_damage_range = 15.0
+min_damage_fraction = 0.3
+max_range = 40.0
+spread_degrees = 4.0
+pellets = 10
+mag_size = 6
+reserve = 24
+reload_per_round = true
+scope_zoom = 1.2
+scope_spread = 0.7
+scope_move_speed = 0.8
+recoil_kick_degrees = 3.5
+recoil_side_degrees = 0.8
+recoil_max_degrees = 6.0
+recoil_recovery_delay_ticks = 12
+recoil_recovery_degrees_per_second = 18.0
+recoil_scoped = 0.7

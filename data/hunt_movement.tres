@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="MovementConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/movement_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+walk_speed = 5.0
+sprint_speed = 8.4
+crouch_speed = 2.2
+air_wish_speed_cap = 0.5
+ground_accel = 11.0
+air_accel = 3.0
+friction = 9.0
+stop_speed = 2.5
+gravity = 3.72
+jump_velocity = 3.4
+double_jump_velocity = 0.0
+air_jumps = 0
+slide_min_speed = 99.0

@@ -1,0 +1,65 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="THE HUNT"
+config/version="1.0.0"
+run/main_scene="res://core/boot.tscn"
+run/flush_stdout_on_print=true
+config/quit_on_go_back=false
+config/features=PackedStringArray("4.7", "Mobile")
+config/icon="res://icon.svg"
+config/project_settings_override="user://renderer.cfg"
+
+[autoload]
+
+LogService="*res://core/log_service.gd"
+Platform="*res://core/platform.gd"
+Events="*res://core/events.gd"
+BuildInfo="*res://core/build_info.gd"
+Settings="*res://core/settings.gd"
+Profile="*res://core/profile.gd"
+Diagnostics="*res://core/diagnostics.gd"
+UiStyle="*res://ui/theme/ui_style.gd"
+EOSGRuntime="*res://net/online/eos_runtime.gd"
+Online="*res://core/online.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/ionfall_android/plugin.cfg", "res://addons/ionfall_tools/plugin.cfg")
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/strings.en.translation")
+locale/translations.dedicated_server=PackedStringArray()
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+anti_aliasing/quality/use_debanding=true
+textures/default_filters/anisotropic_filtering_level=4
+textures/default_filters/anisotropic_filtering_level.mobile=2
+rendering_device/fallback_to_opengl3=true
+renderer/rendering_method="mobile"
+lightmapping/lightmap_gi/use_bicubic_filter.mobile=false
+textures/vram_compression/import_s3tc_bptc=true
+textures/vram_compression/import_etc2_astc=true

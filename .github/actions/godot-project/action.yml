@@ -1,0 +1,113 @@
+name: Godot project
+description: >
+  LFS files, the build version, Godot 4 with its export templates, and the
+  imported project: what every CI job starts from. Run actions/checkout first.
+
+inputs:
+  native:
+    description: >
+      Platforms to build the native extension for before the import
+      (native/build.sh: linux, windows, android), or empty for none. Android
+      needs the SDK and NDK installed first.
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    # LFS objects come from a cache keyed on their IDs, so a run downloads
+    # only new or changed files (GitHub's LFS bandwidth quota is small).
+    - name: List LFS objects
+      shell: bash
+      run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
+
+    - name: Cache LFS objects
+      uses: actions/cache@v6
+      with:
+        path: .git/lfs/objects
+        key: lfs-${{ hashFiles('.lfs-ids') }}
+        restore-keys: lfs-
+
+    - name: Fetch LFS files
+      shell: bash
+      run: git lfs pull
+
+    - name: Version
+      shell: bash
+      run: bash tools/ci_version.sh
+
+    - name: Cache Godot
+      id: cache-godot
+      uses: actions/cache@v6
+      with:
+        path: |
+          ~/godot
+          ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+        key: godot-${{ env.GODOT_RELEASE }}-v1
+
+    - name: Download and verify Godot
+      if: steps.cache-godot.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        B=https://github.com/godotengine/godot/releases/download/$GODOT_RELEASE
+        mkdir -p ~/godot/dl && cd ~/godot/dl
+        curl -fsSL -o SHA512-SUMS.txt $B/SHA512-SUMS.txt
+        curl -fsSL -o editor.zip $B/Godot_v${GODOT_RELEASE}_linux.x86_64.zip
+        curl -fsSL -o templates.tpz $B/Godot_v${GODOT_RELEASE}_export_templates.tpz
+        echo "$(grep " Godot_v${GODOT_RELEASE}_linux.x86_64.zip$" SHA512-SUMS.txt | cut -d' ' -f1)  editor.zip" | sha512sum -c
+        echo "$(grep " Godot_v${GODOT_RELEASE}_export_templates.tpz$" SHA512-SUMS.txt | cut -d' ' -f1)  templates.tpz" | sha512sum -c
+        unzip -q editor.zip -d ~/godot
+        TPL=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+        mkdir -p "$TPL" && unzip -q templates.tpz -d tpl && mv tpl/templates/* "$TPL"/
+        rm -rf ~/godot/dl
+
+    - name: Put Godot on PATH
+      shell: bash
+      run: |
+        sudo ln -sf ~/godot/Godot_v${GODOT_RELEASE}_linux.x86_64 /usr/local/bin/godot
+        godot --version
+
+    # The import cache (.godot): Godot re-imports only assets whose source
+    # changed (it checks each file's hash), so a stale cache is safe.
+    - name: Cache imported assets
+      uses: actions/cache@v6
+      with:
+        path: .godot
+        key: godot-import-${{ env.GODOT_VERSION }}-${{ hashFiles('.lfs-ids', '**/*.import', 'project.godot') }}
+        restore-keys: godot-import-${{ env.GODOT_VERSION }}-
+
+    # The native extension (native/, PLAN §3.17). Built before the import so
+    # Godot registers it: the tests then run the native path and the exports
+    # ship it. The web keeps the GDScript path (export_presets.cfg excludes
+    # native/ there).
+    - name: Install native build tools
+      if: inputs.native != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq scons >/dev/null
+        if [[ " ${{ inputs.native }} " == *" windows "* ]]; then
+          sudo apt-get install -y -qq g++-mingw-w64-x86-64-posix >/dev/null
+          sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+          sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
+        fi
+
+    - name: Cache godot-cpp
+      if: inputs.native != ''
+      uses: actions/cache@v6
+      with:
+        path: |
+          native/godot-cpp
+          native/.sconsign.dblite
+        key: godot-cpp-${{ inputs.native }}-${{ hashFiles('native/build.sh', 'native/SConstruct') }}
+        restore-keys: godot-cpp-${{ inputs.native }}-
+
+    - name: Build the native extension
+      if: inputs.native != ''
+      shell: bash
+      run: bash native/build.sh ${{ inputs.native }}
+
+    - name: Import project
+      shell: bash
+      run: timeout 600 godot --headless --import

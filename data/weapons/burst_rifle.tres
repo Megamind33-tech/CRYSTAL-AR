@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://sim/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"burst_rifle"
+display_name = "Burst Rifle"
+fire_mode = 2
+is_power_weapon = false
+ticks_between_shots = 20
+burst_count = 3
+burst_spacing_ticks = 3
+reload_ticks = 132
+raise_ticks = 24
+damage = 18.0
+headshot_multiplier = 2.0
+precision = false
+spread_degrees = 0.25
+mag_size = 36
+reserve = 144
+scope_zoom = 1.8
+scope_spread = 0.3
+scope_move_speed = 0.65
+recoil_kick_degrees = 0.5
+recoil_side_degrees = 0.12
+recoil_max_degrees = 3.5
+recoil_recovery_delay_ticks = 8
+recoil_recovery_degrees_per_second = 14.0
+recoil_scoped = 0.7

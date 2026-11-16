@@ -1,0 +1,434 @@
+class_name HuntVisuals
+extends Node3D
+## THE HUNT's world markers (presentation only, fed from HuntRules on the
+## host): each treasure is a glowing case (gold: the grand treasure; green:
+## the local hunter's own assignments; blue: rivals'), floating over its
+## carrier's head while carried; tall beams mark our own assignments and
+## the grand treasure so they can be found across the 150 m yard; labelled
+## rings mark the extraction pads; the alarm trap pulses red.
+
+const GRAND := Color(1.0, 0.78, 0.25)
+const OWN := Color(0.35, 1.0, 0.5)
+const RIVAL := Color(0.45, 0.7, 1.0)
+const ALARM := Color(1.0, 0.25, 0.2)
+const CACHE := Color(1.0, 0.55, 0.15)
+const INTEL := Color(0.75, 0.55, 1.0)
+const CARRIED_LIFT := 2.3
+const BEAM_HEIGHT := 40.0
+
+var _cases: Dictionary = {}  ## treasure id -> Node3D
+var _beams: Dictionary = {}  ## treasure id -> MeshInstance3D
+var _built: bool = false
+var _trap: MeshInstance3D
+var _rings: Array[MeshInstance3D] = []
+var _wanted_marks: Array[Node3D] = []
+var _zone_labels: Array[Label3D] = []
+var _zone_beams: Array[MeshInstance3D] = []
+var _clue_mark: Node3D
+var _cache_nodes: Dictionary = {}  ## cache id -> Node3D
+var _ally_mark: Label3D
+var _intel_marks: Array[Node3D] = []
+var _time: float = 0.0
+## The ore crates' armour: the outpost's PBR metal (CC0, art/ASSETS.csv).
+var _crate_metal: StandardMaterial3D
+
+
+func _process(delta: float) -> void:
+	_time += delta
+	for node: Node3D in _cases.values():
+		var case: Node3D = node.get_node("Case")
+		case.rotation.y = _time * 1.2
+		case.position.y = 0.55 + sin(_time * 2.4 + node.get_index()) * 0.1
+	if _trap != null:
+		_trap.scale = Vector3.ONE * (1.0 + sin(_time * 5.0) * 0.06)
+	for r in _rings:  # extraction pads breathe so they read from afar
+		var k := 1.0 + sin(_time * 2.2) * 0.05
+		r.scale = Vector3(k, 1.0, k)
+
+
+## `local_id`: whose assignments count as "ours". `carrier_pos`:
+## Callable(id) -> Vector3 for where a carrier is drawn (INF if unknown).
+func sync(hunt: HuntRules, tick: int, local_id: int, carrier_pos: Callable) -> void:
+	if not _built:
+		_build_static(hunt)
+	var seen := {}
+	for t: HuntRules.Treasure in hunt.treasures:
+		seen[t.id] = true
+		var color := _color_of(t, local_id)
+		var node: Node3D = _cases.get(t.id)
+		if node == null:
+			node = _make_case(color, t.kind == HuntRules.Kind.GRAND)
+			add_child(node)
+			_cases[t.id] = node
+		var hidden := t.banked or (t.kind == HuntRules.Kind.GRAND and tick < t.available_tick)
+		node.visible = not hidden
+		var pos := t.position
+		if t.carrier != 0:
+			var at: Vector3 = carrier_pos.call(t.carrier)
+			if at != Vector3.INF:
+				pos = at
+			pos += Vector3(0, CARRIED_LIFT - 0.55, 0)
+		node.position = pos
+		if t.kind == HuntRules.Kind.GRAND:
+			_update_lock_label(node, hunt, t)
+		# Beams: our own treasures and the grand one, while on the ground or
+		# carried by someone else (follow the thief).
+		var wants_beam := not hidden and t.carrier != local_id and (t.kind != HuntRules.Kind.PERSONAL or t.owner == local_id)
+		var beam: MeshInstance3D = _beams.get(t.id)
+		if wants_beam and beam == null:
+			beam = _make_beam(color)
+			add_child(beam)
+			_beams[t.id] = beam
+		if beam != null:
+			beam.visible = wants_beam
+			beam.position = Vector3(pos.x, BEAM_HEIGHT * 0.5, pos.z)
+	for id: int in _cases.keys():
+		if not seen.has(id):
+			_cases[id].queue_free()
+			_cases.erase(id)
+			if _beams.has(id):
+				_beams[id].queue_free()
+				_beams.erase(id)
+	if _trap != null:
+		_trap.visible = hunt.trap_rearm_tick == 0
+	# Last Extraction: closed pads go dark; the last one says so.
+	for i in _zone_labels.size():
+		var open := hunt.zone_open(i, tick)
+		_rings[i].visible = open
+		_zone_beams[i].visible = open
+		_zone_labels[i].modulate = OWN if open else Color(0.5, 0.5, 0.5)
+		_zone_labels[i].text = tr("HUNT_EXTRACT_CLOSED") if not open \
+				else (tr("HUNT_EXTRACT_LAST") if hunt.final_phase(tick) and i == hunt.final_zone else tr("HUNT_EXTRACT_LABEL"))
+	_sync_last_known(hunt.social, tick, local_id)
+	_sync_clue(hunt, tick, local_id)
+	_sync_caches(hunt)
+	_sync_ally(hunt, local_id, carrier_pos)
+	_sync_intel(hunt, tick, local_id)
+
+
+## Informant: a violet ring at each live report with a position, labelled
+## with its kind, confidence and age.
+func _sync_intel(hunt: HuntRules, tick: int, local_id: int) -> void:
+	var shown := 0
+	for r: Dictionary in hunt.economy.intel_of(local_id, tick):
+		if r.position == Vector3.INF or r.kind == "vault_status" or not hunt.intel_useful(r, tick):
+			continue
+		if shown >= _intel_marks.size():
+			var mark := _make_wanted_mark()
+			(mark.get_child(0) as MeshInstance3D).material_override = _glow(INTEL, 0.6, 2.0)
+			(mark.get_node("Label") as Label3D).modulate = INTEL
+			add_child(mark)
+			_intel_marks.append(mark)
+		var mark: Node3D = _intel_marks[shown]
+		mark.visible = true
+		mark.position = r.position
+		(mark.get_node("Label") as Label3D).text = tr("HUNT_INTEL_MARK") % [tr("HUNT_INTEL_KIND_" + str(r.kind).to_upper()),
+				int(round(float(r.confidence) * 100.0)), (tick - int(r.tick)) / Sim.TICK_RATE]
+		shown += 1
+	for i in range(shown, _intel_marks.size()):
+		_intel_marks[i].visible = false
+
+
+## Double-Cross: allies share information; the ally is marked overhead.
+func _sync_ally(hunt: HuntRules, local_id: int, carrier_pos: Callable) -> void:
+	var ally: int = hunt.social.allies.get(local_id, 0)
+	if ally == 0:
+		if _ally_mark != null:
+			_ally_mark.visible = false
+		return
+	if _ally_mark == null:
+		_ally_mark = Label3D.new()
+		_ally_mark.text = tr("HUNT_ALLY_MARK")
+		_ally_mark.font_size = 120
+		_ally_mark.modulate = OWN
+		_ally_mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_ally_mark.no_depth_test = true
+		add_child(_ally_mark)
+	var at: Vector3 = carrier_pos.call(ally)
+	_ally_mark.visible = at != Vector3.INF
+	if at != Vector3.INF:
+		_ally_mark.position = at + Vector3(0, 2.6, 0)
+
+
+## Resource Dispute: each cache is a stack of ore crates under an amber
+## beam, labelled with its type, value and collection progress.
+func _sync_caches(hunt: HuntRules) -> void:
+	var seen := {}
+	for c: HuntRules.Cache in hunt.caches:
+		if c.empty:
+			continue
+		seen[c.id] = true
+		var node: Node3D = _cache_nodes.get(c.id)
+		if node == null:
+			node = _make_cache()
+			node.position = c.position
+			add_child(node)
+			_cache_nodes[c.id] = node
+		var label: Label3D = node.get_node("Label")
+		var res: Dictionary = HuntResources.TYPES[c.resource]
+		label.text = tr(res.name_key) + " · %d" % res.points
+		if c.collector != 0:
+			label.text += "  %d%%" % (100 * c.progress / int(res.collect_ticks))
+	for id: int in _cache_nodes.keys():
+		if not seen.has(id):
+			_cache_nodes[id].queue_free()
+			_cache_nodes.erase(id)
+
+
+func _make_cache() -> Node3D:
+	var root := Node3D.new()
+	for i in 3:
+		var crate := MeshInstance3D.new()
+		var m := BoxMesh.new()
+		m.size = Vector3(0.7, 0.5, 0.7)
+		crate.mesh = m
+		crate.position = Vector3(0.4 * (i - 1), 0.25 + (0.5 if i == 1 else 0.0), 0.1 * i)
+		crate.material_override = _metal()
+		root.add_child(crate)
+	var beam := _make_beam(CACHE)
+	beam.position.y = BEAM_HEIGHT * 0.5
+	root.add_child(beam)
+	var label := Label3D.new()
+	label.name = "Label"
+	label.font_size = 110
+	label.modulate = CACHE
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.position.y = 2.6
+	root.add_child(label)
+	return root
+
+
+## Recovery Contract: where our stolen treasure was last reported.
+func _sync_clue(hunt: HuntRules, tick: int, local_id: int) -> void:
+	var clue: Dictionary = hunt.recovery_clues.get(local_id, {})
+	if clue.is_empty() or hunt.stolen_from_hunter(local_id) == null:
+		if _clue_mark != null:
+			_clue_mark.visible = false
+		return
+	if _clue_mark == null:
+		_clue_mark = _make_wanted_mark()
+		(_clue_mark.get_child(0) as MeshInstance3D).material_override = _glow(OWN, 0.6, 2.0)
+		(_clue_mark.get_node("Label") as Label3D).modulate = OWN
+		add_child(_clue_mark)
+	_clue_mark.visible = true
+	_clue_mark.position = clue.position
+	(_clue_mark.get_node("Label") as Label3D).text = tr("HUNT_CLUE_MARK") % ((tick - int(clue.tick)) / Sim.TICK_RATE)
+
+
+## Most Wanted: a red ring and label where each Wanted rival was last
+## reported (fuzzed, with its age): never where it is now.
+func _sync_last_known(social: HuntSocial, tick: int, local_id: int) -> void:
+	var shown := 0
+	for id: int in social.last_known:
+		if id == local_id:
+			continue
+		if shown >= _wanted_marks.size():
+			var mark := _make_wanted_mark()
+			add_child(mark)
+			_wanted_marks.append(mark)
+		var lk: Dictionary = social.last_known[id]
+		var mark: Node3D = _wanted_marks[shown]
+		mark.visible = true
+		mark.position = lk.position
+		var label: Label3D = mark.get_node("Label")
+		label.text = tr("HUNT_WANTED_MARK") % [social.bounty.get(id, 0), (tick - int(lk.tick)) / Sim.TICK_RATE]
+		shown += 1
+	for i in range(shown, _wanted_marks.size()):
+		_wanted_marks[i].visible = false
+
+
+func _make_wanted_mark() -> Node3D:
+	var root := Node3D.new()
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = HuntSocial.PING_FUZZ - 0.4
+	torus.outer_radius = HuntSocial.PING_FUZZ
+	ring.mesh = torus
+	ring.position.y = 0.15
+	ring.material_override = _glow(ALARM, 0.6, 2.0)
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(ring)
+	var label := Label3D.new()
+	label.name = "Label"
+	label.font_size = 110
+	label.modulate = ALARM
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.fixed_size = true  # readable at range, never a wall of text up close
+	label.pixel_size = 0.0004
+	label.no_depth_test = true
+	label.position.y = 3.5
+	root.add_child(label)
+	return root
+
+
+## Grand Vault Standoff: LOCKED / unlocking progress over the grand crate.
+func _update_lock_label(node: Node3D, hunt: HuntRules, t: HuntRules.Treasure) -> void:
+	var label: Label3D = node.get_node_or_null("Lock")
+	if label == null:
+		label = Label3D.new()
+		label.name = "Lock"
+		label.font_size = 110
+		label.modulate = GRAND
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true
+		label.position.y = 2.0
+		node.add_child(label)
+	label.visible = t.locked and t.on_ground()
+	if hunt.vault_unlocker != 0:
+		label.text = tr("HUNT_LOCK_PROGRESS") % (100 * hunt.vault_progress / HuntRules.VAULT_UNLOCK_TICKS)
+	else:
+		label.text = tr("HUNT_LOCKED")
+
+
+static func _color_of(t: HuntRules.Treasure, local_id: int) -> Color:
+	match t.kind:
+		HuntRules.Kind.GRAND:
+			return GRAND
+		HuntRules.Kind.PROOF:
+			return ALARM
+		HuntRules.Kind.RESOURCE:
+			return CACHE
+	return OWN if t.owner == local_id else RIVAL
+
+
+func _build_static(hunt: HuntRules) -> void:
+	_built = true
+	# Every pad's posts in one mesh and their lit tips in another (2 draw
+	# calls for all pads instead of 24).
+	var posts := SurfaceTool.new()
+	posts.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var tips := SurfaceTool.new()
+	tips.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for z: Vector3 in hunt.zones:
+		var ring := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = HuntRules.EXTRACT_RADIUS - 0.2
+		torus.outer_radius = HuntRules.EXTRACT_RADIUS
+		ring.mesh = torus
+		ring.position = z + Vector3(0, 0.12, 0)
+		ring.material_override = _glow(OWN, 1.0, 2.5)
+		add_child(ring)
+		_rings.append(ring)
+		# Four beacon posts with lit tips around the pad (merged below).
+		for corner in [Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, -1)]:
+			var at: Vector3 = z + corner * (HuntRules.EXTRACT_RADIUS + 0.3)
+			posts.append_from(_box_mesh(Vector3(0.25, 2.2, 0.25)), 0, Transform3D(Basis.IDENTITY, at + Vector3(0, 1.1, 0)))
+			tips.append_from(_box_mesh(Vector3(0.32, 0.3, 0.32)), 0, Transform3D(Basis.IDENTITY, at + Vector3(0, 2.3, 0)))
+		var label := Label3D.new()
+		label.text = tr("HUNT_EXTRACT_LABEL")
+		label.font_size = 140
+		label.modulate = OWN
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true
+		label.position = z + Vector3(0, 4.5, 0)
+		add_child(label)
+		_zone_labels.append(label)
+		var beam := _make_beam(OWN)
+		beam.position = Vector3(z.x, BEAM_HEIGHT * 0.5, z.z)
+		add_child(beam)
+		_zone_beams.append(beam)
+	if not hunt.zones.is_empty():
+		var post_mi := MeshInstance3D.new()
+		post_mi.mesh = posts.commit()
+		post_mi.material_override = _metal()
+		add_child(post_mi)
+		var tip_mi := MeshInstance3D.new()
+		tip_mi.mesh = tips.commit()
+		tip_mi.material_override = _glow(OWN, 1.0, 3.0)
+		tip_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(tip_mi)
+	if hunt.trap != Vector3.INF:
+		_trap = MeshInstance3D.new()
+		var disc := CylinderMesh.new()
+		disc.top_radius = 0.6
+		disc.bottom_radius = 0.7
+		disc.height = 0.08
+		_trap.mesh = disc
+		_trap.position = hunt.trap + Vector3(0, 0.05, 0)
+		_trap.material_override = _glow(ALARM, 1.0, 3.0)
+		add_child(_trap)
+	RenderLayers.mark_dynamic(self)
+
+
+## An ore crate: an armoured metal case (the outpost's PBR plate) split
+## by a glowing core seam in the treasure's colour, with lit corner caps.
+## Three small meshes; the grand crate is half again as big.
+func _make_case(color: Color, grand: bool) -> Node3D:
+	var root := Node3D.new()
+	var case := Node3D.new()
+	case.name = "Case"
+	root.add_child(case)
+	var k := 1.5 if grand else 1.0
+	var shell := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.9, 0.6, 0.6) * k
+	shell.mesh = mesh
+	shell.material_override = _metal()
+	case.add_child(shell)
+	var seam := MeshInstance3D.new()
+	var seam_mesh := BoxMesh.new()
+	seam_mesh.size = Vector3(0.94, 0.1, 0.64) * k
+	seam.mesh = seam_mesh
+	seam.material_override = _glow(color, 1.0, 2.6 if grand else 1.8)
+	seam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	case.add_child(seam)
+	var caps := MeshInstance3D.new()
+	var caps_mesh := BoxMesh.new()
+	caps_mesh.size = Vector3(0.2, 0.66, 0.66) * k
+	caps.mesh = caps_mesh
+	caps.material_override = _glow(color.darkened(0.35), 1.0, 0.8)
+	case.add_child(caps)
+	if Settings.video("lights") == true:
+		var light := OmniLight3D.new()
+		light.light_color = color
+		light.light_energy = 1.5 if grand else 0.8
+		light.omni_range = 5.0
+		light.position.y = 1.0
+		root.add_child(light)
+	RenderLayers.mark_dynamic(root)
+	return root
+
+
+static func _box_mesh(size: Vector3) -> BoxMesh:
+	var m := BoxMesh.new()
+	m.size = size
+	return m
+
+
+func _metal() -> StandardMaterial3D:
+	if _crate_metal == null:
+		_crate_metal = StandardMaterial3D.new()
+		_crate_metal.albedo_color = Color(0.75, 0.72, 0.7)
+		_crate_metal.albedo_texture = load("res://art/environment/mars/metal_plate_02_diff_1k.jpg")
+		_crate_metal.normal_enabled = true
+		_crate_metal.normal_texture = load("res://art/environment/mars/metal_plate_02_nor_gl_1k.jpg")
+		_crate_metal.orm_texture = load("res://art/environment/mars/metal_plate_02_arm_1k.jpg")
+		_crate_metal.uv1_triplanar = true
+		_crate_metal.uv1_scale = Vector3.ONE * 1.4
+	return _crate_metal
+
+
+func _make_beam(color: Color) -> MeshInstance3D:
+	var beam := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.15
+	cyl.bottom_radius = 0.35
+	cyl.height = BEAM_HEIGHT
+	beam.mesh = cyl
+	beam.material_override = _glow(color, 0.28, 1.5)
+	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return beam
+
+
+func _glow(color: Color, alpha: float, energy: float) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(color, alpha)
+	if energy > 0.0:
+		m.emission_enabled = true
+		m.emission = color
+		m.emission_energy_multiplier = energy
+	if alpha < 1.0:
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED if energy > 1.0 else BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	return m

@@ -1,0 +1,837 @@
+keys,en
+MENU_TITLE,THE HUNT
+MENU_HOST,Host Game
+MENU_JOIN,Join Game
+MENU_SETTINGS,Settings
+MENU_QUIT,Quit
+QUIT_CONFIRM,Quit IONFALL?
+MENU_COMING_SOON,Coming in a later milestone
+MENU_PROFILE_NOT_SAVED,Your profile won't be saved on this device
+HUD_SCORE,Score %d
+HUD_RESPAWN_IN,Respawning in %d
+HUD_RELOADING,Reloading
+HUD_SPAWN_PROTECTED,Spawn protection
+PAUSE_TITLE,Paused
+PAUSE_RESUME,Resume
+PAUSE_LEAVE,Leave match
+PAUSE_CONTROLS_HINT,"WASD move · Shift sprint · Ctrl/C crouch, slide · Space jump, double jump, hold to mantle · R reload · Q / 1 / 2 switch · G grenade · V / F melee · E pick up · F3 diagnostics"
+TOUCH_FIRE,Fire
+TOUCH_JUMP,Jump
+TOUCH_CROUCH,Crouch
+TOUCH_RELOAD,Reload
+TOUCH_SWAP,Swap
+TOUCH_SCOPE,Scope
+MENU_NAME_PLACEHOLDER,Your name
+MENU_ADDRESS_PLACEHOLDER,IP address or invite code
+MENU_ADDRESS_PLACEHOLDER_LAN,Host IP address
+MENU_CONNECT,Connect
+MENU_BAD_ADDRESS,Enter the host's IP address or a 6-letter invite code
+PHASE_WAITING,Waiting for players
+PHASE_COUNTDOWN,Match starts in %d
+PHASE_PLAYING,
+PHASE_POST_MATCH,Match over
+NET_CONNECTING,Connecting to %s…
+NET_HOSTING,"Hosting on %s, port %d"
+NET_DISCONNECTED,Disconnected from the host
+NET_CONNECT_ERROR,Could not connect (%s)
+NET_HOST_ERROR,Could not host on port %d (%s)
+MENU_BACK,Back
+NET_RECONNECTING,Connection lost: reconnecting (%d s)
+NET_RECONNECT_FAILED,Couldn't reconnect to the match
+NET_HOST_PAUSED,The host paused the game
+NET_HOST_NOT_RESPONDING,Host not responding…
+NET_HOST_LOST,Host disconnected
+LEAVE_CONFIRM_HOST,Leaving ends the match for everyone.
+LEAVE_CONFIRM_CLIENT,You'll leave the match.
+LEAVE_CONFIRM_YES,Leave
+LEAVE_CONFIRM_NO,Stay
+NET_GAME_OF,%s's game
+MENU_GAMES_SEARCHING,Looking for games on this network and online…
+MENU_GAMES,Games found: %d
+MENU_LAN_UNAVAILABLE,"Can't search this network, enter an address or invite code"
+MENU_LAN_UNAVAILABLE_WEB,"Browsers can't search the network, enter the host's address"
+MENU_LAN_OTHER_VERSION,different version (%s)
+NET_UNREACHABLE,Couldn't reach the host. Both devices must be on the same network; guest Wi-Fi and access-point isolation block LAN games.
+SCOREBOARD_TITLE,Scoreboard
+COL_PLAYER,Player
+COL_SCORE,Score
+COL_KILLS,K
+COL_DEATHS,D
+COL_ASSISTS,A
+COL_ACCURACY,Acc
+COL_DAMAGE,Damage
+RESULTS_VICTORY,Victory
+RESULTS_DRAW,Draw
+RESULTS_WINNER,%s wins
+RESULTS_NEXT_MATCH,Next match in %d
+PHASE_SUDDEN_DEATH,Sudden death: next point wins
+DEATH_KILLED_BY,Killed by %s
+DEATH_KILLER_STATUS,Their shield %d · health %d
+DEATH_DAMAGE,You dealt %d · took %d
+DEATH_SUICIDE,You died
+RESULTS_XP,+%d XP · Level %d (%d / %d)
+MENU_PROFILE,Profile
+PROFILE_LEVEL,Level
+PROFILE_VS_PLAYERS,Vs players K / D / A:
+PROFILE_VS_BOTS,Vs bots K / D / A:
+PROFILE_WINS_MATCHES,Wins / matches:
+PROFILE_INCOMPLETE,incomplete
+PROFILE_ACCURACY,Accuracy
+PROFILE_HEADSHOT_KILLS,Headshot kills
+PROFILE_BEST_STREAK,Best streak
+PROFILE_TIME_PLAYED,Time played
+PROFILE_UNCONFIRMED,%d match(es) unconfirmed (host left before results)
+PROFILE_READ_ONLY,"This profile was saved by a newer version, progress isn't saved"
+SETTINGS_TITLE,Settings
+SETTINGS_DONE,Done
+SETTINGS_TAB_CONTROLS,Controls
+SETTINGS_TAB_VIDEO,Video
+SETTINGS_TAB_AUDIO,Audio
+SETTINGS_TAB_ACCESSIBILITY,Accessibility
+SETTINGS_TAB_KEYS,Keys
+SETTINGS_TAB_ABOUT,About
+ABOUT_VERSION,Version %s
+ABOUT_CREDITS,Credits
+ABOUT_CREDIT_ICONS,"Touch icons: fire, jump, grenade, interact"
+ABOUT_CREDIT_CHARACTERS,Prototype characters
+ABOUT_CREDIT_ENVIRONMENT,"Station environment, astronauts, animations"
+ABOUT_CREDIT_FONTS,Fonts
+ABOUT_CREDIT_ENGINE,Engine
+ABOUT_CREDIT_ONLINE,Online play
+ABOUT_LICENSE,"IONFALL is open source under the MIT License. Third-party assets keep their own licenses; the full list and license texts are in the source repository (art/ASSETS.csv, licenses/)."
+ABOUT_SOURCE,Source code and licenses
+SETTINGS_PRESS_KEY,Press a key… (Esc cancels)
+SETTINGS_RESET_KEYS,Reset to defaults
+SETTING_SENS_X,Look sensitivity (horizontal)
+SETTING_SENS_Y,Look sensitivity (vertical)
+SETTING_TOUCH_SENS,Touch look sensitivity
+SETTING_INVERT_Y,Invert vertical look
+SETTING_CROUCH_TOGGLE,Crouch: toggle instead of hold
+SETTING_SPRINT_TOGGLE,Sprint: toggle instead of hold
+SETTING_AIM_TOGGLE,Aim: toggle instead of hold
+SETTING_FOV,Field of view (vertical)
+SETTING_RENDER_SCALE,Render scale
+SETTING_FPS_CAP,Frame rate cap
+SETTING_SHADOWS,Sun shadows
+SETTING_ANTI_ALIASING,Anti-aliasing
+SETTING_GLOW,Glow
+SETTING_EFFECTS,Effects density
+SETTING_ADAPTIVE_QUALITY,Adaptive quality (lowers settings when slow or hot)
+SETTING_RENDERER,Renderer (applies after a restart)
+SETTING_VOL_MASTER,Master volume
+SETTING_VOL_MUSIC,Music volume
+SETTING_VOL_SFX,Effects volume
+SETTING_HUD_SCALE,HUD and text scale
+SETTING_VIGNETTE,Low-health vignette
+SETTING_REDUCE_SHAKE,Reduce screen shake
+SETTING_CAPTIONS,Captions for important sounds
+SETTING_SHOW_STATS,Show FPS and latency
+HUD_STATS_FPS,%d FPS
+HUD_STATS_PING,%d ms
+ACTION_MOVE_FORWARD,Move forward
+ACTION_MOVE_BACK,Move back
+ACTION_MOVE_LEFT,Move left
+ACTION_MOVE_RIGHT,Move right
+ACTION_JUMP,Jump / mantle
+ACTION_SPRINT,Sprint
+ACTION_CROUCH,Crouch / slide
+ACTION_RELOAD,Reload
+ACTION_SWITCH_WEAPON,Next weapon
+ACTION_WEAPON_1,Weapon 1
+ACTION_WEAPON_2,Weapon 2
+ACTION_GRENADE,Throw grenade
+ACTION_MELEE,Melee
+ACTION_INTERACT,Pick up / swap
+ACTION_SCOREBOARD,Scoreboard
+SETTING_NIGHT_MODE,Night mode (compressed dynamic range)
+CAPTION_SHIELD_BROKEN,Shield broken
+CAPTION_SHIELD_RECHARGING,Shield recharging
+NET_MAP_MISMATCH,The host is on a different map (%s); update both devices to the same build
+MAP_STATION,Meridian Station
+MAP_SPIRE,Halcyon Spire
+MAP_FOUNDRY,Vesper Foundry
+MENU_MAP,Map: %s  ›
+MAP_TEST_ARENA,Test Arena
+MENU_TAGLINE,LIVE  ·  WORK  ·  TRADE  ·  SURVIVE  ·  MARS
+MENU_TAGLINE_WEB,Arena combat · Practice against bots · Join LAN games · Get the desktop or Android app to host and play online
+MENU_XP_PROGRESS,Level %d · %d / %d XP
+HUD_RESPAWN_LABEL,Respawning in
+PROFILE_TILE_VS_PLAYERS,Vs players K / D / A
+PROFILE_TILE_VS_BOTS,Vs bots K / D / A
+PROFILE_TILE_WINS,Wins / matches
+PHASE_GO,Fight!
+SETTING_DISPLAY_MODE,Display mode
+SETTING_RESOLUTION,Resolution
+SETTING_VALUE_WINDOWED,Windowed
+SETTING_VALUE_FULLSCREEN,Fullscreen
+SETTING_VALUE_EXCLUSIVE,Exclusive fullscreen
+SETTING_VALUE_NATIVE,Native
+SETTING_QUALITY,Graphics quality
+SETTING_VALUE_LOW,Low
+SETTING_VALUE_MEDIUM,Medium
+SETTING_VALUE_HIGH,High
+SETTING_VALUE_ULTRA,Ultra
+SETTING_VALUE_AUTO_GPU,Auto (Forward+ on dedicated GPUs)
+SETTING_VALUE_MOBILE,Fast (best for integrated graphics)
+SETTING_VALUE_FORWARD_PLUS,"Forward+ (ambient occlusion, FSR; dedicated GPU)"
+SETTING_VALUE_CUSTOM,Custom
+SETTING_VALUE_AUTO,Auto (quality preset)
+SETTING_VALUE_OFF,Off
+SETTING_VALUE_FXAA,FXAA
+SETTING_VALUE_MSAA_2X,MSAA 2×
+SETTING_VALUE_MSAA_4X,MSAA 4×
+PROFILE_TAB_CUSTOMIZE,Customise
+PROFILE_TAB_STATS,Stats
+CUSTOMIZE_CALLSIGN,Callsign
+CUSTOMIZE_COLOR,Colour
+CUSTOMIZE_AUTO,Auto
+CUSTOMIZE_CHARACTER,Character
+CHAR_SENTINEL,Sentinel
+CHAR_SENTINEL_DESC,Cybernetic combat frame. Light-strip armour glows in your colour.
+CHAR_VANGUARD,Vanguard
+CHAR_VANGUARD_DESC,"Heavy plated trooper with a gold visor, armour in your colour."
+CHAR_OPERATIVE,Operative
+CHAR_OPERATIVE_DESC,"Light flight-suit pilot, quick and low-profile."
+CHAR_SPACER,Spacer
+CHAR_SPACER_DESC,"A cheerful crew of station astronauts: frog, red panda, bee or flamingo."
+HUD_GRENADES,Frag ×%d
+TOUCH_GRENADE,Grenade
+TOUCH_MELEE,Melee
+TOUCH_INTERACT,Action
+HUD_PICKUP_SWAP,Swap for %s
+LOADOUT_PRIMARY,Next spawn:
+CUSTOMIZE_PRIMARY,Primary weapon
+MODE_FFA,Free-for-all
+MODE_TDM,Team Deathmatch
+MODE_CTF,Capture the Flag
+MODE_WAVES,Co-op Waves
+MODE_TDM_SHORT,Team DM
+MODE_CTF_SHORT,CTF
+CTF_GOAL,Take the enemy flag to your base
+CTF_CARRYING,You have the flag! Bring it to your base
+CTF_OUR_FLAG_TAKEN,%s has our flag
+CTF_OUR_FLAG_DROPPED,Our flag is down: returns in %d s
+CTF_WE_HAVE_FLAG,%s has their flag: escort them home
+CTF_NOBODY,The flag
+CTF_FEED_TAKE,took the %s flag
+CTF_FEED_DROP,dropped the %s flag
+CTF_FEED_RETURN,returned the %s flag
+CTF_FEED_CAPTURE,captured the %s flag
+CAPTION_FLAG_TAKEN,Enemy flag taken
+CAPTION_OUR_FLAG_TAKEN,Our flag was taken
+CAPTION_FLAG_CAPTURED,Flag captured
+CAPTION_FLAG_LOST,They captured our flag
+CAPTION_FLAG_RETURNED,Flag returned
+WAVES_WAVE,Wave %d
+WAVES_INCOMING,%d enemies incoming
+WAVES_CLEARED,cleared
+WAVES_FIGHTING,Wave %d of %d · %d enemies left
+WAVES_NEXT,Wave %d in %d s
+CAPTION_WAVE_START,Wave %d
+CAPTION_WAVE_CLEARED,Wave cleared
+HUD_WAVE_WAIT,Back when the wave is cleared
+WAVES_VICTORY,All %d waves cleared
+WAVES_DEFEAT,Overrun on wave %d
+TEAM_CYAN,Cyan
+TEAM_ORANGE,Orange
+RESULTS_TEAM_WINS,%s team wins
+MENU_MODE,Mode: %s  ›
+SETTINGS_FRIENDLY_FIRE,Friendly fire when hosting Team Deathmatch
+SETTING_BROWSER_PLAYERS,"Allow browser players when hosting on LAN (WebSocket, port 47711)"
+LOBBY_BROWSER_HINT,"Browsers on this network can join too (web build served over http, port %d)."
+SETTINGS_TAB_GAME,Game
+SETTING_BOT_DIFFICULTY,Bot difficulty
+SETTING_VALUE_EASY,Easy
+SETTING_VALUE_NORMAL,Normal
+SETTING_VALUE_HARD,Hard
+SETTING_VALUE_INSANE,Insane
+RESULTS_UNLOCKED,Unlocked: %s
+CUSTOMIZE_LOCKED,Level %d
+UNLOCK_COLOR_5,Crimson
+UNLOCK_COLOR_6,Gold
+UNLOCK_COLOR_7,Magenta
+UNLOCK_COLOR_8,Frost
+UNLOCK_COLOR_9,Ion teal
+UNLOCK_COLOR_10,Gunmetal
+UNLOCK_COLOR_11,Ember
+SETTING_AIM_ASSIST,Aim assist (touch)
+SETTING_AUTO_FIRE,Auto-fire (touch)
+SETTING_TOUCH_OPACITY,Touch button opacity
+SETTING_TOUCH_LAYOUT,Touch button layout
+SETTINGS_EDIT,Edit
+TOUCH_EDIT_HINT,Drag a button to move it. Select one to resize it.
+TOUCH_EDIT_SIZE,Button size
+TOUCH_EDIT_RESET,Reset
+MENU_REJOIN,Rejoin match
+PAUSE_SCAN_TO_JOIN,Scan to join
+LOADING,Loading
+MENU_HOST_ONLINE,Internet
+NET_ONLINE_SIGNING_IN,Connecting to online services…
+NET_ONLINE_HOSTING,Online game · invite code %s
+NET_ONLINE_ERROR,Online play failed (%s)
+NET_ONLINE_NOT_FOUND,No online game with code %s
+NET_ONLINE_JOINING,Joining online game %s…
+PAUSE_INVITE_CODE,Invite code
+NET_ONLINE_VERSION,That game runs a different version of IONFALL
+MENU_SINGLE_PLAYER,Play The Hunt
+MENU_START,Start
+MENU_WATCH,Watch
+SPECTATE_WATCHING,Watching %s
+SPECTATE_HINT,Click or Space: next player · Right click: previous · Esc: menu
+SPECTATE_HINT_TOUCH,Tap to watch the next player
+MENU_JOIN_WATCH,Watch games already playing (spectate)
+MENU_HOST_LAN,Local network
+MENU_TAG_LAN,LAN
+MENU_TAG_ONLINE,Online
+MENU_IN_LOBBY,In lobby
+MENU_IN_MATCH,Playing
+LOBBY_TITLE,Lobby
+LOBBY_CONNECTING,Connecting…
+LOBBY_JOINED,%s's lobby
+LOBBY_HOST_CHOOSES,Map (the host chooses)
+LOBBY_PLAYERS_TITLE,Players
+LOBBY_PLAYERS,%d / %d
+LOBBY_HOST_TAG,Host
+LOBBY_YOU_TAG,You
+LOBBY_TEAM,%s · %d / %d
+LOBBY_KICK,Remove
+LOBBY_PING,%d ms
+LOBBY_KICK_CONFIRM,Confirm?
+LOBBY_KICKED,The host removed you from the lobby
+LOBBY_JOIN_TEAM,Join
+LOBBY_EDIT_TEAM,Edit
+LOBBY_EDIT_TEAM_TITLE,Team name and colour
+LOBBY_TEAM_NAME,Name
+LOBBY_TEAM_COLOUR,Colour
+LOBBY_TEAM_SAVE,Save
+LOBBY_TEAM_CANCEL,Cancel
+LOBBY_LEAVE,Leave
+LOBBY_START,Start match
+LOBBY_WAITING_FOR_HOST,Waiting for the host to start…
+LOBBY_HOST_LEFT,The host closed the lobby
+MAP_STATION_BLURB,Compact station deck · close quarters
+MAP_SPIRE_BLURB,Open moon platform · long sightlines
+MAP_FOUNDRY_BLURB,Refinery yard · catwalks and close quarters
+MENU_SINGLE_PLAYER_SUB,Tharsis Gate: jobs · trade · homes · rovers
+MENU_HOST_SUB,Open a LAN or online lobby
+MENU_HOST_LAN_SUB,Players on the same Wi-Fi join you
+MENU_HOST_ONLINE_SUB,Friends anywhere join with an invite code
+MENU_JOIN_SUB,Find games nearby and online
+MENU_JOIN_SUB_WEB,Join a game hosted on your network
+MENU_HOST_HINT,You pick the map and mode in the lobby once players have joined.
+MENU_SECTION_MAP,Map
+MENU_SECTION_MODE,Mode
+MENU_SECTION_DURATION,Match length
+MENU_SECTION_BOTS,Bots
+MENU_SECTION_BOT_DIFFICULTY,Bot difficulty
+MENU_SECTION_FRIENDLY_FIRE,Friendly fire
+MENU_BOTS_NONE,None
+MENU_OFF,Off
+MENU_ON,On
+MENU_SOLO_HINT_ONE,You against 1 bot
+MENU_MINUTES,%d min
+MENU_SOLO_HINT,You against %d bots
+MENU_SOLO_HINT_WAVES,"You against 10 waves of bots, each bigger and tougher"
+MENU_JOIN_DIRECT,Join directly
+MENU_JOIN_DIRECT_HINT,Enter the host's IP address (192.168.0.10) or a 6-letter invite code.
+MENU_JOIN_DIRECT_HINT_LAN,"Enter the host's IP address, e.g. 192.168.0.10."
+MENU_JOIN_DIRECT_HINT_WEB,"Enter the host's IP address, e.g. 192.168.0.10. The host must allow browser players."
+LOBBY_SHARE_CODE,Share the invite code with friends. They find the game under Join Game or type the code.
+LOBBY_LAN_HINT,Players on this network see the game under Join Game.
+LOBBY_LAN_CAPTION,Local network
+LOBBY_HOST_BOTS_HINT,Bots make room as players join. Start when everyone is in.
+MENU_GAMES_EMPTY,"No games yet. Ask a friend to host, or enter their address or invite code."
+NET_SERVER_SHUTDOWN,The server was shut down
+SETTING_REDUCE_FLASHES,Reduce flashes
+HUD_SHIELD,SHIELD
+HUD_HEALTH,HEALTH
+TAG_PULSE,PULSE
+TAG_PISTOL,PISTOL
+TAG_ARC,ARC
+TAG_BURST,BURST
+TAG_RAIL,RAIL
+TAG_SCATTER,SCATTER
+TAG_SMG,SMG
+TAG_FRAG,FRAG
+TAG_MELEE,MELEE
+TAG_FALL,FALL
+NET_ONLINE_UNREACHABLE,Couldn't connect to the host over the internet. Check your connection and try again.
+LOADING_MAP,Loading the map
+LOADING_FIRST_RUN,Preparing graphics for this device. The first match after an install or a driver update takes longer.
+LOADING_TIP,Tip
+TIP_SLIDE,"Sprint, then crouch to slide under fire."
+TIP_DOUBLE_JUMP,Jump again in mid-air for a double jump.
+TIP_MANTLE,Jump at a ledge to mantle up onto it.
+TIP_PADS,Jump pads in the side lanes throw you up to the high ground.
+TIP_SCOPE,Scoping in tightens the spread of every gun.
+TIP_POWER,The Rail Sniper and Arc Launcher are power weapons: find them on the map.
+TIP_GRENADE,A frag grenade flushes enemies out of cover.
+TIP_CTF,"In Capture the Flag, three captures win."
+TIP_BOTS,Bots fill empty places. Pick their number and difficulty next to the map.
+MODE_HUNT,The Hunt
+MAP_HUNT,Rustwood Yard
+MAP_HUNT_BLURB,"A 150 m salvage yard: sheds, a vault and three extraction pads"
+MENU_SOLO_HINT_HUNT,"You against 5 rival hunters: 2 treasures of your own, 1 grand treasure, 12 minutes"
+HUNT_OBJ_FIND,Find your «treasures» (%d left) or raid the «vault».
+HUNT_OBJ_DONE,Steal from «rival hunters» or raid the «vault».
+HUNT_OBJ_CARRY,Take the «%s» to an «extraction pad».
+HUNT_OBJ_EXTRACTING,Extracting the «%s»… %d
+HUNT_TREASURE_OWN,your treasure
+HUNT_TREASURE_RIVAL,a rival's treasure
+HUNT_TREASURE_GRAND,the GRAND treasure
+HUNT_FEED_TAKE,took %s
+HUNT_FEED_DROP,dropped %s
+HUNT_FEED_STEAL,stole %s
+HUNT_FEED_EXTRACT,extracted %s (+%d)
+HUNT_FEED_ALARM,set off the vault alarm!
+HUNT_FEED_GRAND_READY,The grand treasure is back in the vault
+HUNT_REVEALED,ALARM: you are revealed to every hunter
+HUNT_EXTRACT_LABEL,EXTRACT
+HUNT_TREASURE_PROOF,a bounty proof
+HUNT_WANTED_MARK,WANTED %d · seen %ds ago
+HUNT_WANTED_SELF,WANTED: bounty %d. Rivals see your approximate position
+HUNT_FEED_WANTED,is WANTED (bounty %d)
+HUNT_FEED_BOUNTY_UP,bounty +%d (now %d)
+HUNT_FEED_CONTRACT,accepted the bounty contract on %s
+HUNT_FEED_BOUNTY_CLAIMED,"took down %s: bounty proof worth %d, extract it"
+HUNT_CLUE_MARK,YOUR STOLEN TREASURE · %ds ago
+HUNT_RECOVER,Recover %s: last clue %ds ago (take it back by melee or pick it up)
+HUNT_RECOVER_NO_CLUE,Recover %s: a clue to its position is coming
+HUNT_FEED_STOLE_YOURS,stole %s from you: recover it
+HUNT_FEED_RECOVERED,recovered %s (+%d)
+HUNT_FEED_RECOVERY_FAILED,%s was extracted by the thief
+HUNT_EXTRACT_CLOSED,CLOSED
+HUNT_EXTRACT_LAST,LAST EXTRACTION
+HUNT_EXTRACTION_CLOSING,Extraction pads close in %ds: one stays open to the end
+HUNT_LAST_EXTRACTION,"LAST EXTRACTION: one pad open, %ds left. Unextracted cargo is lost"
+HUNT_FEED_FINAL_WARNING,Final phase: extraction pads close in 60 s
+HUNT_FEED_LAST_EXTRACTION,Pads closed: one LAST EXTRACTION pad remains
+HUNT_FEED_CARGO_LOST,lost %s: not extracted in time
+HUNT_MENU_BUTTON,CONTRACTS [H]
+HUNT_MENU_HEADER,Operational credits: %d
+HUNT_MENU_HIRE,Hire a mercenary (%d cr)
+HUNT_MENU_ORDER_FOLLOW,Mercenary: Follow me
+HUNT_MENU_ORDER_HOLD,Mercenary: Hold here
+HUNT_MENU_ORDER_DEFEND,Mercenary: Defend me
+HUNT_MENU_ORDER_RETREAT,Mercenary: Retreat to me
+HUNT_MENU_DISMISS,Dismiss the mercenary
+HUNT_MENU_BOUNTY,Accept the nearest bounty contract
+HUNT_FEED_MERC_HIRED,Mercenary hired: it follows you (orders in your PHONE)
+HUNT_FEED_MERC_ORDER,Mercenary order: %s
+HUNT_FEED_MERC_ENDED,Mercenary contract ended: %s
+HUNT_WORD_FOLLOW,follow
+HUNT_WORD_HOLD,hold
+HUNT_WORD_DEFEND,defend
+HUNT_WORD_RETREAT,retreat
+HUNT_WORD_EXPIRED,expired
+HUNT_WORD_EXTRACTED,you extracted
+HUNT_WORD_DISMISSED,dismissed
+HUNT_WORD_EMPLOYER_DOWN,you went down
+HUNT_WORD_MERC_DOWN,mercenary down
+HUNT_WORD_LEFT,left
+HUNT_WORD_UNAVAILABLE,no mercenary available
+HUNT_RES_HELIUM3,Helium-3
+HUNT_RES_RARE_ORE,Rare-earth ore
+HUNT_RES_WATER_ICE,Water ice
+HUNT_COLLECTING,"Collecting %s… %ds (stay put, damage interrupts)"
+HUNT_FEED_CACHE,"Resource cache reported: %s (%d), see the amber beam"
+HUNT_FEED_CACHE_INTERRUPTED,Collection interrupted
+HUNT_FEED_CACHE_COLLECTED,collected %s: unsecured until extracted
+HUNT_MENU_PROPOSE,Propose an alliance to %s
+HUNT_MENU_PROPOSE_NONE,Propose an alliance (nobody near)
+HUNT_MENU_ACCEPT,Accept the alliance from %s
+HUNT_MENU_REJECT,Reject the alliance from %s
+HUNT_PROPOSAL,%s proposes an alliance (reputation %d): answer in your PHONE
+HUNT_UNLOCKING,"Unlocking the vault… %ds (stay put, damage interrupts)"
+HUNT_LOCKED,LOCKED: interact to unlock
+HUNT_LOCK_PROGRESS,UNLOCKING %d%%
+HUNT_FEED_VAULT_OPEN,The vault is open at the centre: unlock the grand treasure
+HUNT_FEED_UNLOCK_INTERRUPTED,Unlock interrupted
+HUNT_FEED_VAULT_UNLOCKED,unlocked the vault
+HUNT_FEED_PROPOSED_YOU,proposes an alliance to you
+HUNT_FEED_ALLIED,is now allied with %s
+HUNT_FEED_REJECTED,rejected the alliance
+HUNT_FEED_COOP_BONUS,cooperation bonus +%d
+HUNT_MENU_LEAVE,End the alliance with %s (5 s notice)
+HUNT_MENU_BETRAY,BETRAY %s (reputation and bounty)
+HUNT_FEED_LEAVING,is ending the alliance (5 s)
+HUNT_FEED_BETRAYED,BETRAYED %s
+HUNT_BETRAYED_YOU,%s betrayed you: protection is gone
+HUNT_ALLIED_WITH,Allied with %s: you can't hurt each other
+HUNT_ALLY_MARK,ALLY
+HUNT_MENU_INTEL_CACHE_CLUE,Intel: nearest resource cache (%d cr)
+HUNT_MENU_INTEL_VAULT_STATUS,Intel: vault status (%d cr)
+HUNT_MENU_INTEL_RIVAL_POSITION,Intel: a rival's position (%d cr)
+HUNT_INTEL_CACHE,Intel: a %s cache near the violet ring (%d%% sure)
+HUNT_INTEL_VAULT_CARRIED,Intel: %s is carrying the grand treasure
+HUNT_INTEL_VAULT_BACK,Intel: the grand treasure returns to the vault in %ds
+HUNT_INTEL_VAULT_UNLOCKING,Intel: %s is unlocking the vault
+HUNT_INTEL_VAULT_LOCKED,"Intel: the vault is locked, nobody at it"
+HUNT_INTEL_RIVAL,Intel: %s %snear the violet ring (%d%% sure)
+HUNT_INTEL_CARRYING,"carrying cargo, "
+HUNT_INTEL_NONE,Intel: nothing to report
+HUNT_INTEL_MARK,INTEL %s · %d%% · %ds ago
+HUNT_INTEL_KIND_CACHE_CLUE,cache
+HUNT_INTEL_KIND_RIVAL_POSITION,rival
+HUD_HUNT_ACTION,%s
+HUNT_ACTION_COLLECT,Collect %s
+HUNT_ACTION_UNLOCK,Unlock the vault
+HUNT_PHONE_BUTTON,PHONE
+HUNT_PHONE_HEADER,HUNTER'S PHONE · %d cr
+HUNT_TAB_JOBS,JOBS
+HUNT_TAB_CREW,CREW
+HUNT_TAB_DEALS,DEALS
+HUNT_TAB_INTEL,INTEL
+HUNT_PHONE_DATE,SOL 214 · RUSTWOOD YARD
+HUNT_BANNER_EXTRACTED,TREASURE EXTRACTED
+HUNT_BANNER_REWARD,+%d PTS     +$%d
+HUNT_BANNER_STOLE,STOLEN!
+HUNT_BANNER_STOLE_SUB,Get it to an extraction pad
+HUNT_BANNER_ROBBED,ROBBED
+HUNT_BANNER_ROBBED_SUB,%s has your cargo. Hunt them down
+HUNT_BANNER_WANTED,WANTED
+HUNT_BANNER_WANTED_SUB,$%d on your head
+HUNT_BANNER_VAULT,VAULT CRACKED
+HUNT_BANNER_VAULT_SUB,Grab the grand treasure
+HUNT_BANNER_LAST,LAST EXTRACTION
+HUNT_BANNER_LAST_SUB,One pad left open
+HUNT_BANNER_RECOVERED,CARGO RECOVERED
+HUNT_BANNER_BOUNTY,BOUNTY CLAIMED
+HUNT_BANNER_BOUNTY_SUB,Extract the proof for +%d
+HUNT_BANNER_GRAND,GRAND TREASURE
+HUNT_BANNER_GRAND_SUB,Every hunter is coming for you
+MENU_PLAY,PLAY
+CITY_BACK,BACK
+HUD_CONTRACT,CONTRACT
+HUD_NO_CONTRACT,FREELANCE
+HUD_SECURED,Secured this run: %d
+HUD_FRAG,FRAG
+CITY_NAME,THARSIS GATE
+CITY_SUB,PROTECTED CITY · KASEI VALLEY
+CITY_TAB_CONTRACTS,CONTRACTS
+CITY_TAB_MARKET,MARKET
+CITY_TAB_OUTFITTER,OUTFITTER
+CITY_DEPLOY,DEPLOY
+CITY_DEPLOY_SUB,Rustwood Yard (lawless) · %s
+CITY_NO_CONTRACT,no contract
+CITY_REPORT_NONE,"No deployments yet. Take a contract, gear up, deploy."
+CITY_REPORT_TITLE,DEPLOYMENT %d REPORT
+CITY_REPORT_LOOT,Extracted: %s
+CITY_REPORT_EMPTY,nothing
+CITY_REPORT_DONE,Contract complete: +$%d
+CITY_REPORT_FAILED,Contract failed: standing lost
+CITY_ACTIVE,ACTIVE: %s
+CITY_ABANDON,Abandon contract (%s standing %+d)
+CITY_STASH_EMPTY,Your stash is empty. Extract loot to sell it here.
+CITY_SELL,%s ×%d   ·   sell one for $%d   (%s)
+CITY_PRICE_LOW,price down
+CITY_PRICE_HIGH,price up
+CITY_PRICE_STEADY,steady
+CITY_MAXED,MAXED
+MODE_CITY,City
+MAP_CITY,Tharsis Gate
+MAP_CITY_BLURB,The protected city
+CITY_HOLSTERED,WEAPONS HOLSTERED · CITY LAW
+CITY_PROMPT_DEPLOY,Go into the Rustwood Dig · %s
+CITY_PROMPT_TERMINAL,%s
+CITY_TERMINAL_CONTRACTS,Contract board
+CITY_TERMINAL_MARKET,Market exchange
+CITY_TERMINAL_OUTFITTER,Outfitter
+CITY_NPC_BROKER,Oyelaran · Kasei broker
+CITY_NPC_TRADER,Mbeki · Exchange trader
+CITY_NPC_ARMOURER,Varga · Armourer
+CITY_HINT_BOARD,Contracts: Tharsis Gate board · the dig is east
+CITY_NPC_FOREMAN,Adaeze · Hollow foreman
+WORLD_HOLLOW_SIGN,Work board
+WORLD_HOLLOW,DUST HOLLOW
+WORLD_HOLLOW_SUB,FRONTIER MINING SETTLEMENT · KASEI VALLEY
+WORLD_HOLLOW_RULE,CONTESTED · Tharsis Mining Concern holds it
+WORLD_DIG,RUSTWOOD DIG
+WORLD_DIG_SUB,EXTRACTION SITE · EASTERN CANYON
+WORLD_DIG_RULE,LAWLESS · step on the pad to go in
+WORLD_OPEN,KASEI VALLEY
+WORLD_OPEN_SUB,OPEN COUNTRY
+WORLD_OPEN_RULE,No law out here · explore
+WORLD_DISCOVERED,Landmarks found: %d / %d
+WORLD_DISCOVERY,DISCOVERED: %s
+WORLD_LANDMARK_WRECK,Wreck of the Kestrel hauler
+WORLD_LANDMARK_CRATER,Ice crater
+WORLD_LANDMARK_RELAY,Old relay mesa
+WORLD_LANDMARK_MESA,The Anvil mesa
+WORLD_LANDMARK_DIG_RIM,Dig rim lookout
+WORLD_PROMPT_DRIVE,Drive the rover
+WORLD_PROMPT_EXIT,Get out
+TALK_TRUST,Trust %d · %s
+TALK_MOOD_STRANGER,stranger
+TALK_MOOD_KNOWN,acquaintance
+TALK_MOOD_FRIEND,FRIEND
+TALK_CHAT,Talk
+TALK_CHATTED,You've talked today
+TALK_TAB_BROKER,See the contract board
+TALK_TAB_TRADER,Trade at the exchange
+TALK_TAB_ARMOURER,Browse the outfitter
+TALK_BUY_SUPPLY,Buy a supply crate for Dust Hollow · $%d
+TALK_DELIVER,Deliver supply crates (%d carried)
+TALK_COLLECT,Collect refined ingots (%d ready)
+TALK_CLAIM,Stake a claim on Dust Hollow · $%d
+TALK_CLAIM_NEED_TRUST,Needs Adaeze's trust (%d)
+TALK_CLAIM_NEED_MONEY,Not enough money
+TALK_LEAVE,Leave
+TALK_TO,Talk to %s
+NPC_BROKER_STRANGER,"New face. Contracts are on the board, if you can finish one."
+NPC_BROKER_KNOWN,You got the job done last time. Kasei remembers that.
+NPC_BROKER_FRIEND,For you I keep the better-paying freight back. Don't make me regret it.
+NPC_BROKER_CHAT,The Concern's been leaning on the Hollow again. Watch yourself out there.
+NPC_TRADER_STRANGER,I buy what you haul. Prices move: sell too much at once and they drop.
+NPC_TRADER_KNOWN,"Back again? The Hollow's been short on crates, if you're going that way."
+NPC_TRADER_FRIEND,Friends get the good rate. Don't tell the others.
+NPC_TRADER_CHAT,Helium's up this week. Ice is down. Everyone's hauling ice.
+NPC_ARMOURER_STRANGER,"Plating, webbing. Pay first, then we talk."
+NPC_ARMOURER_KNOWN,"Still alive. Good. The plating's working, then."
+NPC_ARMOURER_FRIEND,I'll knock some off for you. Bring the gear back in one piece.
+NPC_ARMOURER_CHAT,The Ledger don't care who's right. Only who pays.
+NPC_FOREMAN_STRANGER,Another mercenary. The Concern takes our ore and sends nothing back.
+NPC_FOREMAN_KNOWN,You've been fair with us. The crews are starting to talk about you.
+NPC_FOREMAN_FRIEND,Say the word and the Hollow stands behind you. The Concern won't like it.
+NPC_FOREMAN_CHAT,Keep the refinery fed with supplies and it pays. Starve it and people leave.
+NPC_FOREMAN_THANKS,%d crates. That'll keep the refinery turning. Thank you.
+NPC_FOREMAN_CLAIMED,Then it's done. Dust Hollow is yours. Keep us supplied.
+NPC_FOREMAN_BOSS,Boss. The refinery runs on supplies: one crate makes an ingot.
+WORLD_HOLLOW_YOURS,YOURS · %d supplies · %d ingots waiting
+WORLD_HOLLOW_SIGN_THARSIS,THARSIS MINING CONCERN
+WORLD_HOLLOW_SIGN_YOURS,UNDER NEW MANAGEMENT
+CITY_BUY_SUPPLY,Buy a supply crate for Dust Hollow · $%d   (carrying %d)
+CITY_RAID_DUE,CONCERN RAIDERS ARE MOVING ON DUST HOLLOW · GO DEFEND IT
+CITY_RAID_START,CONCERN RAID · DEFEND THE HOLLOW
+CITY_RAID_STATUS,RAIDERS %d · MILITIA %d
+CITY_RAID_WON,RAID BEATEN · +$150
+CITY_RAID_LOST,DUST HOLLOW HAS FALLEN
+CITY_SLEPT,SLEPT · RESTED
+CITY_JOB_DONE,JOB DONE · +$%d
+CITY_PROMPT_SLEEP,Sleep in the bunk
+CITY_PROMPT_JOB_SALVAGE,Salvage the wreck
+CITY_PROMPT_JOB_ICE,Cut ice
+CITY_SEARCHED,CHECKPOINT · %d Red Dust confiscated · -$%d
+TALK_BUY_O2,Buy an oxygen canister · $%d
+TALK_LAB_OXYGEN,Brew oxygen: 1 water ice + $%d → %d canisters (%d s)
+TALK_LAB_RED_DUST,Cook Red Dust: 1 rare ore + 1 helium-3 + $%d → %d doses (%d s) · ILLEGAL
+TALK_LAB_NEED,Missing ingredients (extract them at the dig)
+TALK_LAB_COLLECT,Collect %d × %s
+TALK_LAB_WAIT,Batch ready in %d s
+TALK_DEALER_SELL,Sell Red Dust (%d doses · $%d each)
+TALK_JOB_ACTIVE,On the job: %s
+TALK_JOB_TAKE,%s · $%d
+TALK_COMPANION,Come with me on the next runs
+TALK_COMPANION_STOP,Stay here this time
+TALK_DELIVER_PARCEL,Hand over the courier parcel
+HUNT_FEED_FRIEND_JOINS,came along on the run
+NPC_DEALER_PAID,$%d. Pleasure. Don't let the Gate's guards look in your bag.
+NPC_COMPANION_YES,"I'll come. Watch my back, I'll watch yours."
+NPC_COMPANION_NO,Fine. I'll be here.
+NPC_FOREMAN_PARCEL,"The parcel. Good. Here's $%d, as agreed."
+NPC_CHEMIST_STRANGER,The lab's for paying customers. Bring ice and I'll give you air.
+NPC_CHEMIST_KNOWN,"You again. The electrolysis cells are warm, if you've brought ice."
+NPC_CHEMIST_FRIEND,For you I'll run the other batch too. Quietly.
+NPC_CHEMIST_CHAT,Everyone out there is breathing borrowed air. That's my business.
+NPC_DEALER_STRANGER,"You're not a guard. Good. I buy Red Dust, no questions."
+NPC_DEALER_KNOWN,The Ledger remembers its suppliers.
+NPC_DEALER_FRIEND,Keep it coming. The Ledger looks after its own.
+NPC_DEALER_CHAT,The Gate searches one in three. Don't carry what you can't lose.
+NPC_JOBS_STRANGER,Work's on the board. Honest pay for honest hauling.
+NPC_JOBS_KNOWN,Reliable people get the jobs first.
+NPC_JOBS_FRIEND,I keep the good runs for you.
+NPC_JOBS_CHAT,The Kestrel wreck's still full of scrap if you've the nerve.
+SURV_DOME,dome air
+SURV_SUFFOCATING,SUFFOCATING · find oxygen
+SURV_WINDED,winded
+SURV_STAMINA,stamina
+SURV_TIRED,TIRED · sleep in a bunk
+SURV_EXHAUSTED,EXHAUSTED · you're slowing down
+CITY_MINED,SHIFT DONE · %s
+CITY_LIFT_DOWN,DEEP FURROW · 200 M DOWN
+CITY_RIG_COOLING,The drill is cooling · %d s
+CITY_PROMPT_LIFT_DOWN,Take the lift down to Deep Furrow
+CITY_PROMPT_LIFT_UP,Take the lift up
+CITY_PROMPT_RIG,Run a shift at the drill
+CITY_RIG_RUNNING,Drilling… %d%% (stay at the controls)
+WORLD_FARM,DEEP FURROW
+WORLD_FARM_SUB,UNDERGROUND FARM · UNDER THE ANVIL
+WORLD_FARM_RULE,Pressurised · fresh air, fresh greens
+WORLD_STORM,DUST STORM · filters clogging - air and water drain faster outside
+TALK_BUY_FOOD,Buy fresh greens · $%d
+NPC_FARMER_STRANGER,Mind the beds. Everything down here took years to grow.
+NPC_FARMER_KNOWN,Up top they pay a fortune for greens. Down here we just eat.
+NPC_FARMER_FRIEND,"Take a crate, friend. The Gate's rich folk will pay double."
+NPC_FARMER_CHAT,Green's the only real wealth on Mars. The Gate grows trees to show it.
+SURV_DRY,DRY · find water
+LOOT_CRATES,Search the crates
+LOOT_LOCKERS,Search the lockers
+LOOT_WRECK,Search the wreck's hold
+CITY_LOOT_EMPTY,Nothing here now · back in %d s
+CITY_LOOT_FOUND,FOUND %d × %s
+CITY_PROMPT_ALGAE,Lift algae cultures (guarded)
+CITY_THEFT_ALARM,ALARM · FARM GUARDS COMING DOWN
+CITY_THEFT_ESCAPED,UP THE SHAFT · GOT AWAY WITH IT
+CITY_THEFT_CLEAR,GUARDS DOWN · THE CULTURES ARE YOURS
+CITY_THEFT_CAUGHT,CAUGHT · cultures taken back · -$%d
+TALK_LAB_WATER,Melt and filter: 1 water ice + $%d → %d water rations (%d s)
+TALK_LAB_ALGAE_OXYGEN,Culture oxygen: 1 algae culture + $%d → %d canisters (%d s)
+TALK_BUY_WATER,Buy a water ration · $%d
+SHELF_YOUR_PACK,Your pack
+SHELF_FIT,Fit · $%d
+SHELF_MAXED,Fully fitted
+SHELF_FITTED,%s fitted
+SHELF_BUY,Buy · $%d
+SHELF_BOUGHT,Bought: %s
+SHELF_SELL,Sell · $%d
+SHELF_WONT_BUY,They won't buy this
+SHELF_SOLD,Sold %s for $%d
+SHELF_TAKE,Take ×%d
+SHELF_TOOK,Took %d× %s
+SHELF_TAKE_ALL,Take all
+SHELF_TOOK_ALL,Took everything (%d kinds)
+SHELF_LOAD,Load in rover
+SHELF_LOADED,%s loaded in the hold
+SHELF_HOLD_FULL,The hold is full
+SHELF_EQUIP,Carry this gun
+SHELF_EQUIPPED,Carried
+SHELF_NOW_CARRY,You now carry the %s
+SHELF_CLOSE,Close
+SHELF_PULSE,Pulse rifle (issue)
+SHELF_PULSE_DESC,Standard issue: always yours
+SHELF_WEAPON_DESC,Gun · %s
+SHELF_IN_PACK,in your pack
+SHELF_CONTRABAND,Contraband: only the Ledger buys it
+SHELF_NO_SALE,Not for sale: deliver it
+SHELF_WORTH,Worth about $%d at the exchange
+SHELF_EMPTY,Nothing here
+SHELF_PICK,Tap something on your shelf
+SHELF_HOLD_OWN,Your rover's hold
+SHELF_HOLD_OTHER,%s's hold
+SHELF_PACK_OF,%s's pack
+CITY_PROMPT_SHOP,Browse the counter · %s
+CITY_PROMPT_HOLD,Open the rover's hold
+CITY_PROMPT_SEARCH,Search %s's pack
+CITY_PROMPT_HOLDUP,Hold up %s
+CITY_HELD_UP,%s gives up and drops their pack
+CITY_CONVOY_ALARM,Concern convoy guards! They saw you at the hold
+CITY_CONVOY,Concern supply rover
+CITY_PACK_BUTTON,Pack
+CITY_CONVOY_CLEAR,ESCORT DOWN · THE HOLD IS YOURS
+CITY_CONVOY_CAUGHT,THE ESCORT CAUGHT YOU · fined -$%d
+SHELF_PACK_TITLE,Look it over
+CITY_ROVER,rover
+SHELF_FOR_SALE,for sale
+SHELF_THEIRS,theirs for the taking
+TOUCH_GAS,GAS
+TOUCH_BRAKE,BRAKE
+CITY_WANTED,WANTED BY THE MARSHALS · %d★
+CITY_LOST_THEM,LOST THE MARSHALS
+CITY_BUSTED,"THE MARSHALS GOT YOU · fined $%d, contraband seized"
+CITY_WANTED_SEARCHING,Out of sight · they lose you in %d s
+SHELF_BODY_WOMAN,Play as a woman
+SHELF_BODY_MAN,Play as a man
+SHELF_BODY_DONE,Your character changed
+WORLD_ROOM_AIR,Pressurised room · helmets can come off
+WORLD_ROOM_NO_AIR,"Unsealed building · no air in here, breathe from your suit"
+SHELF_LOCKER,Your hab · locker
+SHELF_STORE,Store in locker
+SHELF_STORED,%s put away in your locker
+SHELF_LOCKER_FULL,Your locker is full
+SHELF_LOCK,Fit %s · $%d
+SHELF_LOCK_FITTED,%s fitted to your door
+SHELF_HOME_OF,%s's locker
+CITY_PROMPT_LOCKER,Open your locker
+CITY_PROMPT_BREAK_IN,Break into %s's locker
+CITY_BREAKING_IN,Working the lock… %d%%
+CITY_HOME_BARE,Cleaned out already: nothing worth taking
+CITY_HOME_ROBBED,WHILE YOU WERE OUT · someone broke into your hab: %s gone
+CITY_YOUR_HOME,YOUR HAB
+CITY_HOME_SIGN,%s's hab
+CITY_PROMPT_SEARCH_SPOT,Take from %s
+CITY_NEED_TOOL,"You need a crowbar or lockpicks (General Store, Rook's Salvage, Ironside Guns)"
+CITY_USED,Used: %s
+CITY_QUICK_MED,+ Medkit ×%d
+CITY_QUICK_ARMOUR,Plate ×%d
+SHELF_USE,Use it
+SHELF_MASK_ON,Wear the mask
+SHELF_MASK_OFF,Take the mask off
+SHELF_MASK_ON_DONE,Masked: they can't name you
+SHELF_MASK_OFF_DONE,Mask off
+SHELF_DESC_CROWBAR,Breaks a lock in 4 s · loud (2 stars in town) · lasts
+SHELF_DESC_LOCKPICK,Opens a lock in 2.5 s · quiet (1 star) · one per lock
+SHELF_DESC_MEDKIT,+50 health · quick-use button or H
+SHELF_DESC_ARMOUR_PLATE,Shield back to full · quick-use button or H
+SHELF_DESC_STIM_COLA,"Stamina to full, tiredness down"
+SHELF_DESC_MASK,Worn during a crime: one star less
+SHELF_DESC_HAND_DRILL,Drill-rig shifts give one more of everything
+GARAGE_NAME,Joe's Respray & Chop
+GARAGE_LINE,"Fuel %d%% · condition %d%%. Joe wipes his hands: ""What'll it be?"""
+GARAGE_RESPRAY,Respray · $%d · lose the Marshals
+GARAGE_RESPRAY_SEEN,No respray with a Marshal watching
+GARAGE_CHOP,Sell it to the chop shop · $%d
+GARAGE_CHOP_HOT,Too hot to chop · come back in %d min
+GARAGE_FUEL,Fill the tank · $%d
+GARAGE_REPAIR,Fix it up · $%d
+GARAGE_RESPRAYED,New colour: the Marshals have lost you
+GARAGE_FUELLED,Tank full
+GARAGE_FIXED,Good as new
+GARAGE_CHOPPED,CHOPPED · +$%d (the hold's %d kinds in your pack)
+CITY_FUEL,Fuel
+CITY_CONDITION,Rover
+CITY_BINOCULARS,Binoculars
+CITY_BINOCULARS_OFF,Lower binoculars
+CITY_SCAN,Scan
+CITY_SCAN_WAIT,Scan · %d s
+CITY_SCANNED,SCAN · %d things of interest marked
+CITY_YOUR_ROVER,Your rover
+CITY_ROVER_FREE,Rover
+CITY_MARK_LOADED, · loaded
+CITY_MARK_LOCKER,%s's locker
+CITY_MARK_BARE, (bare)
+CITY_MARK_CARRYING, · carrying %d kinds
+SHELF_ROVER_FUEL_CELL,Refuel · fuel cell ×%d (tank %d%%)
+SHELF_ROVER_REPAIR_KIT,Repair · kit ×%d (rover %d%%)
+SHELF_ROVER_DONE,%s used on the rover
+SHELF_DESC_FUEL_CELL,Half a rover tank · use at the rover's hatch
+SHELF_DESC_REPAIR_KIT,Fixes 60% of a rover's damage · use at its hatch
+SHELF_DESC_BINOCULARS,Zoom far and name what you see (button or B)
+SHELF_DESC_SCANNER,"Marks loaded rovers, lockers, packs and officers within 160 m (button or N)"
+SURV_FOOD,Food %d%%
+SURV_HUNGRY,hungry
+SURV_STARVING,STARVING
+CITY_QUICK_EAT,Eat · %s
+SHELF_EAT,Eat it
+SHELF_DESC_FOOD,Fills you %d%% · worth about $%d
+TALK_BUY_MEAT,Buy fresh meat from the hutches · $%d
+CITY_PROMPT_KIOSK,Use the kiosk (nobody's at it)
+CITY_SHOP_CLOSED,%s · CLOSED · opens at %s
+MOTORS_NAME,Kasei Motors
+MOTORS_LINE,Your ride: the %s. Trade it in for something new? ($%d to spend)
+MOTORS_YOURS,The %s · yours
+MOTORS_BUY,The %s · %d km/h · %d-stack hold · $%d with trade-in
+MOTORS_BOUGHT,NEW RIDE · the %s waits at the city gate
+CITY_PROMPT_SHOWROOM,Kasei Motors showroom · buy a ride
+CITY_JOB_MARK,Job: %s
+CITY_EAT,Eat ×%d
+CITY_DRINK,Drink ×%d
+NPC_BARK_SHOTS,"Shots! Run!|Get down!|Somebody call the Marshals!|They're shooting!|Move, move!"
+NPC_BARK_COWER,Don't hurt me!|Not again...|Take what you want!|Keep your head down!
+NPC_BARK_AIMED,"Easy! Easy!|Don't shoot!|Whoa, put that down!|I don't want trouble!|Okay, okay!"
+NPC_BARK_BUMP,"Watch it!|Hey, eyes up.|Mind the suit!|Excuse you.|Careful!"
+NPC_BARK_GREET,Morning.|Hey there.|Dusty one today.|Air's good in here.|Need something?
+NPC_BARK_SHOP,Welcome to %s!
+NPC_BARK_BAR,Evening.|Pull up a stool.|First one's on you.|Long sol?
+BOT_BARK_CONTACT,Contact!|There!|Got eyes on them!|Over here!
+BOT_BARK_HIT,Agh!|I'm hit!|Taking fire!|Ugh!
+BOT_BARK_DOWN,Man down!|We lost one!|They got one of ours!
+BOT_BARK_MARSHAL,Marshals! Hands where we can see them!|Stop right there!|Drop the weapon!
+BOT_BARK_WIN,Target's down.|Clear.|That's done.
+BOT_BARK_HONK,Move it!|Out of the road!|Hey!
+CITY_TORCH,Torch
+CITY_TORCH_OFF,Torch off
+CITY_DRAW,Draw gun
+CITY_HOLSTER,Holster
+CITY_JET,Jet %d%%
+CITY_NIGHT_TORCH,Dark out: your torch is on the button by the minimap
+CITY_DRAWN_RULE,GUN DRAWN · PEOPLE ARE WATCHING · FIRING IS A CRIME
