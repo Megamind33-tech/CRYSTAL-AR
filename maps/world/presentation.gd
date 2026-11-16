@@ -35,15 +35,23 @@ func _ready() -> void:
 	_city_life()
 	_deep_furrow()
 	for p: Array in WorldLayout.pieces():
+		if str(p[0]).is_empty():
+			continue  # collision only
 		var base := WorldTerrain.at(p[1], p[2])
 		var sink := 0.15 if FOOTINGS.has(p[0]) else 0.3  # small props bed into the dust
-		add_child(Comic.kit_instance(p[0], base + Vector3(0, -sink, 0), p[3], p[4]))
+		var kit := Comic.kit_instance(p[0], base + Vector3(0, -sink, 0), p[3], p[4])
+		if VIEW_RANGE.has(p[0]):
+			kit.visibility_range_end = VIEW_RANGE[p[0]]
+			kit.visibility_range_end_margin = 10.0
+		add_child(kit)
 		if FOOTINGS.has(p[0]):
 			_footing(base, FOOTINGS[p[0]] * float(p[4]), float(p[3]))
 		if p[0] == "life/hab_open" or p[0] == "shopfront":
 			_room_light(WorldTerrain.at(p[1], p[2]))
 	_deploy_pad(WorldLayout.dig_pad())
 	_roads()
+	_districts()
+	_monorail()
 	MarsLighting.add(self)
 	MarsLighting.add_moons(self)
 	var weather := DustStorms.new()
@@ -112,6 +120,147 @@ func _deep_furrow() -> void:
 		light.omni_range = 24.0
 		light.position = o + Vector3(0, 6.0, -20.0 + k * 14.0)
 		add_child(light)
+
+
+## Small street furniture isn't drawn from far off (the towers always are).
+const VIEW_RANGE := {"districts/lamp_neo": 180.0, "districts/planter": 140.0, "districts/holo_sign": 260.0,
+		"districts/solar_tree": 260.0, "crate_stack": 180.0, "street_lamp": 180.0, "districts/pod_a": 420.0,
+		"districts/pod_b": 420.0, "districts/pod_c": 420.0, "districts/landing_pad": 500.0}
+
+
+## The districts' paved plazas, and the Galleria's interior lights.
+func _districts() -> void:
+	var paving := Comic.env_material(load(TEX % ["concrete_slab_wall", "diff"]), 0.12, Color(0.8, 0.74, 0.7))
+	var dark := Comic.env_material(load(TEX % ["concrete_slab_wall", "diff"]), 0.12, Color(0.42, 0.4, 0.42))
+	for d: Array in [[WorldLayout.HELIOS, 112.0, paving], [WorldLayout.TERRACE, 98.0, paving], [WorldLayout.SKYPORT, 108.0, dark]]:
+		var c: Vector2 = d[0]
+		var mi := MeshInstance3D.new()
+		var disc := CylinderMesh.new()
+		disc.top_radius = d[1]
+		disc.bottom_radius = d[1]
+		disc.height = 0.1
+		disc.radial_segments = 48
+		disc.rings = 1
+		mi.mesh = disc
+		mi.position = WorldTerrain.at(c.x, c.y) + Vector3(0, 0.0, 0)
+		mi.material_override = d[2]
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mi)
+	var g := WorldLayout.GALLERIA
+	var fore := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(156, 64)
+	fore.mesh = pm
+	fore.position = WorldTerrain.at(g.x, g.y) + Vector3(0, 0.04, 0)
+	fore.material_override = paving
+	add_child(fore)
+	for x in [-30.0, 0.0, 30.0]:
+		var l := OmniLight3D.new()
+		l.light_color = Color(1.0, 0.88, 0.7)
+		l.light_energy = 1.4
+		l.omni_range = 22.0
+		l.position = WorldTerrain.at(g.x, g.y) + Vector3(x, 5.0, 0)
+		add_child(l)
+
+
+## The monorail (WorldLayout.monorail): a white guideway on pylons every
+## PYLON_EVERY metres, MONO_HEIGHT up, and a three-car train that runs the
+## line end to end and waits at each end.
+const PYLON_EVERY := 32.0
+const TRAIN_SPEED := 22.0
+const TRAIN_WAIT := 8.0
+var _train: Array[Node3D] = []
+var _track: Array = []          ## [position, direction] every 2 m
+var _train_d: float = 0.0
+var _train_dir: float = 1.0
+var _train_wait: float = 0.0
+
+
+func _monorail() -> void:
+	# The guideway's height: the ground plus MONO_HEIGHT, smoothed so it
+	# runs level over the dunes.
+	var samples := WorldLayout.road_samples(WorldLayout.monorail(), 2.0)
+	var ys := PackedFloat32Array()
+	for sm: Array in samples:
+		var q: Vector2 = sm[0]
+		ys.append(WorldTerrain.height(q.x, q.y) + WorldLayout.MONO_HEIGHT)
+	var smooth := PackedFloat32Array(ys)
+	for k in ys.size():
+		var sum := 0.0
+		var n := 0
+		for o in range(-12, 13):
+			var i := clampi(k + o, 0, ys.size() - 1)
+			sum += maxf(ys[i], WorldTerrain.height((samples[i][0] as Vector2).x, (samples[i][0] as Vector2).y) + 7.0)
+			n += 1
+		smooth[k] = sum / n
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var white := Color(0.9, 0.9, 0.92).srgb_to_linear()
+	var cyan := Color(0.2, 0.95, 1.0).srgb_to_linear()
+	cyan.a = Comic.TAG_GLOW
+	var since := PYLON_EVERY
+	for k in samples.size():
+		var q: Vector2 = samples[k][0]
+		var dir: Vector2 = samples[k][1]
+		var at := Vector3(q.x, smooth[k], q.y)
+		_track.append([at, Vector3(dir.x, 0, dir.y)])
+		since += 2.0
+		if since >= PYLON_EVERY:
+			since = 0.0
+			var ground := WorldTerrain.at(q.x, q.y)
+			var pylon := Comic.kit_instance("districts/mono_pylon", ground, rad_to_deg(atan2(dir.x, dir.y)), 1.0)
+			pylon.scale = Vector3(1.0, (at.y - 1.1 - ground.y) / 9.9, 1.0)
+			add_child(pylon)
+		if k == 0:
+			continue
+		var a: Vector3 = _track[k - 1][0]
+		var n := Vector3(-dir.y, 0, dir.x)
+		_box_strip(st, a, at, n, 0.9, 1.1, white)        # the beam
+		_box_strip(st, a + Vector3(0, 1.12, 0), at + Vector3(0, 1.12, 0), n, 0.25, 0.1, cyan)  # its guide light
+	st.generate_normals()
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = Comic.kit_material(0.02)
+	add_child(mi)
+	for i in 3:
+		var car := Comic.kit_instance("districts/mono_car", Vector3.ZERO, 0.0, 1.0)
+		add_child(car)
+		_train.append(car)
+
+
+## A box section along a-b: half width `hw`, depth `h` below the top.
+func _box_strip(st: SurfaceTool, a: Vector3, b: Vector3, n: Vector3, hw: float, h: float, col: Color) -> void:
+	var top := [a - n * hw, a + n * hw, b + n * hw, b - n * hw]
+	var bot := [a - n * hw - Vector3(0, h, 0), a + n * hw - Vector3(0, h, 0), b + n * hw - Vector3(0, h, 0),
+			b - n * hw - Vector3(0, h, 0)]
+	st.set_color(col)
+	for f: Array in [[top[0], top[2], top[1], top[0], top[3], top[2]],
+			[bot[0], bot[1], bot[2], bot[0], bot[2], bot[3]],
+			[top[0], bot[0], bot[3], top[0], bot[3], top[3]],
+			[top[1], top[2], bot[2], top[1], bot[2], bot[1]]]:
+		for v: Vector3 in f:
+			st.add_vertex(v)
+
+
+func _process(delta: float) -> void:
+	if _track.is_empty() or _train.is_empty():
+		return
+	var length := (_track.size() - 1) * 2.0
+	if _train_wait > 0.0:
+		_train_wait -= delta
+	else:
+		_train_d += _train_dir * TRAIN_SPEED * delta
+		if _train_d >= length - 40.0 or _train_d <= 0.0:
+			_train_d = clampf(_train_d, 0.0, length - 40.0)
+			_train_dir = -_train_dir
+			_train_wait = TRAIN_WAIT
+	for i in _train.size():
+		var d := _train_d + i * 13.4
+		var k := clampi(int(d / 2.0), 0, _track.size() - 2)
+		var t := clampf(d / 2.0 - k, 0.0, 1.0)
+		var p: Vector3 = (_track[k][0] as Vector3).lerp(_track[k + 1][0], t)
+		var dir: Vector3 = _track[k][1]
+		_train[i].transform = Transform3D(Basis(Vector3.UP, atan2(dir.x, dir.z)), p + Vector3(0, 0.35, 0))
 
 
 ## The dig's deploy pad: a glowing ring and a beam visible across the valley.

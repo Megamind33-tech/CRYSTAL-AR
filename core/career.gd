@@ -120,6 +120,21 @@ const SHOPS := {
 			"sells": {"water_ration": 90, "oxygen_canister": 110, "burst_rifle": 560, "flux_smg": 380, "medkit": 95,
 					"lockpick": 35, "hand_drill": 260, "fuel_cell": 45, "repair_kit": 75, "binoculars": 110, "meal_pack": 28,
 					"vat_meat": 50}, "buys": "all"},
+	# The Prism Galleria (the outlands' mall, west of the city).
+	"tech": {"name": "Nova Tech", "keeper": "Yusuf",
+			"sells": {"torch": 32, "binoculars": 95, "scanner": 210, "jetpack": 1450, "fuel_cell": 38, "repair_kit": 65},
+			"buys": ""},
+	"foodcourt": {"name": "Orbit Food Court", "keeper": "Chidi",
+			"sells": {"grill_plate": 40, "meal_pack": 18, "fresh_food": 50, "fresh_meat": 70, "stim_cola": 12, "red_ale": 11,
+					"water_ration": 62}, "buys": ""},
+	"pharmacy": {"name": "Helix Pharmacy", "keeper": "Dr. Sato",
+			"sells": {"medkit": 75, "oxygen_canister": 80, "water_ration": 65, "stim_cola": 14}, "buys": ""},
+	"outfitter": {"name": "Redline Outfitters", "keeper": "Kaya", "gear": true,
+			"sells": {"armour_plate": 105, "mask": 85, "lockpick": 32, "crowbar": 38, "hand_drill": 230}, "buys": ""},
+	"prism": {"name": "Prism Exchange", "keeper": "Amara",
+			"sells": {"supply_crate": 65, "vat_meat": 38, "fuel_cell": 40}, "buys": "all"},
+	"noodle": {"name": "Red Planet Noodles", "keeper": "Mei", "hours": "bar",
+			"sells": {"meal_pack": 16, "grill_plate": 42, "red_ale": 12, "stim_cola": 12}, "buys": ""},
 }
 const WEAPON_RESALE := 0.5  ## a used gun sells for half its list value
 ## Your residence (a hab in Tharsis Gate): a locker for what you don't

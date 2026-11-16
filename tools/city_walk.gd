@@ -111,6 +111,10 @@ func _run() -> void:
 		print("CITY WALK: ate, food now %.0f, meat left %s" % [me.state.food, mc.d.stash])
 		get_tree().quit(0)
 		return
+	if Platform.user_args.has("--districts"):
+		await _districts_run(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--gear"):
 		await _gear_run(me)
 		get_tree().quit(0)
@@ -413,7 +417,10 @@ func _perf_probe(me: SimPlayer) -> void:
 	if Platform.user_args.has("--phone-lod"):
 		get_viewport().mesh_lod_threshold = 4.0  # project.godot's .mobile override
 	for place: Array in [["plaza", CityLayout.ORIGIN + Vector3(0, 0.05, 10), 0.0],
-			["hollow", WorldTerrain.at(WorldLayout.HOLLOW.x, WorldLayout.HOLLOW.z + 10) + Vector3(0, 0.1, 0), 0.0]]:
+			["hollow", WorldTerrain.at(WorldLayout.HOLLOW.x, WorldLayout.HOLLOW.z + 10) + Vector3(0, 0.1, 0), 0.0],
+			["helios", WorldTerrain.at(WorldLayout.HELIOS.x + 5, WorldLayout.HELIOS.y + 78) + Vector3(0, 0.1, 0), 0.0],
+			["galleria_in", WorldTerrain.at(WorldLayout.GALLERIA.x - 34, WorldLayout.GALLERIA.y) + Vector3(0, 0.1, 0), -PI * 0.5],
+			["outlands", WorldTerrain.at(-300, 60) + Vector3(0, 0.1, 0), 1.0]]:
 		await _pose(me, place[1], place[2], -0.05)
 		Diagnostics.section_report()
 		var proc := 0.0
@@ -607,6 +614,48 @@ func _garage_run(me: SimPlayer) -> void:
 ## The living valley: the plaza by day (minimap, clock), roads and traffic,
 ## the new rides, Kasei Motors, the Red Lantern of an evening, a shop shut
 ## at night, the Hollow on its footings.
+func _districts_run(me: SimPlayer) -> void:
+	var weather: DustStorms = m.get_tree().root.find_child("Weather", true, false)
+	var now_h := GameClock.hour(Time.get_unix_time_from_system())
+	var to_hour := func(hh: float) -> void:
+		CityNpcs.hour_offset = fposmod(hh - now_h, 24.0)
+		weather.hour_offset = CityNpcs.hour_offset
+	to_hour.call(10.5)
+	var look := func(from: Vector2, target: Vector2) -> float:
+		var d := target - from
+		return atan2(-d.x, -d.y)
+	var h := WorldLayout.HELIOS
+	var g := WorldLayout.GALLERIA
+	var t := WorldLayout.TERRACE
+	var p := WorldLayout.SKYPORT
+	var shots := [
+		["d1_helios", h + Vector2(5, 78), h + Vector2(-10, -20), 0.4],
+		["d10_helios_spire", h + Vector2(-10, 10), h + Vector2(-62, -58), 0.5],
+		["d11_pod", t + Vector2(-20, 6), t + Vector2(-42 * cos(0.2 + TAU / 10.0 * 4.0) * 0.0 - 30, 30), 0.12],
+		["d3_galleria", g + Vector2(78, 26), g + Vector2(20, 0), 0.12],
+		["d4_galleria_in", g + Vector2(-34, 0), g + Vector2(40, 0), 0.05],
+		["d5_terrace", t + Vector2(-104, -8), t, 0.06],
+		["d6_skyport", p + Vector2(-64, 58), p + Vector2(10, -30), 0.08],
+		["d7_monorail", Vector2(-360, 90), Vector2(-400, 40), 0.25],
+		["d8_outlands", Vector2(-300, 60), Vector2(-560, -100), 0.06],
+	]
+	for sh: Array in shots:
+		var from: Vector2 = sh[1]
+		await _pose(me, WorldTerrain.at(from.x, from.y) + Vector3(0, 0.1, 0), look.call(from, sh[2]), sh[3])
+		print("CITY WALK: region %s room %d" % [m.city.region, m.city.room])
+		await _shot(sh[0])
+	var shop: Array = WorldLayout.shops()[0]
+	var front: Vector3 = (shop[1] as Vector3) + Basis(Vector3.UP, float(shop[3]) - PI) * Vector3(0, 0, 9.0)
+	await _pose(me, front, float(shop[3]) - PI, 0.18)
+	await _shot("d12_shopfront")
+	to_hour.call(22.0)
+	await _frames(30)
+	await _pose(me, WorldTerrain.at(h.x + 10, h.y + 150) + Vector3(0, 0.1, 0), look.call(h + Vector2(10, 150), h + Vector2(0, -30)), 0.22)
+	await _shot("d2_helios_night")
+	await _pose(me, WorldTerrain.at(t.x - 104, t.y - 8) + Vector3(0, 0.1, 0), look.call(t + Vector2(-104, -8), t), 0.06)
+	await _shot("d9_terrace_night")
+
+
 func _gear_run(me: SimPlayer) -> void:
 	var c := Profile.career()
 	c.d.stash = {"torch": 1, "jetpack": 1}

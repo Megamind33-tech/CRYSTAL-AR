@@ -165,6 +165,26 @@ def hangar():
     box("plinth", (w + 0.6, d + 0.6, 0.4), (0, 0, 0.2), "dark")
     box("door", (0.15, 5.0, 4.0), (w / 2 + 0.05, 0, 2.4), "trim")
     box("door_stripe", (0.18, 5.2, 0.4), (w / 2 + 0.07, 0, 4.6), "dark")
+    # Detail (not in its collision): hazard chevrons, floodlights, a vent,
+    # the door's rails.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import build_districts as D
+    for name, rgba in D.MORE.items():
+        if name not in bpy.data.materials:
+            m = bpy.data.materials.new(name)
+            m.use_nodes = True
+            m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = rgba
+            m.diffuse_color = rgba
+    for k in range(5):
+        D.rbox("d_chevron%d" % k, (0.06, 0.5, 0.5), (w / 2 + 0.14, -2.0 + k * 1.0, 0.75), "dark", bevel=0.0,
+               rot=(math.radians(45), 0, 0))
+    for s in (-1, 1):
+        D.rbox("d_rail%d" % s, (0.2, 0.2, 4.6), (w / 2 + 0.1, s * 2.65, 2.3), "steel", bevel=0.03)
+        D.rbox("d_flood%d" % s, (0.3, 0.5, 0.3), (w / 2 + 0.25, s * 3.2, 4.4), "dark", bevel=0.05)
+        D.rbox("d_flood_face%d" % s, (0.06, 0.4, 0.22), (w / 2 + 0.41, s * 3.2, 4.4), "light_warm", bevel=0.0)
+    D.cyl("d_vent", 0.45, 1.4, (-3.0, 0, d / 2 + 0.9), "steel", verts=10)
+    D.rbox("d_vent_cap", (1.2, 1.2, 0.15), (-3.0, 0, d / 2 + 1.65), "dark", bevel=0.03)
+    D.export_col("hangar")
     finish("hangar")
 
 

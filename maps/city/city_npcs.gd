@@ -14,6 +14,8 @@ const WALK_SPEED := 1.4
 const COLORS := [Color(0.95, 0.33, 0.04), Color(0.14, 0.24, 0.52), Color(0.88, 0.9, 0.92), Color(0.08, 0.46, 0.48),
 		Color(0.78, 0.56, 0.06), Color(0.3, 0.34, 0.42), Color(0.34, 0.42, 0.16), Color(0.52, 0.1, 0.17)]
 
+## Beyond this (metres) people aren't animated (they're out of sight).
+const FAR := 130.0
 var _vendors: Array = []  ## [PlayerVisual, PlayerSimState, home yaw]
 var _walkers: Array = []  ## [PlayerVisual, PlayerSimState, path, next index]
 var _time: float = 0.0
@@ -85,6 +87,15 @@ func _ready() -> void:
 		for p: Vector3 in path:
 			fp.append(WorldLayout.factory_at(p))
 		walks.append(fp)
+	# The outlands' districts: Helios' plaza, the Galleria's shoppers, the
+	# Terrace's neighbours, the Skyport's crews.
+	for d: Array in WorldLayout.district_walks():
+		var c: Vector2 = d[0]
+		for loop: Array in d[1]:
+			var dp := []
+			for q: Vector2 in loop:
+				dp.append(WorldTerrain.at(c.x + q.x, c.y + q.y))
+			walks.append(dp)
 	# Deep Furrow's farmers tend the beds (underground, bare-headed).
 	var fo := WorldLayout.farm_origin()
 	walks.append([fo + Vector3(-5, 0, -18), fo + Vector3(-5, 0, 16)])
@@ -250,7 +261,8 @@ func say(v: Node3D, text: String, force: bool = false) -> void:
 	b.text = text
 	b.font = UiStyle.font_hud_big
 	b.font_size = 48
-	b.pixel_size = 0.011
+	b.pixel_size = 0.0021
+	b.fixed_size = true  # the same size on screen near or far
 	b.outline_size = 12
 	b.outline_modulate = ComicUI.INK
 	b.modulate = ComicUI.PAPER
@@ -278,6 +290,15 @@ func _process(delta: float) -> void:
 	for w: Array in _walkers:
 		var v: PlayerVisual = w[0]
 		var s: PlayerSimState = w[1]
+		# Far from you, people wait where they are (no animation to run).
+		if player_position != Vector3.INF and s.position.distance_squared_to(player_position) > FAR * FAR:
+			if v.visible:
+				v.visible = false
+				v.process_mode = Node.PROCESS_MODE_DISABLED
+			continue
+		if not v.visible:
+			v.visible = true
+			v.process_mode = Node.PROCESS_MODE_INHERIT
 		var m: Dictionary = _mood.get(v, {})
 		var mode: String = m.get("mode", "walk")
 		if mode != "walk":
@@ -334,6 +355,8 @@ func _process(delta: float) -> void:
 		if not (v[0] as Node3D).visible:
 			continue
 		var s: PlayerSimState = v[1]
+		if player_position != Vector3.INF and s.position.distance_squared_to(player_position) > FAR * FAR:
+			continue
 		var yaw: float = v[2]
 		var pv: PlayerVisual = v[0]
 		var vm: Dictionary = _mood.get(pv, {})

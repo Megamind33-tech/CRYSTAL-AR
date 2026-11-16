@@ -11,6 +11,10 @@ static func shape(piece: String) -> ConcavePolygonShape3D:
 	if _shapes.has(piece):
 		return _shapes[piece]
 	var path := ("res://art/environment/%s.glb" % piece) if piece.contains("/") else "res://art/environment/kit/%s.glb" % piece
+	# A walk-in piece with fine detail ships its walls and floors alone.
+	var col := path.get_basename() + "_col.glb"
+	if ResourceLoader.exists(col):
+		path = col
 	var scene: Node = (load(path) as PackedScene).instantiate()
 	var faces := PackedVector3Array()
 	for mi: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):

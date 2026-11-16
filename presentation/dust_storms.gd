@@ -77,6 +77,7 @@ func _process(delta: float) -> void:
 	var h := GameClock.hour(Time.get_unix_time_from_system()) + hour_offset
 	daylight = GameClock.daylight(fmod(h, 24.0)) if day_cycle else 1.0
 	var night := 1.0 - daylight
+	RenderingServer.global_shader_parameter_set("night_glow", night)  # lit windows, glowing signs
 	if _env != null:
 		_env.fog_density = lerpf(_base_fog, 0.035, storm)
 		_env.fog_light_color = Color(0.78, 0.5, 0.33).lerp(Color(0.6, 0.33, 0.18), storm).lerp(Color(0.12, 0.1, 0.18), night * 0.8)

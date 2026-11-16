@@ -63,3 +63,10 @@ renderer/rendering_method="mobile"
 lightmapping/lightmap_gi/use_bicubic_filter.mobile=false
 textures/vram_compression/import_s3tc_bptc=true
 textures/vram_compression/import_etc2_astc=true
+
+[shader_globals]
+
+night_glow={
+"type": "float",
+"value": 0.0
+}

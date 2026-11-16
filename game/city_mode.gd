@@ -388,7 +388,7 @@ func update() -> void:
 ## Traffic on the valley's roads (presentation only): rovers, buggies and
 ## haulers keeping right, turning back short of the road's ends, and
 ## stopping for you (on foot or driving) in the way.
-const TRAFFIC := 7
+const TRAFFIC := 12
 const TRAFFIC_SPEED := 13.0
 var _traffic: Array = []  ## [mesh, road points, distance along, direction, speed]
 
@@ -797,7 +797,7 @@ func on_event(e: Dictionary) -> void:
 			if _people != null:
 				_people.threat(e.origin, 40.0)
 			var fighting := _raid != null or _guards != null or _police != null
-			if int(e.shooter) == me and not fighting and (region == "city" or region == "hollow"):
+			if int(e.shooter) == me and not fighting and region in WorldLayout.LAWFUL:
 				crime("shots")
 			elif int(e.shooter) in _hostiles() and not _contacted.has(int(e.shooter)):
 				_contacted[int(e.shooter)] = true
@@ -959,7 +959,7 @@ func _step_homes(me: SimPlayer, dt: float) -> void:
 		c.use_up("lockpick")  # a pick snaps in every lock
 	var got := c.break_in(str(home[0]), [randf(), randf()], int(Time.get_unix_time_from_system()))
 	Profile.save()
-	if region == "city" or region == "hollow":
+	if region in WorldLayout.LAWFUL:
 		crime(Career.BREAK_TOOLS[_breakin_tool][1])  # the neighbours heard (a crowbar's loud)
 	if got.is_empty():
 		_note(tr("CITY_HOME_BARE"), ComicUI.YELLOW)
@@ -1773,9 +1773,14 @@ class _CityHud extends Control:
 				"farm": ["WORLD_FARM", "WORLD_FARM_SUB", "WORLD_FARM_RULE"],
 				"hollow": ["WORLD_HOLLOW", "WORLD_HOLLOW_SUB", "WORLD_HOLLOW_RULE"],
 				"dig": ["WORLD_DIG", "WORLD_DIG_SUB", "WORLD_DIG_RULE"],
+				"helios": ["WORLD_HELIOS", "WORLD_HELIOS_SUB", "WORLD_LAWFUL_RULE"],
+				"galleria": ["WORLD_GALLERIA", "WORLD_GALLERIA_SUB", "WORLD_GALLERIA_RULE"],
+				"terrace": ["WORLD_TERRACE", "WORLD_TERRACE_SUB", "WORLD_LAWFUL_RULE"],
+				"skyport": ["WORLD_SKYPORT", "WORLD_SKYPORT_SUB", "WORLD_LAWFUL_RULE"],
 				"open": ["WORLD_OPEN", "WORLD_OPEN_SUB", "WORLD_OPEN_RULE"]}
 		var n: Array = names.get(city.region, names.open)
-		var accent: Color = {"city": ComicUI.YELLOW, "hollow": ComicUI.CYAN, "dig": ComicUI.MAGENTA}.get(city.region, ComicUI.PAPER)
+		var accent: Color = {"city": ComicUI.YELLOW, "hollow": ComicUI.CYAN, "dig": ComicUI.MAGENTA, "helios": ComicUI.CYAN,
+				"galleria": ComicUI.MAGENTA, "terrace": ComicUI.GREEN, "skyport": ComicUI.YELLOW}.get(city.region, ComicUI.PAPER)
 		var title := tr(n[0])
 		var tw := UiStyle.font_hud_big.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(22 * s)).x
 		var tag := Rect2(Vector2(34, 22) * s, Vector2(tw + 44 * s, 30 * s))
@@ -1784,7 +1789,7 @@ class _CityHud extends Control:
 		ComicUI.draw_text(self, Vector2(34, 82) * s, tr(n[1]), UiStyle.font_hud_bold, roundi(22 * s), ComicUI.PAPER, 0, roundi(4 * s))
 		var rule := tr(n[2])
 		var cc := Profile.career()
-		if city.drawn and city.region == "city":
+		if city.drawn and city.region in WorldLayout.LAWFUL:
 			rule = tr("CITY_DRAWN_RULE")
 		if city.region == "hollow" and cc.owns_hollow():
 			rule = tr("WORLD_HOLLOW_YOURS") % [int(cc.d.hollow.supplies), int(cc.d.hollow.ingots)]
@@ -1882,6 +1887,12 @@ class _CityHud extends Control:
 					if a.distance_to(c) < rad * 1.6 or b.distance_to(c) < rad * 1.6:
 						draw_line(a, b, Color(0.55, 0.5, 0.46), 5.0 * s)
 				prev = q
+		var mono := PackedVector2Array()
+		for pt: Vector2 in WorldLayout.monorail():
+			mono.append(to_map.call(pt))
+		for i in mono.size() - 1:
+			if mono[i].distance_to(c) < rad * 1.6 or mono[i + 1].distance_to(c) < rad * 1.6:
+				draw_line(mono[i], mono[i + 1], Color(0.3, 0.9, 1.0, 0.6), 2.0 * s)
 		var dome: Vector2 = to_map.call(Vector2(CityLayout.ORIGIN.x, CityLayout.ORIGIN.z))
 		if dome.distance_to(c) < rad + WorldLayout.DOME_RADIUS * k:
 			draw_arc(dome, WorldLayout.DOME_RADIUS * k, 0.0, TAU, 48, Color(0.4, 0.8, 0.9, 0.7), 2.0 * s)
@@ -1924,6 +1935,17 @@ class _CityHud extends Control:
 				q = c + (q - c).normalized() * (rad - 8 * s)  # off the map: at its edge, pointing the way
 			var d := 7.0 * s
 			draw_colored_polygon(PackedVector2Array([q + Vector2(0, -d), q + Vector2(d, 0), q + Vector2(0, d), q + Vector2(-d, 0)]), ComicUI.YELLOW)
+		# The districts: on the map, or named at its edge pointing the way.
+		for dist: Array in [[WorldLayout.HELIOS, "MAP_HELIOS"], [WorldLayout.GALLERIA, "MAP_GALLERIA"],
+				[WorldLayout.TERRACE, "MAP_TERRACE"], [WorldLayout.SKYPORT, "MAP_SKYPORT"],
+				[Vector2(CityLayout.ORIGIN.x, CityLayout.ORIGIN.z), "MAP_CITY"]]:
+			var q: Vector2 = to_map.call(dist[0])
+			if q.distance_to(c) < rad - 10 * s:
+				continue
+			q = c + (q - c).normalized() * (rad - 14 * s)
+			var label := tr(dist[1])
+			ComicUI.draw_text(self, q + Vector2(0, 5 * s), label, UiStyle.font_hud_bold, roundi(12 * s), ComicUI.CYAN, 1,
+					roundi(3 * s))
 		# You: an arrow pointing up (the map turns with you).
 		var a := 9.0 * s
 		var arrow := PackedVector2Array([c + Vector2(0, -a * 1.3), c + Vector2(a * 0.8, a), c + Vector2(0, a * 0.45), c + Vector2(-a * 0.8, a)])

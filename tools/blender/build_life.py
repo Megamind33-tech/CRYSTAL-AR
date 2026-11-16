@@ -5,6 +5,7 @@
 #   blender -b -P tools/blender/build_life.py -- <out_dir>
 import bpy, bmesh, math, sys, os
 sys.path.insert(0, os.path.dirname(__file__))
+sys.argv = sys.argv  # build_districts reads the same out dir argument
 import build_outpost_kit as K  # noqa: E402
 from build_outpost_kit import reset, box, cyl, dome, finish  # noqa: E402
 
@@ -256,6 +257,38 @@ def hab_open():
     for x in (-2.0, -1.0):
         box("locker", (0.8, 0.6, 2.0), (x, 4.6, 1.0), "dark")
     box("lamp", (1.4, 0.3, 0.1), (0, 0, 3.1), "light")
+    # Outside detail (left out of its collision): ribs, a window band, the
+    # airlock's lit frame, roof plant, a mast.
+    import build_districts as D
+    K.COLORS.update(D.MORE)
+    for name, rgba in D.MORE.items():
+        if name not in bpy.data.materials:
+            m = bpy.data.materials.new(name)
+            m.use_nodes = True
+            m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = rgba
+            m.diffuse_color = rgba
+    for i in range(16):
+        a = (i + 0.5) * math.tau / 16
+        if math.sin(a) < -0.9:
+            continue  # the doorway
+        D.rbox("d_rib%d" % i, (0.3, 0.3, 3.3), (math.cos(a) * (r + 0.1), math.sin(a) * (r + 0.1), 1.65), "steel", bevel=0.04,
+               rot=(0, 0, a))
+    for i in range(16):
+        a = i * math.tau / 16 + math.tau / 32
+        if math.sin(a) < -0.85:
+            continue
+        D.rbox("d_window%d" % i, (0.12, 1.6, 0.7), (math.cos(a) * (r + 0.02), math.sin(a) * (r + 0.02), 2.2), "glass", bevel=0.0,
+               rot=(0, 0, a))
+    D.rbox("d_door_frame", (2.8, 0.3, 0.25), (0, -r + 0.1, 3.0), "steel", bevel=0.05)
+    for s in (-1, 1):
+        D.rbox("d_door_glow%d" % s, (0.1, 0.12, 2.6), (s * 1.3, -r - 0.05, 1.5), "neon_cyan", bevel=0.0)
+        D.rbox("d_lamp%d" % s, (0.25, 0.2, 0.3), (s * 1.8, -r - 0.05, 2.7), "light_warm", bevel=0.03)
+    D.rbox("d_ac", (1.6, 1.1, 0.8), (1.6, 1.2, 5.3), "steel", bevel=0.06)
+    D.cyl("d_ac_fan", 0.42, 0.06, (1.6, 1.2, 5.72), "dark", verts=12)
+    D.cyl("d_mast", 0.05, 2.6, (-2.0, 1.0, 6.3), "steel", verts=6)
+    D.rbox("d_mast_light", (0.18, 0.18, 0.18), (-2.0, 1.0, 7.65), "neon_pink", bevel=0.03)
+    D.cyl("d_skirt", r + 0.2, 0.35, (0, 0, 0.18), "dark", verts=16, cap=False)
+    D.export_col("hab_open")
     finish("hab_open")
 
 

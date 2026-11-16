@@ -70,6 +70,7 @@ static func kit_mesh(piece: String) -> ArrayMesh:
 			var mat := mi.get_active_material(i)
 			# Imported albedo colours are sRGB; vertex COLOR is used as linear.
 			var col := ((mat as BaseMaterial3D).albedo_color if mat is BaseMaterial3D else Color.WHITE).srgb_to_linear()
+			col.a = surface_tag(mat.resource_name if mat != null else "")
 			var arrays := mi.mesh.surface_get_arrays(i)
 			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
@@ -83,6 +84,25 @@ static func kit_mesh(piece: String) -> ArrayMesh:
 	var mesh := st.commit()
 	_kit_meshes[piece] = mesh
 	return mesh
+
+
+## What a Blender material is, for the kit shader (in the vertex alpha):
+## glass reflects the sky and lights up at night, lamps ("light_*") and neon glow,
+## bare steel shines, the rest is painted and weathered.
+const TAG_GLASS := 0.25
+const TAG_GLOW := 0.5
+const TAG_METAL := 0.75
+
+
+static func surface_tag(material_name: String) -> float:
+	var n := material_name.to_lower()
+	if n.begins_with("glass"):
+		return TAG_GLASS
+	if n.begins_with("light_") or n.begins_with("neon"):  # plain "light" is pale paint
+		return TAG_GLOW
+	if n.begins_with("steel") or n.begins_with("chrome"):
+		return TAG_METAL
+	return 1.0
 
 
 static func _transform_to(root: Node, n: Node3D) -> Transform3D:

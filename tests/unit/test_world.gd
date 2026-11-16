@@ -5,8 +5,9 @@ extends GutTest
 
 ## [x, z, height] computed by tools/blender/world_terrain.py.
 const PYTHON_SAMPLES := [[0, 0, 3.6027], [-220, 20, 14.0], [60, -60, 2.0], [238, 161.83249824996986, -21.1647],
-		[150, -240, -11.2001], [-60, -230, 31.8974], [390, -390, 54.1351], [123.4, -56.7, 2.1644], [-300, 150, -0.6022],
-		[-150, 80, 12.8548], [-290, -60, 9.2059]]
+		[150, -240, -11.2001], [-60, -230, 31.8974], [390, -390, 10.2049], [123.4, -56.7, 2.1644], [-300, 150, -0.6022],
+		[-150, 80, 12.8548], [-290, -60, 9.2059], [-520, -470, 18.0], [470, 430, 6.0], [-330, 400, -16.8883],
+		[760, -760, 56.2079], [640, -60, 43.6121], [-450, 300, -3.2202], [300, 520, -2.5724]]
 
 
 func test_terrain_matches_blender() -> void:
@@ -26,6 +27,30 @@ func test_places_on_flat_ground() -> void:
 	assert_lt(pad.y, -15.0, "down in the canyon")
 	for t: Array in CityLayout.terminals():
 		assert_eq(WorldLayout.region_at((t[1] as Vector3).x, (t[1] as Vector3).z), "city")
+
+
+## The outlands: each district stands on its own flat, named, under the law.
+func test_districts_on_flat_ground() -> void:
+	for d: Array in [[WorldLayout.HELIOS, WorldTerrain.HELIOS, "helios"], [WorldLayout.GALLERIA, WorldTerrain.GALLERIA, "galleria"],
+			[WorldLayout.TERRACE, WorldTerrain.TERRACE, "terrace"], [WorldLayout.SKYPORT, WorldTerrain.SKYPORT, "skyport"]]:
+		var c: Vector2 = d[0]
+		var site: Array = d[1]
+		assert_eq(Vector2(site[0], site[1]), c, "the layout and the terrain agree on %s" % d[2])
+		assert_eq(WorldLayout.region_at(c.x, c.y), d[2])
+		assert_true(d[2] in WorldLayout.LAWFUL)
+		for off: Vector2 in [Vector2(60, 0), Vector2(0, -60), Vector2(-50, 50)]:
+			assert_almost_eq(WorldTerrain.height(c.x + off.x, c.y + off.y), float(site[2]), 0.01, "%s is level" % d[2])
+	# Inside the Galleria there's air; Terrace homes are sealed; each has a locker to break.
+	var g := WorldTerrain.at(WorldLayout.GALLERIA.x, WorldLayout.GALLERIA.y)
+	assert_eq(WorldLayout.room_at(g + Vector3(20, 1, 0)), WorldLayout.ROOM_AIR, "the mall is pressurised")
+	assert_eq(WorldLayout.room_at(g + Vector3(80, 1, 0)), WorldLayout.NO_ROOM, "its forecourt is outside")
+	var terrace_homes := WorldLayout.residences().filter(func(r: Array) -> bool: return str(r[2]).begins_with("Terrace"))
+	assert_gt(terrace_homes.size(), 15, "Nova Terrace's homes can be broken into")
+	# The mall's shops are real shops, at counters inside it.
+	var mall := WorldLayout.shops().filter(func(sh: Array) -> bool: return Career.SHOPS.has(sh[0]) and sh[0] in ["tech", "foodcourt"])
+	assert_eq(mall.size(), 2)
+	for sh: Array in mall:
+		assert_eq(WorldLayout.room_at((sh[1] as Vector3) + Vector3(0, 1, 0)), WorldLayout.ROOM_AIR)
 
 
 func test_world_map_registered_for_city_mode() -> void:

@@ -20,6 +20,13 @@ ROADS = [
     [(-220, 84), (-170, 92), (-110, 70), (-40, 20), (20, -30), (60, -60)],
     [(60, -60), (110, -10), (160, 60), (205, W.canyon_center(205)), (240, W.canyon_center(240))],
     [(60, -60), (110, -150), (140, -190)],
+    [(-110, 70), (-160, -60), (-240, -146)],
+    [(-220, 84), (-300, 140), (-420, 190), (-482, 200)],
+    [(-240, -146), (-330, -290), (-420, -390), (-455, -430)],
+    [(-170, 92), (-160, 200), (-100, 300), (150, 385), (370, 425)],
+    [(60, -60), (250, -150), (400, -300), (460, -385)],
+    [(240, W.canyon_center(240)), (300, W.canyon_center(300)), (370, W.canyon_center(370)), (420, 300), (440, 345)],
+    [(-560, 120), (-590, -60), (-570, -250), (-540, -350)],
 ]
 
 
@@ -46,8 +53,8 @@ def color_at(x, z, h, slope):
     band = int(math.floor(h / 3.2)) % 3
     rock = [(0.42, 0.18, 0.11), (0.58, 0.29, 0.16), (0.33, 0.15, 0.1)][band]
     c = lerp3(dust, rock, W.smoothstep(0.12, 0.35, slope))
-    cx, cz, cr = W.CRATER
-    if math.hypot(x - cx, z - cz) < cr * 0.42 and slope < 0.2:
+    for cx, cz, cr in (W.CRATER, W.CRATER2):
+      if math.hypot(x - cx, z - cz) < cr * 0.42 and slope < 0.2:
         c = lerp3(c, (0.82, 0.86, 0.9), 0.75 * (0.5 + 0.5 * math.sin(x * 0.4) * math.sin(z * 0.37)))
     rd = road_dist(x, z)
     if rd < 5.0:
@@ -55,7 +62,7 @@ def color_at(x, z, h, slope):
     return c
 
 
-TILES = 6  # per side: tiles are culled off-screen and get the importer's LODs
+TILES = 10  # per side: tiles are culled off-screen and get the importer's LODs
 
 
 def terrain():
