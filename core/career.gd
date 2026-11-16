@@ -47,6 +47,7 @@ const ITEMS := {
 	"torch": {"name": "Torch", "base": 15, "tool": true},
 	"cutter": {"name": "Plasma saw", "base": 140, "tool": true},
 	"timber": {"name": "Mars timber", "base": 90},
+	"ring_bonds": {"name": "Helios Ring bearer bonds", "base": 0, "no_sale": true},
 	"jetpack": {"name": "Jetpack", "base": 900, "tool": true},
 	"grill_plate": {"name": "Grill plate", "base": 30},
 	"water_ration": {"name": "Water ration", "base": 45},
@@ -263,7 +264,8 @@ static func fresh() -> Dictionary:
 			"armed": "", "rover_cargo": {},
 			"home": {"locker": {}, "lock": 0, "checked_at": 0, "robbed": {}}, "ride": 0,
 			"aircraft": -1, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
-			"trade": {"chain": 0, "sold": 0, "learned": [], "clients": {}, "orders": [], "dealers": {}, "order_at": 0}}
+			"trade": {"chain": 0, "sold": 0, "learned": [], "clients": {}, "orders": [], "dealers": {}, "order_at": 0},
+			"heist": {}, "heists_done": {}}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -1273,6 +1275,91 @@ func carrying_dust() -> bool:
 		if int(d.stash.get(variant, 0)) > 0:
 			return true
 	return false
+
+
+# --- Heists (planned at your gang's back room) ------------------------------
+
+## A heist in stages: prep jobs out in the world, then the approach you
+## choose (it changes the guards, what you need and when you can go), then
+## the finale and the getaway. The take is split with your crew.
+const HEISTS := {
+	"ring": {"name": "The Helios Ring vault", "take": 32000, "preps": ["codes", "intel", "ride"]},
+}
+const HEIST_APPROACHES := {
+	"quiet": {"guards": 3, "needs": "mask", "night": true, "mult": 1.15, "stars": 1},
+	"loud": {"guards": 4, "needs": "armour_plate", "night": false, "mult": 1.0, "stars": 3},
+	"con": {"guards": 2, "visa": "helios", "night": false, "mult": 1.05, "stars": 2},
+}
+const HEIST_COOLDOWN := 3600
+const CREW_CUT := 0.08   ## each crew member's share
+
+
+func heist() -> Dictionary:
+	return d.heist
+
+
+func heist_wait(id: String, now: int) -> int:
+	return maxi(int(d.heists_done.get(id, 0)) + HEIST_COOLDOWN - now, 0)
+
+
+func plan_heist(id: String, now: int) -> bool:
+	if not HEISTS.has(id) or not heist().is_empty() or heist_wait(id, now) > 0:
+		return false
+	d.heist = {"id": id, "preps": [], "approach": "", "stage": "prep"}
+	return true
+
+
+func heist_prep(prep: String) -> bool:
+	if heist().is_empty() or not prep in HEISTS[heist().id].preps or prep in heist().preps:
+		return false
+	(heist().preps as Array).append(prep)
+	return true
+
+
+func heist_ready() -> bool:
+	return not heist().is_empty() and (heist().preps as Array).size() == (HEISTS[heist().id].preps as Array).size()
+
+
+## Why you can't go with `approach` now ("" if you can).
+func approach_blocker(approach: String, now: int, night: bool) -> String:
+	var a: Dictionary = HEIST_APPROACHES[approach]
+	if a.has("needs") and int(d.stash.get(a.needs, 0)) <= 0:
+		return "item"
+	if a.has("visa") and not has_visa(a.visa, now):
+		return "visa"
+	if bool(a.get("night", false)) and not night:
+		return "night"
+	return ""
+
+
+func choose_approach(approach: String, now: int, night: bool) -> bool:
+	if not heist_ready() or not HEIST_APPROACHES.has(approach) or not approach_blocker(approach, now, night).is_empty():
+		return false
+	heist().approach = approach
+	heist().stage = "finale"
+	return true
+
+
+## The getaway's made with the bonds: the take, less the crew's shares.
+func heist_payout(now: int) -> int:
+	if heist().is_empty() or int(d.stash.get("ring_bonds", 0)) <= 0:
+		return 0
+	_set_count("ring_bonds", 0)
+	var h: Dictionary = HEISTS[heist().id]
+	var crew := (d.gang.get("members", []) as Array).size() if in_gang() else 0
+	var take := roundi(float(h.take) * float(HEIST_APPROACHES[heist().approach].mult))
+	var pay := roundi(take * maxf(1.0 - CREW_CUT * crew, 0.4))
+	d.wallet += pay
+	d.earned += pay
+	d.heists_done[heist().id] = now
+	d.heist = {}
+	gang_respect(120)
+	return pay
+
+
+func abandon_heist() -> void:
+	_set_count("ring_bonds", 0)
+	d.heist = {}
 
 
 # --- The Marshals' Bounty Board (free roam) --------------------------------

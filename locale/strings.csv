@@ -1005,3 +1005,40 @@ EVENT_PROMPT_CONVOY,Open the hauler's hold
 EVENT_GUARDED,Not with its drivers still standing
 EVENT_TOOK,Took %s
 EVENT_MAP,EVENT
+HEIST_SIGN,HEIST BOARD
+HEIST_GETAWAY_SIGN,DROP POINT
+HEIST_BOARD,Heist board
+HEIST_PROMPT_BOARD,The heist board
+HEIST_BOARD_LINE,"Big jobs, planned properly: prep work first, then pick how you go in. Your crew comes along for a share."
+HEIST_PLAN,Plan it: %s
+HEIST_LATER,The Ring's on alert: wait %d min
+HEIST_PLANNED,Planned: do the prep work (see the board and your map)
+HEIST_PREP_CODES_TODO,Codes: hack the Ring's maintenance panel (needs a scanner)
+HEIST_PREP_INTEL_TODO,Guard rota: sweep the Ring with your scanner
+HEIST_PREP_RIDE_TODO,Getaway: leave a vehicle at the drop point
+HEIST_PREP_CODES,Prep done: the vault codes
+HEIST_PREP_INTEL,Prep done: the guard rota
+HEIST_PREP_RIDE,Prep done: the getaway's parked
+HEIST_GO,Ready: %s · the vault door is at the Ring's core (map: V)
+HEIST_APPROACH_QUIET,"Quiet: at night, masked, three guards"
+HEIST_APPROACH_LOUD,"Loud: guns out, four guards, bring armour"
+HEIST_APPROACH_CON,"Con: Helios papers, two guards"
+HEIST_BLOCK_ITEM,you need the gear
+HEIST_BLOCK_VISA,you need a Helios visa
+HEIST_BLOCK_NIGHT,go in after dark
+HEIST_CHOSEN,Going in: %s
+HEIST_ABANDON,Call it off
+HEIST_PROMPT_CODES,Hack the maintenance panel
+HEIST_HACKING,Hacking… %d%%
+HEIST_PROMPT_ENTER,Through the vault door
+HEIST_PROMPT_CRACK,Crack the vault
+HEIST_CRACKING,Cracking… %d%%
+HEIST_NEED_SCANNER,You need a scanner to hack it
+HEIST_WAIT_NIGHT,Quiet means after dark: come back at night
+HEIST_IN_QUIET,Inside. Keep your distance from the guards
+HEIST_IN_CON,"Inside, on papers. It won't hold forever"
+HEIST_ALARM,ALARM! They know you're here
+HEIST_GOT_BONDS,The bonds! Now get clear of Helios
+HEIST_PAID,Clean getaway: $%d after the crew's shares
+HEIST_FAILED,The job's blown: the bonds are lost (the prep still stands)
+HEIST_VAULT_ROOM,THE RING'S COUNTING ROOM

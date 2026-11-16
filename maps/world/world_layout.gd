@@ -744,3 +744,23 @@ static func client_spot(id: String) -> Vector3:
 ## The Blue Line crew's corner (the turf fight): the Galleria's west forecourt.
 static func turf_spot() -> Vector3:
 	return WorldTerrain.at(GALLERIA.x - 72, GALLERIA.y + 18)
+
+
+# --- The Helios Ring heist ---
+
+## The ring's maintenance panel (the codes), the vault door at the core's
+## far side, the getaway drop point, and the vault (the office interior,
+## dressed as the Ring's counting room while a heist is on).
+static func ring_panel() -> Vector3:
+	return WorldTerrain.at(HELIOS.x + 30, HELIOS.y + 8) + Vector3(0, 0.1, 0)
+
+
+static func vault_door() -> Vector3:
+	return WorldTerrain.at(HELIOS.x, HELIOS.y - 5.6) + Vector3(0, 0.1, 0)
+
+
+static func getaway_spot() -> Vector3:
+	return WorldTerrain.at(HELIOS.x + 110, HELIOS.y + 40) + Vector3(0, 0.1, 0)
+
+
+const HEIST_ESCAPE := 320.0  ## metres from the Ring: you're clear

@@ -185,3 +185,30 @@ func test_red_dust_trade_chain_orders_and_dealers() -> void:
 	c.receive("dust_bloom", 2)
 	assert_gt(c.confiscate(), 0)
 	assert_false(c.carrying_dust())
+
+
+func test_heist_in_stages() -> void:
+	var c := _rich()
+	assert_true(c.plan_heist("ring", NOW))
+	assert_false(c.heist_ready())
+	assert_false(c.choose_approach("loud", NOW, false), "preps first")
+	for p: String in ["codes", "intel", "ride"]:
+		assert_true(c.heist_prep(p))
+	assert_false(c.heist_prep("codes"), "done once")
+	assert_true(c.heist_ready())
+	assert_eq(c.approach_blocker("loud", NOW, false), "item", "loud needs armour")
+	assert_eq(c.approach_blocker("con", NOW, false), "visa", "a con needs Helios papers")
+	c.receive("mask", 1)
+	assert_eq(c.approach_blocker("quiet", NOW, false), "night", "quiet waits for dark")
+	assert_true(c.choose_approach("quiet", NOW, true))
+	assert_eq(c.heist_payout(NOW), 0, "no bonds, no pay")
+	c.form_gang("Valles Vipers")
+	c.recruit()
+	c.recruit()
+	c.receive("ring_bonds", 1)
+	var wallet: int = c.d.wallet
+	var pay := c.heist_payout(NOW)
+	var take := roundi(Career.HEISTS.ring.take * Career.HEIST_APPROACHES.quiet.mult)
+	assert_eq(pay, roundi(take * (1.0 - 2 * Career.CREW_CUT)), "the crew take their shares")
+	assert_eq(int(c.d.wallet), wallet + pay)
+	assert_false(c.plan_heist("ring", NOW + 10), "the Ring is on alert after")

@@ -68,6 +68,7 @@ var estate: CityEstate   ## doors, property, visas, aircraft, the gang, trees
 var bounty: CityBounty   ## the Marshals' Bounty Board
 var trade: CityTrade     ## the Red Dust Trade
 var events: CityEvents   ## things that turn up out in the valley
+var heist: CityHeist     ## heists in stages
 var burner_button: Button
 var draw_button: Button
 var torch_button: Button
@@ -328,6 +329,11 @@ func update() -> void:
 	var event_near := events.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
 	if _near.is_empty() and not event_near.is_empty():
 		_near = event_near
+	if heist == null:
+		heist = CityHeist.new(self)
+	var heist_near := heist.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	if (_near.is_empty() or _near == "exit_rover") and not heist_near.is_empty():
+		_near = heist_near
 	burner_button.visible = Profile.career().chain_step() >= 1 and not (screen.visible or talk.visible or shelf.visible or garage.visible)
 	var c := Profile.career()
 	_hollow_sign.text = tr("WORLD_HOLLOW") + "\n" + (tr("WORLD_HOLLOW_SIGN_YOURS") if c.owns_hollow() else tr("WORLD_HOLLOW_SIGN_THARSIS"))
@@ -376,6 +382,8 @@ func update() -> void:
 			trade.act(_near, me)
 		elif _near.begins_with("event:"):
 			events.act(_near, me)
+		elif _near.begins_with("heist:"):
+			heist.act(_near, me)
 		elif _near == "bounty:ask":
 			bounty.ask(me)
 		elif _near.begins_with("kiosk:"):
@@ -718,7 +726,8 @@ func crime(kind: String) -> void:
 ## A fight on: a raid, guards after you, the Marshals, or a bounty gone hot.
 func in_fight() -> bool:
 	return _raid != null or _guards != null or _police != null or (bounty != null and bounty.hot) \
-			or (trade != null and trade.in_fight()) or (events != null and events.in_fight())
+			or (trade != null and trade.in_fight()) or (events != null and events.in_fight()) \
+			or (heist != null and heist.in_fight())
 
 
 func _sync_combat() -> void:
@@ -974,6 +983,8 @@ func _step_police(me: SimPlayer, dt: float) -> void:
 			if space.intersect_ray(q).is_empty():
 				seen = true
 				break
+	if int(Profile.career().d.stash.get("ring_bonds", 0)) > 0:
+		seen = true  # the Ring's bonds are tagged: they track you till you're clear
 	_police_seen = seen
 	if wanted.step(dt, seen):
 		_flash_text(tr("CITY_LOST_THEM"), ComicUI.GREEN)
@@ -1233,6 +1244,8 @@ func scan() -> void:
 	scan_marks = targets(me.state.position, SCAN_RANGE, false)
 	if bounty != null:
 		bounty.on_scan(me)
+	if heist != null:
+		heist.on_scan(me)
 	scan_t = SCAN_SHOW
 	_scan_cool = SCAN_COOLDOWN
 	match_node.audio.play_ui("countdown", -6.0)
@@ -1349,6 +1362,9 @@ func open_menu(title: String, line: String, options: Array) -> void:
 
 func _garage_act(what: String) -> void:
 	var c := Profile.career()
+	if what.begins_with("heist:"):
+		heist.menu_act(what.substr(6))
+		return
 	if what.begins_with("trade:"):
 		trade.menu_act(what.substr(6))
 		return
@@ -1620,6 +1636,8 @@ func _hostiles() -> Array[int]:
 		out.append_array(trade.fighters())
 	if events != null:
 		out.append_array(events.fighters())
+	if heist != null:
+		out.append_array(heist.fighters())
 	return out
 
 
@@ -1765,6 +1783,11 @@ func prompt() -> String:
 		text = trade.prompt(_near)
 	elif _near.begins_with("event:"):
 		text = events.prompt(_near)
+	elif _near.begins_with("heist:"):
+		var ht := heist.prompt(_near)
+		if ht.contains("%"):
+			return ht
+		text = ht
 	elif _near == "bounty:board":
 		text = tr("BOUNTY_PROMPT_BOARD")
 	elif _near == "bounty:ask":
@@ -1901,7 +1924,8 @@ class _CityHud extends Control:
 				"galleria": ComicUI.MAGENTA, "terrace": ComicUI.GREEN, "skyport": ComicUI.YELLOW}.get(city.region, ComicUI.PAPER)
 		var title := tr(n[0])
 		if city.region == "interior" and city.estate != null and not city.estate.inside.is_empty():
-			title = str(Career.PROPERTIES[city.estate.inside[0]].name).to_upper()
+			title = str(Career.PROPERTIES[city.estate.inside[0]].name).to_upper() if Career.PROPERTIES.has(city.estate.inside[0]) \
+					else tr("HEIST_VAULT_ROOM")
 		var tw := UiStyle.font_hud_big.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(22 * s)).x
 		var tag := Rect2(Vector2(34, 22) * s, Vector2(tw + 44 * s, 30 * s))
 		ComicUI.draw_panel(self, tag, accent, ComicUI.INK, 3.0 * s)
@@ -2031,6 +2055,8 @@ class _CityHud extends Control:
 				places.append([p[1], "J", ComicUI.YELLOW])
 		if city.trade != null:
 			places.append_array(city.trade.map_places())
+		if city.heist != null:
+			places.append_array(city.heist.map_places())
 		if city.events != null:
 			for ev: Array in city.events.map_places():
 				var eq: Vector2 = to_map.call(Vector2((ev[0] as Vector3).x, (ev[0] as Vector3).z))
