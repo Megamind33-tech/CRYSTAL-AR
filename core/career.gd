@@ -32,6 +32,10 @@ const ITEMS := {
 	"oxygen_canister": {"name": "Oxygen canister", "base": 55},
 	"scrap": {"name": "Hull scrap", "base": 70},
 	"red_dust": {"name": "Red Dust (contraband)", "base": 0, "contraband": true},
+	"dust_frost": {"name": "Frost Dust (contraband)", "base": 0, "contraband": true},
+	"dust_bloom": {"name": "Bloom Dust (contraband)", "base": 0, "contraband": true},
+	"dust_float": {"name": "Float Dust (contraband)", "base": 0, "contraband": true},
+	"dust_spark": {"name": "Spark Dust (contraband)", "base": 0, "contraband": true},
 	"parcel": {"name": "Courier parcel", "base": 0, "no_sale": true},
 	"fresh_food": {"name": "Fresh greens (Deep Furrow)", "base": 60},
 	# Meat on Mars: vat-grown is everyday; fresh, from Deep Furrow's rabbit
@@ -258,7 +262,8 @@ static func fresh() -> Dictionary:
 			"oxygen": 100.0, "fatigue": 0.0, "water": 100.0, "lab": {}, "job": {}, "jobs_done": {}, "companion": "",
 			"armed": "", "rover_cargo": {},
 			"home": {"locker": {}, "lock": 0, "checked_at": 0, "robbed": {}}, "ride": 0,
-			"aircraft": -1, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {}}
+			"aircraft": -1, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
+			"trade": {"chain": 0, "sold": 0, "learned": [], "clients": {}, "orders": [], "dealers": {}, "order_at": 0}}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -1018,6 +1023,256 @@ func settle_property(now: int) -> Dictionary:
 				out.income += got
 				p["income_at"] = since + sols * day
 	return out
+
+
+# --- The Red Dust Trade (the Ledger's line of work) -------------------------
+
+## Red Dust and what it's cut with: each variant is one dose of dust mixed
+## with one of an additive, worth more ("mult") to the clients who like it.
+## Learned from Sable (TRADE_CHAIN step 2).
+const DUST_BASE := 90
+const VARIANTS := {
+	"red_dust": {"with": "", "mult": 1.0},
+	"dust_spark": {"with": "stim_cola", "mult": 1.4},
+	"dust_frost": {"with": "water_ice", "mult": 1.6},
+	"dust_float": {"with": "helium3", "mult": 1.8},
+	"dust_bloom": {"with": "algae_culture", "mult": 2.1},
+}
+## The trade's people: [name, district, the variant they like best].
+## Where they meet you: WorldLayout.client_spot(id).
+const CLIENTS := {
+	"lena": ["Lena V.", "galleria", "dust_frost"], "rook_jr": ["Rook Jr.", "city", "red_dust"],
+	"mags": ["Mags", "hollow", "dust_spark"], "tobi": ["Tobi", "terrace", "dust_float"],
+	"saoirse": ["Saoirse", "helios", "dust_bloom"], "dex": ["Dex", "skyport", "dust_frost"],
+	"nadia": ["Nadia", "galleria", "dust_bloom"], "pike": ["Pike", "hollow", "red_dust"],
+	"juno": ["Juno", "terrace", "dust_spark"], "ash": ["Ash", "helios", "dust_float"],
+}
+const FIRST_CLIENTS := ["rook_jr", "mags", "pike"]       ## Sable's introductions (step 1)
+const TURF_CLIENTS := ["lena", "tobi", "saoirse", "dex", "nadia", "juno", "ash"]  ## after the turf (step 3)
+const ORDER_EVERY := 150     ## seconds between new orders
+const ORDER_TIME := 600      ## seconds to deliver one
+const MAX_ORDERS := 3
+const DEALER_CUT := 0.2      ## a dealer keeps a fifth
+const DEALER_SALES := 6      ## doses a dealer moves in a sol
+const DEALER_RISK := 0.12    ## chance a sol that they're robbed (half if armed)
+## Sable's chain: 0 not started, 1 the first consignment (sell 4), 2 learn
+## a cut (bring her 2 water ice), 3 the turf (beat the Blue Line crew at the
+## Galleria), 4 done (dealers, all clients).
+const CHAIN_SELL := 4
+
+
+func trade() -> Dictionary:
+	return d.trade
+
+
+func dust_price(variant: String, client: String) -> int:
+	var mult: float = VARIANTS[variant].mult
+	var c: Dictionary = trade().clients.get(client, {})
+	var loyal := float(c.get("loyalty", 0)) / 200.0
+	var likes := 1.25 if CLIENTS.has(client) and CLIENTS[client][2] == variant else 1.0
+	return roundi(DUST_BASE * mult * likes * (1.0 + loyal))
+
+
+## Mixes `n` doses of a variant (dust + additive each). How many were made.
+func mix(variant: String, n: int) -> int:
+	if not VARIANTS.has(variant) or variant == "red_dust" or not variant in trade().learned:
+		return 0
+	var add: String = VARIANTS[variant].with
+	var made := mini(n, mini(int(d.stash.get("red_dust", 0)), int(d.stash.get(add, 0))))
+	for i in made:
+		use_up("red_dust")
+		use_up(add)
+	if made > 0:
+		receive(variant, made)
+	return made
+
+
+func meet_client(id: String) -> void:
+	if CLIENTS.has(id) and not trade().clients.has(id):
+		trade().clients[id] = {"loyalty": 10}
+
+
+## A new order from a client who knows you (every ORDER_EVERY s, up to
+## MAX_ORDERS open). `roll` picks who and what (0..1, the caller rolls).
+func next_order(now: int, roll: float) -> Dictionary:
+	var t := trade()
+	if (t.clients as Dictionary).is_empty() or (t.orders as Array).size() >= MAX_ORDERS or now < int(t.order_at):
+		return {}
+	t.order_at = now + ORDER_EVERY
+	var ids: Array = t.clients.keys()
+	var who: String = ids[int(roll * ids.size()) % ids.size()]
+	for o: Dictionary in t.orders:
+		if o.client == who:
+			return {}
+	var likes: String = CLIENTS[who][2]
+	var variant := likes if likes in t.learned or likes == "red_dust" else "red_dust"
+	var o := {"client": who, "variant": variant, "count": 1 + int(roll * 7.0) % 3, "due": now + ORDER_TIME}
+	(t.orders as Array).append(o)
+	return o
+
+
+## Hands over order `i`: paid, and they like you more. 0 if you don't have it.
+func deliver(i: int, now: int) -> int:
+	var t := trade()
+	if i < 0 or i >= (t.orders as Array).size():
+		return 0
+	var o: Dictionary = t.orders[i]
+	if int(d.stash.get(o.variant, 0)) < int(o.count):
+		return 0
+	var pay := dust_price(o.variant, o.client) * int(o.count)
+	_set_count(o.variant, int(d.stash.get(o.variant, 0)) - int(o.count))
+	d.wallet += pay
+	d.earned += pay
+	var c: Dictionary = t.clients[o.client]
+	c.loyalty = mini(int(c.loyalty) + (10 if now <= int(o.due) else 2), 100)
+	t.sold = int(t.sold) + int(o.count)
+	(t.orders as Array).remove_at(i)
+	_standing("ledger", 1)
+	gang_respect(3)
+	return pay
+
+
+## Orders past due go cold (the client trusts you less). Returns how many.
+func expire_orders(now: int) -> int:
+	var t := trade()
+	var gone := 0
+	for i in range((t.orders as Array).size() - 1, -1, -1):
+		var o: Dictionary = t.orders[i]
+		if now > int(o.due):
+			var c: Dictionary = t.clients.get(o.client, {})
+			if not c.is_empty():
+				c.loyalty = maxi(int(c.loyalty) - 15, 0)
+			(t.orders as Array).remove_at(i)
+			gone += 1
+	return gone
+
+
+## Sable's chain: what she asks, and whether you've done it.
+func chain_step() -> int:
+	return int(trade().chain)
+
+
+func chain_advance(now: int) -> bool:
+	var t := trade()
+	match int(t.chain):
+		0:  # she fronts you four doses and three names
+			t.chain = 1
+			receive("red_dust", CHAIN_SELL)
+			for id: String in FIRST_CLIENTS:
+				meet_client(id)
+			t.order_at = now
+			t.sold = 0
+			return true
+		1:
+			if int(t.sold) < CHAIN_SELL:
+				return false
+			t.chain = 2
+			return true
+		2:  # two water ice cores and she shows you the cuts
+			if int(d.stash.get("water_ice", 0)) < 2:
+				return false
+			use_up("water_ice")
+			use_up("water_ice")
+			t.learned = ["dust_spark", "dust_frost", "dust_float", "dust_bloom"]
+			t.chain = 3
+			return true
+	return false
+
+
+## The Blue Line crew's beaten at the Galleria: the corner's yours.
+func won_turf() -> void:
+	var t := trade()
+	if int(t.chain) != 3:
+		return
+	t.chain = 4
+	for id: String in TURF_CLIENTS:
+		meet_client(id)
+	_standing("ledger", 10)
+	gang_respect(60)
+
+
+## Dealers (from your gang's crew) sell in a district while you're away.
+func set_dealer(district: String, who: String, now: int) -> bool:
+	if chain_step() < 4 or not in_gang() or not who in d.gang.members:
+		return false
+	for k: String in trade().dealers:
+		if trade().dealers[k].who == who:
+			return false
+	trade().dealers[district] = {"who": who, "stock": {}, "since": now, "armed": false}
+	return true
+
+
+## Hands a dealer `n` doses of `variant` from your pack.
+func supply_dealer(district: String, variant: String, n: int) -> int:
+	var dl: Dictionary = trade().dealers.get(district, {})
+	if dl.is_empty():
+		return 0
+	var moved := mini(n, int(d.stash.get(variant, 0)))
+	if moved > 0:
+		_set_count(variant, int(d.stash.get(variant, 0)) - moved)
+		dl.stock[variant] = int(dl.stock.get(variant, 0)) + moved
+	return moved
+
+
+func arm_dealer(district: String) -> bool:
+	var dl: Dictionary = trade().dealers.get(district, {})
+	if dl.is_empty() or bool(dl.armed) or not use_up("armour_plate"):
+		return false
+	dl.armed = true
+	return true
+
+
+## Every sol each dealer sells up to DEALER_SALES doses (you get the money
+## less their cut), unless robbed (they lose the stock). `rolls` 0..1, one
+## per dealer per sol (the caller rolls). Returns {"cash", "robbed": [district]}.
+func settle_dealers(now: int, rolls: Array) -> Dictionary:
+	var out := {"cash": 0, "robbed": []}
+	var day := int(GameClock.DAY_SECONDS)
+	var k := 0
+	for district: String in trade().dealers:
+		var dl: Dictionary = trade().dealers[district]
+		var sols := (now - int(dl.since)) / day
+		for i in sols:
+			var roll: float = rolls[k % maxi(rolls.size(), 1)] if not rolls.is_empty() else 1.0
+			k += 1
+			if roll < DEALER_RISK * (0.5 if bool(dl.armed) else 1.0):
+				dl.stock = {}
+				out.robbed.append(district)
+				continue
+			var left := DEALER_SALES
+			for variant: String in (dl.stock as Dictionary).keys():
+				var n := mini(left, int(dl.stock[variant]))
+				if n <= 0:
+					continue
+				var cash := roundi(DUST_BASE * float(VARIANTS[variant].mult) * n * (1.0 - DEALER_CUT))
+				out.cash += cash
+				left -= n
+				dl.stock[variant] = int(dl.stock[variant]) - n
+				if int(dl.stock[variant]) <= 0:
+					dl.stock.erase(variant)
+		if sols > 0:
+			dl.since = int(dl.since) + sols * day
+	d.wallet += int(out.cash)
+	d.earned += int(out.cash)
+	return out
+
+
+## A Marshal's search: every dose you carry is taken, and a fine.
+func confiscate() -> int:
+	var n := 0
+	for variant: String in VARIANTS:
+		n += int(d.stash.get(variant, 0))
+		d.stash.erase(variant)
+	if n > 0:
+		d.wallet = maxi(int(d.wallet) - SEARCH_FINE, 0)
+	return n
+
+
+func carrying_dust() -> bool:
+	for variant: String in VARIANTS:
+		if int(d.stash.get(variant, 0)) > 0:
+			return true
+	return false
 
 
 # --- The Marshals' Bounty Board (free roam) --------------------------------

@@ -111,6 +111,10 @@ func _run() -> void:
 		print("CITY WALK: ate, food now %.0f, meat left %s" % [me.state.food, mc.d.stash])
 		get_tree().quit(0)
 		return
+	if Platform.user_args.has("--trade"):
+		await _trade_run(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--bounty"):
 		await _bounty_run(me)
 		get_tree().quit(0)
@@ -633,6 +637,62 @@ func _garage_run(me: SimPlayer) -> void:
 ## The living valley: the plaza by day (minimap, clock), roads and traffic,
 ## the new rides, Kasei Motors, the Red Lantern of an evening, a shop shut
 ## at night, the Hollow on its footings.
+func _trade_run(me: SimPlayer) -> void:
+	var c := Profile.career()
+	c.d.wallet = 5000
+	var weather: DustStorms = m.get_tree().root.find_child("Weather", true, false)
+	CityNpcs.hour_offset = fposmod(11.0 - GameClock.hour(Time.get_unix_time_from_system()), 24.0)
+	weather.hour_offset = CityNpcs.hour_offset
+	await _pose(me, WorldLayout.ledger_drop() + Vector3(0, 0, 1.5), 0.0, -0.05)
+	print("CITY WALK: at Sable's drop, near = %s" % m.city._near)
+	m.city.trade.menu_act("advance")
+	c.trade().order_at = 0
+	await _frames(150)
+	print("CITY WALK: chain %d, orders %s" % [c.chain_step(), c.trade().orders])
+	await _shot("t1_order")
+	var o: Dictionary = c.trade().orders[0]
+	var spot := WorldLayout.client_spot(o.client)
+	await _pose(me, spot + Vector3(0, 0, 2.0), 0.0, -0.05)
+	print("CITY WALK: at the meet, near = %s" % m.city._near)
+	await _shot("t2_meet")
+	var wallet: int = c.d.wallet
+	m.input.press(PlayerCommand.Action.INTERACT)
+	await _frames(10)
+	print("CITY WALK: delivered, +$%d" % (int(c.d.wallet) - wallet))
+	# Learn the cuts, mix at home, the burner.
+	c.trade().sold = Career.CHAIN_SELL
+	c.chain_advance(0)
+	c.receive("water_ice", 4)
+	c.chain_advance(0)
+	c.receive("red_dust", 6)
+	c.receive("stim_cola", 3)
+	await _pose(me, (WorldLayout.residences()[0][1] as Vector3) + Vector3(0, 0, 1.0), 0.0, -0.05)
+	m.city.trade.open_burner()
+	await _frames(10)
+	await _shot("t3_burner")
+	m.city.trade.menu_act("mix:dust_frost")
+	m.city.trade.menu_act("mix:dust_spark")
+	print("CITY WALK: mixed: frost %d, spark %d" % [int(c.d.stash.get("dust_frost", 0)), int(c.d.stash.get("dust_spark", 0))])
+	m.city.garage.visible = false
+	m.city._close_talk()
+	# A Marshal on the beat.
+	var marshal: Array = m.city._people.marshals[0]
+	var mp := (marshal[1] as PlayerSimState).position
+	m.server.world.teleport(me, mp + Vector3(2.0, 0.1, 0))
+	await _frames(30)
+	print("CITY WALK: by a Marshal, searching: %s" % (not m.city.trade._searcher.is_empty()))
+	await _shot("t4_stopped")
+	await _frames(240)
+	print("CITY WALK: still carrying dust: %s" % c.carrying_dust())
+	# The turf.
+	c.trade().chain = 3
+	var turf := WorldLayout.turf_spot()
+	await _pose(me, turf + Vector3(30, 0.1, 0), PI * 0.5, 0.0)
+	await _frames(30)
+	print("CITY WALK: turf fight on: %s, fighters %d" % [m.city.trade.in_fight(), m.city.trade.fighters().size()])
+	await _shot("t5_turf")
+
+
 func _bounty_run(me: SimPlayer) -> void:
 	var c := Profile.career()
 	c.d.stash["scanner"] = 1

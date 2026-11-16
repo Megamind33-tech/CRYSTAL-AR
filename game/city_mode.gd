@@ -66,6 +66,8 @@ var drink_button: Button
 var _kit_seen := {}
 var estate: CityEstate   ## doors, property, visas, aircraft, the gang, trees
 var bounty: CityBounty   ## the Marshals' Bounty Board
+var trade: CityTrade     ## the Red Dust Trade
+var burner_button: Button
 var draw_button: Button
 var torch_button: Button
 var drawn: bool = false          ## your gun out by choice (not a fight's)
@@ -137,6 +139,15 @@ func setup(layer: CanvasLayer) -> void:
 	layer.add_child(scan_button)
 	draw_button = _side_button(ComicUI.RED, 0, func() -> void: toggle_drawn())
 	torch_button = _side_button(ComicUI.PAPER, 0, func() -> void: toggle_torch())
+	burner_button = _side_button(ComicUI.MAGENTA, 0, func() -> void: _open_burner())
+	burner_button.text = tr("TRADE_BURNER")
+	burner_button.visible = false
+	burner_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	burner_button.offset_left = 232
+	burner_button.offset_right = 352
+	burner_button.offset_top = 384
+	burner_button.offset_bottom = 432
+	layer.add_child(burner_button)
 	for b: Button in [draw_button, torch_button]:
 		b.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		b.offset_left = 232
@@ -174,7 +185,8 @@ func setup(layer: CanvasLayer) -> void:
 	layer.add_child(quick_button)
 	# The touch controls take every tap first: let our buttons have their own.
 	match_node.touch.ui_blocks = func(pos: Vector2) -> bool:
-		for b: Button in [pack_button, quick_button, bino_button, scan_button, eat_button, drink_button, draw_button, torch_button]:
+		for b: Button in [pack_button, quick_button, bino_button, scan_button, eat_button, drink_button, draw_button, torch_button,
+				burner_button]:
 			if b.visible and b.get_global_rect().grow(6).has_point(pos):
 				return true
 		return false
@@ -305,6 +317,12 @@ func update() -> void:
 	var bounty_near := bounty.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
 	if _near.is_empty() and not bounty_near.is_empty():
 		_near = bounty_near
+	if trade == null:
+		trade = CityTrade.new(self)
+	var trade_near := trade.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	if _near.is_empty() and not trade_near.is_empty():
+		_near = trade_near
+	burner_button.visible = Profile.career().chain_step() >= 1 and not (screen.visible or talk.visible or shelf.visible or garage.visible)
 	var c := Profile.career()
 	_hollow_sign.text = tr("WORLD_HOLLOW") + "\n" + (tr("WORLD_HOLLOW_SIGN_YOURS") if c.owns_hollow() else tr("WORLD_HOLLOW_SIGN_THARSIS"))
 	_hollow_sign.modulate = ComicUI.GREEN if c.owns_hollow() else ComicUI.CYAN
@@ -348,6 +366,8 @@ func update() -> void:
 			estate.act(_near, me)
 		elif _near == "bounty:board":
 			bounty.open_board()
+		elif _near.begins_with("trade:"):
+			trade.act(_near, me)
 		elif _near == "bounty:ask":
 			bounty.ask(me)
 		elif _near.begins_with("kiosk:"):
@@ -689,7 +709,8 @@ func crime(kind: String) -> void:
 ## valley is peaceful again.
 ## A fight on: a raid, guards after you, the Marshals, or a bounty gone hot.
 func in_fight() -> bool:
-	return _raid != null or _guards != null or _police != null or (bounty != null and bounty.hot)
+	return _raid != null or _guards != null or _police != null or (bounty != null and bounty.hot) \
+			or (trade != null and trade.in_fight())
 
 
 func _sync_combat() -> void:
@@ -705,6 +726,11 @@ func _sync_combat() -> void:
 func toggle_drawn() -> void:
 	drawn = not drawn
 	_sync_combat()
+
+
+func _open_burner() -> void:
+	if trade != null:
+		trade.open_burner()
 
 
 func toggle_torch() -> void:
@@ -1315,6 +1341,9 @@ func open_menu(title: String, line: String, options: Array) -> void:
 
 func _garage_act(what: String) -> void:
 	var c := Profile.career()
+	if what.begins_with("trade:"):
+		trade.menu_act(what.substr(6))
+		return
 	if what.begins_with("bounty:"):
 		bounty.menu_act(what.substr(7))
 		return
@@ -1579,6 +1608,8 @@ func _hostiles() -> Array[int]:
 		out.append_array(_guards.raiders)
 	if bounty != null:
 		out.append_array(bounty.fighters())
+	if trade != null:
+		out.append_array(trade.fighters())
 	return out
 
 
@@ -1720,6 +1751,8 @@ func prompt() -> String:
 			return tr("CITY_BREAKING_IN") % roundi(_breakin_t / _breakin_seconds() * 100.0)
 		else:
 			text = tr("CITY_PROMPT_BREAK_IN") % home[2]
+	elif _near.begins_with("trade:"):
+		text = trade.prompt(_near)
 	elif _near == "bounty:board":
 		text = tr("BOUNTY_PROMPT_BOARD")
 	elif _near == "bounty:ask":
@@ -1984,6 +2017,8 @@ class _CityHud extends Control:
 		for p: Array in city.people_now():
 			if p[0] == "jobs":
 				places.append([p[1], "J", ComicUI.YELLOW])
+		if city.trade != null:
+			places.append_array(city.trade.map_places())
 		for p: Array in places:
 			var q: Vector2 = to_map.call(Vector2((p[0] as Vector3).x, (p[0] as Vector3).z))
 			if q.distance_to(c) < rad - 6 * s:

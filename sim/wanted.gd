@@ -10,7 +10,7 @@ const MAX := 5
 const OFFICERS := [0, 2, 3, 5, 6, 8]
 ## Crimes and their stars.
 const CRIMES := {"holdup": 1, "convoy": 2, "theft": 2, "rover": 1, "officer_down": 1, "assault": 1, "burglary": 2, "burglary_quiet": 1, "shots": 1, "trespass": 1,
-		"vandalism": 1}
+		"vandalism": 1, "evading": 1}
 
 var stars: int = 0
 var unseen: float = 0.0  ## seconds out of every officer's sight

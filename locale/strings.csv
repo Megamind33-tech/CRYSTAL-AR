@@ -954,3 +954,45 @@ DIR_S,south
 DIR_SW,south-west
 DIR_W,west
 DIR_NW,north-west
+MAP_HOLLOW,Hollow
+TRADE_BURNER,Burner
+TRADE_SABLE,Sable · the Ledger
+TRADE_PROMPT_SABLE,The Ledger's drop: talk business with Sable
+TRADE_PROMPT_DELIVER,Hand over %d× %s to %s
+TRADE_ORDER,%s wants %d× %s · meet in %s (burner)
+TRADE_ORDER_COLD,An order went cold: a client trusts you less
+TRADE_DEALERS_PAID,Your dealers paid in $%d
+TRADE_DEALER_ROBBED,Your dealer in %s was robbed: the stock's gone
+TRADE_RAN,You walked off on a Marshal: evading a search
+TRADE_CONFISCATED,"Searched: %d doses taken, fined $%d"
+TRADE_STOPPED,"A Marshal stops you: stay, or walk away fast"
+TRADE_STOP,"Hold it. Search.|Arms out. Let's see the pack.|Stop right there, citizen."
+TRADE_TURF_FIGHT,The Blue Line crew: they won't give up the corner
+TRADE_TURF_WON,"The Galleria corner is yours: more clients, and dealers"
+TRADE_DELIVERED,%s pays $%d
+TRADE_THANKS,Good stuff.|Same time next sol.|You're all right.|Pleasure doing business.
+TRADE_SHORT,You need %d× %s
+TRADE_CHAIN_0,"The Ledger needs a runner who can keep quiet. I front you four doses and three names. Sell them, and we talk."
+TRADE_CHAIN_1,Sell the doses to the names I gave you (%d to go). They'll text you where. Run out? Buy more from me.
+TRADE_CHAIN_2,Plain dust is for amateurs. Bring me two water ice cores from the crater and I'll show you the cuts.
+TRADE_CHAIN_3,"The Blue Line crew sells on the Galleria's west corner. Take it from them, and the outlands are yours to work."
+TRADE_CHAIN_4,The corner's ours. Put your crew on the streets: the burner runs your dealers. Need dust? I've got it.
+TRADE_CHAIN_DONE_1,Sable fronts you four doses: watch the burner for orders
+TRADE_CHAIN_DONE_2,Sable's impressed: now learn the cuts
+TRADE_CHAIN_DONE_3,You know the cuts: mix them at home (burner)
+TRADE_TAKE_WORK,Take the work
+TRADE_SOLD_THEM,They're sold
+TRADE_BRING_ICE,Here's the ice (2 water ice cores)
+TRADE_BUY_DUST,Buy 5 doses of red dust: $%d
+TRADE_ORDER_LINE,%s: %d× %s in %s · %d min left
+TRADE_NO_ORDERS,No orders right now.
+TRADE_CARRYING,Carrying: %s
+TRADE_NOTHING,nothing
+TRADE_DEALER_LINE,Dealer %s in %s · %d doses %s
+TRADE_ARMED,(armed)
+TRADE_MIX,Mix %s (dust + %s) · %d
+TRADE_MIX_HOME, · at home
+TRADE_RESTOCK,Restock the %s dealer
+TRADE_ARM,Arm the %s dealer (armour plate)
+TRADE_STATION,Put %s dealing in %s
+TRADE_MIXED,Mixed %d× %s

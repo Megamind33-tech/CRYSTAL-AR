@@ -714,3 +714,33 @@ const BOUNTY_HIDEOUTS := {
 static func bounty_hideout(id: String) -> Vector3:
 	var p: Vector2 = BOUNTY_HIDEOUTS[id]
 	return WorldTerrain.at(p.x, p.y)
+
+
+# --- The Red Dust Trade ---
+
+## Sable's drop: a crate in the lee of the Hollow's bunkhouses, by her.
+static func ledger_drop() -> Vector3:
+	return WorldTerrain.at(HOLLOW.x - 45, HOLLOW.z - 26) + Vector3(0, 0.1, 0)
+
+
+## Where a client meets you: a quiet corner of their district.
+const CLIENT_SPOTS := {
+	"rook_jr": Vector3(-6, 0, 44), "mags": Vector2(28, 30), "pike": Vector2(-36, -20), "lena": Vector2(62, 28),
+	"nadia": Vector2(-62, -24), "tobi": Vector2(-30, 58), "juno": Vector2(20, -28), "saoirse": Vector2(48, 72),
+	"ash": Vector2(-70, 60), "dex": Vector2(-30, 40),
+}
+
+
+static func client_spot(id: String) -> Vector3:
+	var region: String = Career.CLIENTS[id][1]
+	if region == "city":
+		return CityLayout.ORIGIN + (CLIENT_SPOTS[id] as Vector3)
+	var off: Vector2 = CLIENT_SPOTS[id]
+	var c: Vector2 = {"hollow": Vector2(HOLLOW.x, HOLLOW.z), "galleria": GALLERIA, "terrace": TERRACE, "helios": HELIOS,
+			"skyport": SKYPORT}[region]
+	return WorldTerrain.at(c.x + off.x, c.y + off.y) + Vector3(0, 0.1, 0)
+
+
+## The Blue Line crew's corner (the turf fight): the Galleria's west forecourt.
+static func turf_spot() -> Vector3:
+	return WorldTerrain.at(GALLERIA.x - 72, GALLERIA.y + 18)

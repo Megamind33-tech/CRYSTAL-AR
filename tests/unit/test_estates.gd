@@ -139,3 +139,49 @@ func test_bounty_board_alive_or_dead() -> void:
 			"alive pays more")
 	for id: String in Career.BOUNTIES:
 		assert_true(WorldLayout.BOUNTY_HIDEOUTS.has(id), "%s has a hideout" % id)
+
+
+func test_red_dust_trade_chain_orders_and_dealers() -> void:
+	var c := _rich()
+	assert_true(c.chain_advance(NOW), "Sable fronts the work")
+	assert_eq(int(c.d.stash.get("red_dust", 0)), Career.CHAIN_SELL)
+	assert_eq((c.trade().clients as Dictionary).size(), 3, "and three names")
+	assert_false(c.chain_advance(NOW), "sell them first")
+	var o := c.next_order(NOW, 0.1)
+	assert_false(o.is_empty(), "a client texts an order")
+	assert_true(c.next_order(NOW + 5, 0.5).is_empty(), "not straight after")
+	var wallet: int = c.d.wallet
+	var pay := c.deliver(0, NOW + 30)
+	assert_gt(pay, 0, "hand it over, get paid")
+	assert_eq(int(c.d.wallet), wallet + pay)
+	c.receive("red_dust", 10)
+	c.trade().sold = Career.CHAIN_SELL
+	assert_true(c.chain_advance(NOW))
+	assert_eq(c.mix("dust_frost", 3), 0, "the cuts aren't known yet")
+	c.receive("water_ice", 5)
+	assert_true(c.chain_advance(NOW), "the ice buys the cuts")
+	assert_eq(c.mix("dust_frost", 3), 3)
+	assert_gt(c.dust_price("dust_frost", "lena"), c.dust_price("red_dust", "lena"), "a cut is worth more, most to who likes it")
+	# Missed orders go cold.
+	c.trade().orders = [{"client": "mags", "variant": "red_dust", "count": 1, "due": NOW}]
+	var before: int = c.trade().clients.mags.loyalty
+	assert_eq(c.expire_orders(NOW + 1), 1)
+	assert_lt(int(c.trade().clients.mags.loyalty), before)
+	# The turf, then dealers from the crew.
+	c.won_turf()
+	assert_eq(c.chain_step(), 4)
+	assert_eq((c.trade().clients as Dictionary).size(), Career.CLIENTS.size(), "everyone knows you now")
+	c.form_gang("Phobos Cartel")
+	var who := c.recruit()
+	assert_true(c.set_dealer("galleria", who, NOW))
+	assert_gt(c.supply_dealer("galleria", "red_dust", 20), 0)
+	wallet = c.d.wallet
+	var got := c.settle_dealers(NOW + DAY + 1, [0.9])
+	assert_gt(int(got.cash), 0, "a sol's sales, less the dealer's cut")
+	assert_eq(int(c.d.wallet), wallet + int(got.cash))
+	got = c.settle_dealers(NOW + DAY * 2 + 1, [0.01])
+	assert_true("galleria" in got.robbed, "and sometimes they're robbed")
+	# A search takes it all.
+	c.receive("dust_bloom", 2)
+	assert_gt(c.confiscate(), 0)
+	assert_false(c.carrying_dust())

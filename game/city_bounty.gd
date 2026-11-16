@@ -393,7 +393,7 @@ func draw_card(ci: CanvasItem, s: float) -> void:
 	if not active():
 		return
 	var i := info()
-	var r := Rect2(Vector2(34, 380) * s, Vector2(300, 112) * s)
+	var r := Rect2(Vector2(34, 446) * s, Vector2(300, 112) * s)
 	ComicUI.draw_panel(ci, r, Color(ComicUI.INK, 0.86), ComicUI.RED, 3.0 * s)
 	var face := Rect2(r.position + Vector2(8, 8) * s, Vector2(96, 96) * s)
 	ci.draw_rect(face, Color(0.3, 0.12, 0.12, 0.9))

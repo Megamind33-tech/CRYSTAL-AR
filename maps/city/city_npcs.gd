@@ -112,7 +112,9 @@ func _ready() -> void:
 	# The Kasei Marshals walk their beat round the plaza and past the gate.
 	for path: Array in CityLayout.patrols():
 		var mv := _body("", COLORS[5], i, true, "marshal")
-		_walkers.append([mv, _state(path[0], 0.0), path, 1])
+		var ms := _state(path[0], 0.0)
+		_walkers.append([mv, ms, path, 1])
+		marshals.append([mv, ms])
 		i += 1
 
 
@@ -281,6 +283,40 @@ static func _line(key: String) -> String:
 	return lines[randi() % lines.size()]
 
 
+## The Marshals on their beat ([visual, state]): they stop people.
+var marshals: Array = []
+## People waiting to meet you (the Red Dust Trade's clients): key -> [visual, state].
+var _meets := {}
+
+
+func meet(key: String, who: String, at: Vector3) -> void:
+	if _meets.has(key):
+		return
+	var v := _body(who, COLORS[(hash(key) & 0xff) % COLORS.size()], absi(hash(key)) % 40, _breathes(at))
+	v.face_movement = false
+	_meets[key] = [v, _state(at, 0.0)]
+
+
+func unmeet(key: String) -> void:
+	if _meets.has(key):
+		(_meets[key][0] as Node).queue_free()
+		_meets.erase(key)
+
+
+func meet_visual(key: String) -> Node3D:
+	return _meets[key][0] if _meets.has(key) else null
+
+
+func _step_meets() -> void:
+	for key: String in _meets:
+		var v: PlayerVisual = _meets[key][0]
+		var st: PlayerSimState = _meets[key][1]
+		if player_position != Vector3.INF and st.position.distance_to(player_position) < 12.0:
+			var to := player_position - st.position
+			st.yaw = lerp_angle(st.yaw, atan2(-to.x, -to.z), 0.1)
+		v.update_from(null, st, 1.0, _time)
+
+
 ## Your gang's crew (Career.d.gang.members): they walk with you, a few
 ## steps around you, run to catch up, and wait out of the way while a fight
 ## is on (the fight has them as fighters then). Presentation only.
@@ -331,12 +367,15 @@ func _step_crew(delta: float) -> void:
 func _process(delta: float) -> void:
 	_time += delta
 	_step_crew(delta)
-	for b: Label3D in _bubbles.keys():
-		_bubbles[b] = float(_bubbles[b]) - delta
-		if float(_bubbles[b]) <= 0.0 or not is_instance_valid(b):
+	_step_meets()
+	for b: Variant in _bubbles.keys():
+		if not is_instance_valid(b):  # its speaker's gone
 			_bubbles.erase(b)
-			if is_instance_valid(b):
-				b.queue_free()
+			continue
+		_bubbles[b] = float(_bubbles[b]) - delta
+		if float(_bubbles[b]) <= 0.0:
+			_bubbles.erase(b)
+			(b as Node).queue_free()
 	for w: Array in _walkers:
 		var v: PlayerVisual = w[0]
 		var s: PlayerSimState = w[1]
