@@ -76,6 +76,7 @@ static func draw_panel(ci: CanvasItem, r: Rect2, fill: Color, border: Color = IN
 
 
 ## Outlined text (ink outline) at baseline `pos`; `align` 0 left, 1 centre, 2 right.
+## Inside a text batch (begin_text_batch) it's queued instead.
 static func draw_text(ci: CanvasItem, pos: Vector2, text: String, font: Font, px: int, col: Color,
 		align: int = 0, outline: int = 6) -> float:
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
@@ -83,7 +84,42 @@ static func draw_text(ci: CanvasItem, pos: Vector2, text: String, font: Font, px
 		pos.x -= w * 0.5
 	elif align == 2:
 		pos.x -= w
+	if _batch_owner == ci:
+		_batch.append([pos, text, font, px, col, outline])
+		return w
 	if outline > 0:
 		ci.draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, outline, Color(INK, col.a))
 	ci.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, col)
 	return w
+
+
+# --- Text batching ---
+# Each outlined string is two draws (outline glyphs and fill glyphs sit in
+# different glyph textures), and any shape drawn between two strings stops
+# them sharing one. A HUD that draws text and shapes in turn (panels,
+# minimap letters) costs a draw call per string or two. In a batch, the
+# shapes go first and the text after, outlines then fills, grouped by font
+# and size: a handful of draws. Text then always sits over the shapes.
+
+static var _batch_owner: CanvasItem = null
+static var _batch: Array = []  ## [pos, text, font, px, colour, outline]
+
+
+static func begin_text_batch(ci: CanvasItem) -> void:
+	_batch_owner = ci
+	_batch.clear()
+
+
+static func flush_text_batch(ci: CanvasItem) -> void:
+	_batch_owner = null
+	if _batch.is_empty():
+		return
+	var by_outline := _batch.duplicate()
+	by_outline.sort_custom(func(a: Array, b: Array) -> bool:
+		return [(a[2] as Font).get_instance_id(), a[3], a[5]] < [(b[2] as Font).get_instance_id(), b[3], b[5]])
+	for t: Array in by_outline:
+		if int(t[5]) > 0:
+			ci.draw_string_outline(t[2], t[0], t[1], HORIZONTAL_ALIGNMENT_LEFT, -1, t[3], t[5], Color(INK, (t[4] as Color).a))
+	for t: Array in by_outline:
+		ci.draw_string(t[2], t[0], t[1], HORIZONTAL_ALIGNMENT_LEFT, -1, t[3], t[4])
+	_batch.clear()

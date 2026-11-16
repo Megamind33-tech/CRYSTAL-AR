@@ -61,6 +61,7 @@ anti_aliasing/quality/use_debanding=true
 textures/default_filters/anisotropic_filtering_level=4
 textures/default_filters/anisotropic_filtering_level.mobile=2
 rendering_device/fallback_to_opengl3=true
+rendering_device/staging_buffer/max_size_mb=16
 renderer/rendering_method="mobile"
 lightmapping/lightmap_gi/use_bicubic_filter.mobile=false
 textures/vram_compression/import_s3tc_bptc=true

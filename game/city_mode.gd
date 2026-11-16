@@ -93,6 +93,9 @@ var _home_checked: bool = false  ## the building you're in, if any, and its air 
 
 
 func setup(layer: CanvasLayer) -> void:
+	match_node.get_tree().node_added.connect(_draw_distance)
+	for n: Node in match_node.find_children("*", "GeometryInstance3D", true, false):
+		_draw_distance(n)
 	hud_layer = _CityHud.new()
 	hud_layer.city = self
 	layer.add_child(hud_layer)
@@ -511,6 +514,7 @@ func _step_traffic(me: SimPlayer, dt: float) -> void:
 				pts.append(sample[0])
 			var kit: String = VehicleSim.MODELS[k % VehicleSim.MODELS.size()].kit
 			var mi := Comic.kit_instance(kit, Vector3.ZERO, 0.0)
+			mi.visibility_range_end = 220.0  # traffic: not drawn across the valley
 			match_node.add_child(mi)
 			var wheels := RoverVisuals.add_wheels(mi, kit)
 			_traffic.append([mi, pts, 30.0 + float(k * 53 % maxi(pts.size() * 2 - 60, 1)), 1.0 if k % 2 == 0 else -1.0, TRAFFIC_SPEED,
@@ -624,7 +628,7 @@ func _animate_factory(delta: float) -> void:
 			_arms.append([base, shoulder, elbow, float(i) * 1.3, sparks])
 		for k in 3:
 			var car := MeshInstance3D.new()
-			car.mesh = Comic.kit_mesh(VehicleSim.MODELS[k].kit)
+			car.mesh = Comic.kit_mesh_lod(VehicleSim.MODELS[k].kit)
 			car.material_override = Comic.kit_material()
 			RoverVisuals.add_wheels(car, VehicleSim.MODELS[k].kit)
 			match_node.add_child(car)
@@ -760,6 +764,31 @@ static func _tinted(mesh: PrimitiveMesh, c: Color) -> ArrayMesh:
 	var out := ArrayMesh.new()
 	out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return out
+
+
+## Small things (props, arms, augers, sparks, pickups, signs) are drawn to
+## SMALL_RANGE at most: on phones each is a draw call or two, and from 500 m
+## they're a pixel. The world's own pieces have their view distances
+## (StaticBatches) and people theirs (CityNpcs), so they're left alone.
+const SMALL_RANGE := 180.0
+const SMALL_SIZE := 12.0
+
+
+func _draw_distance(n: Node) -> void:
+	var gi := n as GeometryInstance3D
+	if gi == null or gi.visibility_range_end > 0.0 or not match_node.is_ancestor_of(gi):
+		return
+	var p: Node = gi.get_parent()
+	while p != null and p != match_node:
+		if p is PlayerVisual or p.name == &"Presentation" or p.name == &"WorldPresentation":
+			return
+		p = p.get_parent()
+	var box := gi.get_aabb()
+	if gi is GPUParticles3D:
+		box = (gi as GPUParticles3D).visibility_aabb
+	if box.get_longest_axis_size() * maxf(absf(gi.scale.x), maxf(absf(gi.scale.y), absf(gi.scale.z))) < SMALL_SIZE:
+		gi.visibility_range_end = SMALL_RANGE
+		gi.visibility_range_end_margin = 10.0
 
 
 ## A crime the Marshals saw: stars, and officers on the way.
@@ -1127,6 +1156,7 @@ func _locker_mark(home: Array) -> void:
 	cab.mesh = _tinted(box, Color(0.25, 0.55, 0.6) if yours else Color(0.45, 0.4, 0.38))
 	cab.material_override = Comic.kit_material(0.01)
 	cab.position = (home[1] as Vector3) + Vector3(0, 1.0, 0)
+	cab.visibility_range_end = 40.0  # it's indoors
 	match_node.add_child(cab)
 	var sign := Label3D.new()
 	sign.text = tr("CITY_YOUR_HOME") if yours else tr("CITY_HOME_SIGN") % home[2]
@@ -1138,6 +1168,7 @@ func _locker_mark(home: Array) -> void:
 	sign.modulate = ComicUI.GREEN if yours else ComicUI.PAPER
 	sign.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	sign.position = (home[1] as Vector3) + Vector3(0, 2.5, 0)
+	sign.visibility_range_end = 30.0  # two draws each: only near the door
 	match_node.add_child(sign)
 
 
@@ -1978,7 +2009,14 @@ class _CityHud extends Control:
 	func _process(_delta: float) -> void:
 		queue_redraw()
 
+	## Text is queued and drawn after the shapes, grouped by font (ComicUI's
+	## text batch): the HUD was ~70 draw calls, text and shapes taking turns.
 	func _draw() -> void:
+		ComicUI.begin_text_batch(self)
+		_draw_hud()
+		ComicUI.flush_text_batch(self)
+
+	func _draw_hud() -> void:
 		if city == null or city.screen.visible:
 			return
 		city.discovery_t = maxf(city.discovery_t - get_process_delta_time(), 0.0)

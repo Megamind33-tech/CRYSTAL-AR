@@ -41,7 +41,7 @@ func _dress() -> void:
 		attach.bone_name = g[1]
 		_skeleton.add_child(attach)
 		var mi := MeshInstance3D.new()
-		mi.mesh = Comic.kit_mesh(g[0])
+		mi.mesh = Comic.kit_mesh_lod(g[0])
 		mi.material_override = Comic.kit_material(0.006)
 		# The kit is modelled where it sits on the man's body at rest: map it
 		# onto this body around the bone (a woman's head and chest are a

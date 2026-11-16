@@ -42,6 +42,10 @@ func _run() -> void:
 	var o := CityLayout.ORIGIN
 	await _pose(me, o + Vector3(0, 0.05, 30), 0.0, -0.05)
 	await _shot("c1_arrival")
+	if Platform.user_args.has("--budget"):
+		await _budget_probe(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--perf"):
 		await _perf_probe(me)
 		get_tree().quit(0)
@@ -491,8 +495,11 @@ func _perf_probe(me: SimPlayer) -> void:
 			phys += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
 			draws += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
 			prims += Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)
-		print("PERF %s: process %.2f ms, physics %.2f ms, draw calls %d, primitives %dk, nodes %d" % [place[0],
-				proc / n, phys / n, int(draws / n), int(prims / n / 1000.0), Performance.get_monitor(Performance.OBJECT_NODE_COUNT)])
+		print("PERF %s: process %.2f ms, physics %.2f ms, draw calls %d, primitives %dk, nodes %d, video %.1f MB (textures %.1f, buffers %.1f)" % [place[0],
+				proc / n, phys / n, int(draws / n), int(prims / n / 1000.0), Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+				Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+				Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
+				Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0])
 		print("PERF %s sections: %s" % [place[0], Diagnostics.section_report()])
 		# The heaviest meshes on screen.
 		var tally := {}
@@ -1202,3 +1209,246 @@ func _dig_run(me: SimPlayer) -> void:
 	await _pose(me, WorldTerrain.at(200.0, 135.0) + Vector3(0, 0.3, 0), 0.0, -0.15)
 	await _shot("d5_rim_extraction")
 	get_tree().quit(0)
+
+
+## --budget: the phone budget (86 draws, 100k triangles, 86 MB video
+## memory) at each probe spot, and what spends it: each group hidden in
+## turn, and the textures the scene holds.
+func _budget_probe(me: SimPlayer) -> void:
+	var spots := [["plaza", CityLayout.ORIGIN + Vector3(0, 0.05, 10), 0.0],
+			["hollow", WorldTerrain.at(WorldLayout.HOLLOW.x, WorldLayout.HOLLOW.z + 10) + Vector3(0, 0.1, 0), 0.0],
+			["helios", WorldTerrain.at(WorldLayout.HELIOS.x + 5, WorldLayout.HELIOS.y + 78) + Vector3(0, 0.1, 0), 0.0],
+			["galleria_in", WorldTerrain.at(WorldLayout.GALLERIA.x - 34, WorldLayout.GALLERIA.y) + Vector3(0, 0.1, 0), -PI * 0.5],
+			["outlands", WorldTerrain.at(-300, 60) + Vector3(0, 0.1, 0), 1.0]]
+	var only := Platform.get_user_arg("--spot", "")
+	for place: Array in spots:
+		if not only.is_empty() and place[0] != only:
+			continue
+		await _pose(me, place[1], place[2], -0.05)
+		await _shot("budget_" + str(place[0]))
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		get_tree().paused = true  # nothing moves while it's measured
+		var all := await _measure()
+		print("BUDGET %s: draws %d, triangles %dk, video %.1f MB (textures %.1f, buffers %.1f)" % [place[0], all.x, all.y / 1000,
+				Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+				Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
+				Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0])
+		if Platform.user_args.has("--cats"):
+			for cat: String in ["Batch_", "Terrain_", "Tree_", "character", "label", "particles", "ui", "People", "WorldPresentation", "Skeleton3D", "mesh_outside_world"]:
+				var nodes := []
+				for gi: Node in get_tree().root.find_children("*", "", true, false):
+					var hit := false
+					match cat:
+						"character": hit = gi is PlayerVisual
+						"label": hit = gi is Label3D
+						"particles": hit = gi is GPUParticles3D or gi is CPUParticles3D
+						"ui": hit = gi is CanvasLayer
+						"Skeleton3D": hit = gi is Skeleton3D
+						"mesh_outside_world": hit = gi is GeometryInstance3D and not _under(gi, "WorldPresentation") and not _under(gi, "People")
+						_: hit = str(gi.name).begins_with(cat)
+					if hit and gi.get("visible"):
+						nodes.append(gi)
+				var before := await _measure()
+				for n: Node in nodes:
+					n.set("visible", false)
+				var after := await _measure()
+				for n: Node in nodes:
+					n.set("visible", true)
+				print("BUDGET %s   %-12s x%-3d draws %4d -> %4d  triangles %6.1fk -> %6.1fk" % [place[0], cat, nodes.size(), before.x, after.x, before.y / 1000.0, after.y / 1000.0])
+		if Platform.user_args.has("--outside"):
+			var cam := get_viewport().get_camera_3d()
+			var tally := {}
+			for gi: GeometryInstance3D in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
+				if not gi.is_visible_in_tree() or _under(gi, "WorldPresentation") or _under(gi, "People"):
+					continue
+				var d := cam.global_position.distance_to(gi.global_position)
+				if gi.visibility_range_end > 0.0 and d > gi.visibility_range_end:
+					continue
+				var path := str(gi.get_parent().get_parent().name if gi.get_parent().get_parent() != null else "") + "/" + str(gi.get_parent().name) + "/" + str(gi.name).get_slice("@", 0)
+				var mi := gi as MeshInstance3D
+				var key := "%s %s mesh=%s" % [gi.get_class(), path.left(60), str(mi.mesh.resource_name if mi != null and mi.mesh != null else "")]
+				var row: Array = tally.get(key, [0, 9999.0])
+				tally[key] = [row[0] + 1, minf(row[1], d)]
+			for k: String in tally:
+				print("BUDGET %s   outside x%d nearest %.0f m  %s" % [place[0], tally[k][0], tally[k][1], k])
+		if Platform.user_args.has("--ui"):
+			var items := []
+			for layer: CanvasLayer in get_tree().root.find_children("*", "CanvasLayer", true, false):
+				if not layer.visible:
+					continue
+				for c: Node in layer.get_children():
+					items.append(c)
+					for g: Node in c.get_children():
+						if g is CanvasItem:
+							items.append(g)
+			for c: Node in items:
+				if not c.is_inside_tree() or not (c is CanvasItem) or not (c as CanvasItem).is_visible_in_tree():
+					continue
+				var parent := c.get_parent()
+				var idx := c.get_index()
+				var before := await _measure()
+				parent.remove_child(c)
+				var after := await _measure()
+				parent.add_child(c)
+				parent.move_child(c, idx)
+				if before.x - after.x >= 2:
+					var desc := []
+					for k: Node in c.find_children("*", "", true, false):
+						if desc.size() < 5:
+							desc.append(k.get_class() + ((":" + str(k.get("text")).left(10)) if k.get("text") is String else ""))
+					print("BUDGET %s   ui %-28s draws %3d  %s %s %s" % [place[0], str(parent.name).left(10) + "/" + str(c.name).left(16), before.x - after.x, c.get_class(), str(c.get("text")).left(16) if c.get("text") is String else "", desc])
+			var cam := get_viewport().get_camera_3d()
+			for b: MeshInstance3D in get_tree().root.find_children("Batch_*", "MeshInstance3D", true, false):
+				var d := cam.global_position.distance_to(b.global_position)
+				if d < b.visibility_range_end + 10.0 or b.visibility_range_end == 0.0:
+					print("BUDGET %s   %s d=%.0f tris %d outline %s" % [place[0], b.name, d, b.mesh.surface_get_array_index_len(0) / 3, b.material_override.next_pass != null])
+		if Platform.user_args.has("--groups"):
+			for g: Array in _budget_groups():
+				for n: Node3D in g[1]:
+					n.visible = not n.visible
+				var less := await _measure()
+				for n: Node3D in g[1]:
+					n.visible = not n.visible
+				all = await _measure()
+				if all.x - less.x != 0 or all.y - less.y > 500:
+					print("BUDGET %s   %-28s draws %4d  triangles %5.1fk  (x%d)" % [place[0], g[0], all.x - less.x, (all.y - less.y) / 1000.0, g[1].size()])
+		if Platform.user_args.has("--hold"):
+			print("BUDGET HOLD %s %d" % [place[0], Time.get_ticks_msec()])
+			await get_tree().create_timer(40.0, true).timeout
+		get_tree().paused = false
+	_character_report()
+	_texture_report()
+
+
+## What one character costs: draws (surfaces x passes) and triangles per
+## mesh, for the first few people.
+func _character_report() -> void:
+	var shown := 0
+	for pv: PlayerVisual in get_tree().root.find_children("*", "PlayerVisual", true, false):
+		if shown >= 3:
+			break
+		shown += 1
+		var draws := 0
+		var parts := []
+		for mi: MeshInstance3D in pv.find_children("*", "MeshInstance3D", true, false):
+			if not mi.is_visible_in_tree() or mi.mesh == null:
+				continue
+			for si in mi.mesh.get_surface_count():
+				var passes := 0
+				var mat := mi.get_active_material(si)
+				while mat != null:
+					passes += 1
+					mat = mat.next_pass
+				if mi.material_overlay != null:
+					passes += 1
+				draws += passes
+				parts.append("%s[%d] %d tris x%d" % [mi.name, si, mi.mesh.surface_get_array_index_len(si) / 3, passes])
+		print("CHAR %s (%s): %d draws: %s" % [pv.name, pv.get_parent().name, draws, ", ".join(parts)])
+
+
+func _under(n: Node, name: String) -> bool:
+	while n != null:
+		if n.name == name:
+			return true
+		n = n.get_parent()
+	return false
+
+
+func _measure() -> Vector2i:
+	await _frames(4)
+	var d := 0.0
+	var p := 0.0
+	for i in 4:
+		await get_tree().process_frame
+		d += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+		p += Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)
+	return Vector2i(int(d / 4), int(p / 4))
+
+
+## Visible 3D nodes grouped by what they are.
+func _budget_groups() -> Array:
+	var groups := {}
+	for gi: GeometryInstance3D in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
+		if not gi.is_visible_in_tree():
+			continue
+		var key := ""
+		var target: Node3D = gi
+		var n: Node = gi
+		while n != null and key.is_empty():
+			var nm := str(n.name)
+			if n is PlayerVisual:
+				key = "character"
+				target = n
+			elif nm.begins_with("Tree_"):
+				key = "tree"
+			elif nm.begins_with("Batch_"):
+				key = "batch" + ("_flat" if nm.ends_with("_flat") else "")
+			elif nm.begins_with("Terrain_"):
+				key = "terrain"
+			elif nm.begins_with("Kit_"):
+				key = "kit:" + nm.trim_prefix("Kit_").get_slice("/", 0)
+			n = n.get_parent()
+		if key.is_empty():
+			key = gi.get_class() + " @" + str(gi.get_parent().name).left(20)
+		var arr: Array = groups.get(key, [])
+		if not arr.has(target):
+			arr.append(target)
+		groups[key] = arr
+	var out := []
+	for k: String in groups:
+		out.append([k, groups[k]])
+	return out
+
+
+## Every texture reachable from the scene (materials, shader parameters,
+## UI), largest first, with its estimated video memory.
+func _texture_report() -> void:
+	var seen := {}
+	for n: Node in get_tree().root.find_children("*", "", true, false):
+		for prop: Dictionary in n.get_property_list():
+			if prop.type == TYPE_OBJECT:
+				_collect_textures(n.get(prop.name), seen, 0)
+	var rows := []
+	var total := 0.0
+	for t: Variant in seen:
+		if not seen[t]:
+			continue
+		var mb := _tex_mb(t)
+		total += mb
+		rows.append([mb, t])
+	rows.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
+	print("TEXTURES %d, %.1f MB" % [rows.size(), total])
+	for r: Array in rows.slice(0, 60):
+		var t: Texture2D = r[1]
+		var img := t.get_image() if not (t is ViewportTexture) else null
+		print("TEX %6.2f MB %dx%d %s %s" % [r[0], t.get_width(), t.get_height(), str(img.get_format()) if img != null else "?",
+				t.resource_path if not t.resource_path.is_empty() else t.get_class()])
+
+
+func _collect_textures(o: Variant, seen: Dictionary, depth: int) -> void:
+	if depth > 4 or not (o is Resource):
+		return
+	if o is Texture2D:
+		seen[o] = true
+		return
+	if seen.has(o):
+		return
+	seen[o] = false
+	if o is ShaderMaterial:
+		for u: Dictionary in (o as ShaderMaterial).shader.get_shader_uniform_list() if (o as ShaderMaterial).shader != null else []:
+			_collect_textures((o as ShaderMaterial).get_shader_parameter(u.name), seen, depth + 1)
+	if o is Mesh:
+		for i in (o as Mesh).get_surface_count():
+			_collect_textures((o as Mesh).surface_get_material(i), seen, depth + 1)
+	for prop: Dictionary in (o as Object).get_property_list():
+		if prop.type == TYPE_OBJECT and prop.usage & PROPERTY_USAGE_STORAGE:
+			_collect_textures((o as Object).get(prop.name), seen, depth + 1)
+
+
+func _tex_mb(t: Texture2D) -> float:
+	if t is ViewportTexture:
+		return 0.0
+	var img := t.get_image()
+	if img == null:
+		return 0.0
+	return img.get_data_size() / 1048576.0

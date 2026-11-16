@@ -57,8 +57,21 @@ static func outline_meshes(root: Node, width: float = 0.012) -> void:
 ## A kit piece as one mesh: every surface merged, its Blender material's
 ## colour baked into the vertex colours (one draw, plus one for the outline).
 static func kit_mesh(piece: String) -> ArrayMesh:
-	if _kit_meshes.has(piece):
-		return _kit_meshes[piece]
+	if not _kit_meshes.has(piece):
+		var mesh := ArrayMesh.new()
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, kit_arrays(piece))
+		_kit_meshes[piece] = mesh
+	return _kit_meshes[piece]
+
+
+static var _kit_arrays: Dictionary = {}  ## piece -> surface arrays (CPU only)
+
+
+## kit_mesh's vertices (unindexed: position, normal, colour) without
+## putting them on the GPU: what StaticBatches merges.
+static func kit_arrays(piece: String) -> Array:
+	if _kit_arrays.has(piece):
+		return _kit_arrays[piece]
 	# "world/x" pieces live with the world (art/environment/world).
 	var path := ("res://art/environment/%s.glb" % piece) if piece.contains("/") else KIT % piece
 	var scene: Node = (load(path) as PackedScene).instantiate()
@@ -81,8 +94,39 @@ static func kit_mesh(piece: String) -> ArrayMesh:
 				st.set_normal((xf.basis * normals[k]).normalized())
 				st.add_vertex(xf * verts[k])
 	scene.free()
-	var mesh := st.commit()
-	_kit_meshes[piece] = mesh
+	var out := st.commit_to_arrays()
+	_kit_arrays[piece] = out
+	return out
+
+
+static var _kit_lods: Dictionary = {}  ## piece -> ArrayMesh with detail levels
+
+
+## The kit piece indexed, with generated detail levels, compressed: what a
+## placed piece draws (on phones a far piece is a few hundred triangles).
+static func kit_mesh_lod(piece: String) -> ArrayMesh:
+	if not _kit_lods.has(piece):
+		_kit_lods[piece] = compact_mesh(kit_arrays(piece), true)
+	return _kit_lods[piece]
+
+
+## A triangle surface indexed (shared vertices merged), with generated
+## detail levels if `lods`, its attributes compressed (16-bit positions and
+## normals: about half the video memory).
+static func compact_mesh(arrays: Array, lods: bool) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.create_from_arrays(arrays)
+	st.index()
+	var indexed := st.commit_to_arrays()
+	var levels := {}
+	if lods:
+		var im := ImporterMesh.new()
+		im.add_surface(Mesh.PRIMITIVE_TRIANGLES, indexed)
+		im.generate_lods(25.0, 60.0, [])
+		for l in im.get_surface_lod_count(0):
+			levels[im.get_surface_lod_size(0, l)] = im.get_surface_lod_indices(0, l)
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, indexed, [], levels, Mesh.ARRAY_FLAG_COMPRESS_ATTRIBUTES)
 	return mesh
 
 
@@ -127,6 +171,17 @@ static func kit_material(outline_width: float = 0.03) -> ShaderMaterial:
 	return _kit_mats[outline_width]
 
 
+static var _plain: ShaderMaterial
+
+
+## The kit material without the outline pass (roads, far batches): one draw.
+static func kit_material_plain() -> ShaderMaterial:
+	if _plain == null:
+		_plain = kit_material().duplicate() as ShaderMaterial
+		_plain.next_pass = null
+	return _plain
+
+
 static var _paints: Dictionary = {}  ## colour -> ShaderMaterial
 
 
@@ -143,7 +198,7 @@ static func kit_material_paint(color: Color) -> ShaderMaterial:
 static func kit_instance(piece: String, at: Vector3, yaw_deg: float = 0.0, scale: float = 1.0) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.name = "Kit_" + piece
-	mi.mesh = kit_mesh(piece)
+	mi.mesh = kit_mesh_lod(piece)
 	mi.material_override = kit_material()
 	mi.transform = Transform3D(Basis(Vector3.UP, deg_to_rad(yaw_deg)).scaled(Vector3.ONE * scale), at)
 	return mi

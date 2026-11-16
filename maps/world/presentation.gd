@@ -5,6 +5,8 @@ extends Node3D
 ## the Mars daylight and the people (city and settlement).
 
 const TEX := "res://art/environment/mars/%s_%s_1k.jpg"
+## Static kit pieces merged by cell (StaticBatches): the draw-call budget.
+var batches: StaticBatches
 const TERRAIN_SHADER := preload("res://presentation/comic/comic_terrain.gdshader")
 
 
@@ -14,9 +16,10 @@ func _ready() -> void:
 	mat.shader = TERRAIN_SHADER
 	mat.set_shader_parameter("sand_tex", load(TEX % ["red_sand", "diff"]))
 	mat.set_shader_parameter("rock_tex", load(TEX % ["terrain_red_01", "diff"]))
-	for mi: MeshInstance3D in terrain_scene.find_children("*", "MeshInstance3D", true, false):
-		mi.material_override = mat
-	add_child(terrain_scene)
+	_merge_terrain(terrain_scene, mat)
+	batches = StaticBatches.new()
+	batches.name = "Batches"
+	add_child(batches)
 	# The city plaza's paving.
 	var paving := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
@@ -27,13 +30,11 @@ func _ready() -> void:
 	add_child(paving)
 	for p: Array in CityLayout.pieces():
 		if not str(p[0]).is_empty():
-			var piece := Comic.kit_instance(p[0], p[1], p[2], p[3])
-			piece.visibility_range_end = 420.0  # the city from the outlands: the dome carries it
-			add_child(piece)
+			batches.add_piece(p[0], p[1], p[2], p[3], 420.0)  # the city from the outlands: the dome carries it
 		if p[0] == "life/hab_open" or p[0] == "shopfront":
 			_room_light(p[1])
 	for t: Array in CityLayout.terminals():
-		add_child(Comic.kit_instance("kiosk", t[1], t[2], 1.0))
+		batches.add_piece("kiosk", t[1], t[2], 1.0, 260.0)
 	_city_life()
 	_deep_furrow()
 	for p: Array in WorldLayout.pieces():
@@ -41,12 +42,8 @@ func _ready() -> void:
 			continue  # collision only
 		var base := WorldTerrain.at(p[1], p[2])
 		var sink := 0.15 if FOOTINGS.has(p[0]) else 0.3  # small props bed into the dust
-		var kit := Comic.kit_instance(p[0], base + Vector3(0, -sink, 0), p[3], p[4])
 		var reach: float = VIEW_RANGE.get(p[0], 0.0 if LANDMARKS.has(p[0]) else 380.0)
-		if reach > 0.0:
-			kit.visibility_range_end = reach
-			kit.visibility_range_end_margin = 10.0
-		add_child(kit)
+		batches.add_piece(p[0], base + Vector3(0, -sink, 0), p[3], p[4], reach)
 		if FOOTINGS.has(p[0]):
 			_footing(base, FOOTINGS[p[0]] * float(p[4]), float(p[3]))
 		if p[0] == "life/hab_open" or p[0] == "shopfront":
@@ -56,6 +53,7 @@ func _ready() -> void:
 	_districts()
 	_monorail()
 	_estates()
+	batches.build()
 	MarsLighting.add(self)
 	MarsLighting.add_moons(self)
 	var weather := DustStorms.new()
@@ -84,12 +82,15 @@ func _city_life() -> void:
 		add_child(mi)
 	var ti := 0
 	for p: Array in CityLayout.plants():
+		if p[0] != "life/tree":
+			batches.add_piece(p[0], p[1], p[2], 1.0, 160.0)
+			continue
 		var plant := Comic.kit_instance(p[0], p[1], p[2], 1.0)
-		if p[0] == "life/tree":
-			plant.name = "Tree_c%d" % ti
-			ti += 1
+		plant.name = "Tree_c%d" % ti  # each its own node: felled ones are hidden
+		plant.visibility_range_end = 200.0
+		ti += 1
 		add_child(plant)
-	add_child(Comic.kit_instance("life/city_dome", CityLayout.ORIGIN + Vector3(0, -0.4, 0), 0.0, 1.0))
+	batches.add_piece("life/city_dome", CityLayout.ORIGIN + Vector3(0, -0.4, 0), 0.0, 1.0, 0.0)
 	var glass := MeshInstance3D.new()
 	var sphere := SphereMesh.new()
 	sphere.radius = 74.0
@@ -202,7 +203,7 @@ func _estates() -> void:
 			continue  # the city's own trees are drawn with its parks
 		var tree := Comic.kit_instance("life/tree", t[1], float(hash(t[0]) % 360), 1.6)
 		tree.name = "Tree_" + str(t[0])
-		tree.visibility_range_end = 320.0
+		tree.visibility_range_end = 220.0
 		add_child(tree)
 	add_child(Comic.kit_instance("kiosk", WorldLayout.visa_office() + Vector3(0, 0, -1.4), 0.0, 1.2))
 	add_child(Comic.kit_instance("kiosk", WorldLayout.aero_counter() + Vector3(0, 0, -1.4), 0.0, 1.2))
@@ -222,6 +223,7 @@ func _estates() -> void:
 		sign.modulate = ComicUI.YELLOW
 		sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		sign.position = (place[0] as Vector3) + Vector3(0, 4.0, -1.4)
+		sign.visibility_range_end = 90.0
 		add_child(sign)
 
 
@@ -270,21 +272,19 @@ func _monorail() -> void:
 		if since >= PYLON_EVERY:
 			since = 0.0
 			var ground := WorldTerrain.at(q.x, q.y)
-			var pylon := Comic.kit_instance("districts/mono_pylon", ground, rad_to_deg(atan2(dir.x, dir.y)), 1.0)
-			pylon.scale = Vector3(1.0, (at.y - 1.1 - ground.y) / 9.9, 1.0)
-			pylon.visibility_range_end = 450.0
-			add_child(pylon)
-		if k == 0:
-			continue
-		var a: Vector3 = _track[k - 1][0]
+			var pb := Basis(Vector3.UP, atan2(dir.x, dir.y)).scaled(Vector3(1.0, (at.y - 1.1 - ground.y) / 9.9, 1.0))
+			batches.add_arrays(Comic.kit_arrays("districts/mono_pylon"), Transform3D(pb, ground), 450.0)
+		if k == 0 or k % 3 != 0:
+			continue  # the guideway in 6 m sections (it's smoothed: straight enough)
+		var a: Vector3 = _track[k - 3][0]
 		var n := Vector3(-dir.y, 0, dir.x)
 		_box_strip(st, a, at, n, 0.9, 1.1, white)        # the beam
 		_box_strip(st, a + Vector3(0, 1.12, 0), at + Vector3(0, 1.12, 0), n, 0.25, 0.1, cyan)  # its guide light
-	st.generate_normals()
-	var mi := MeshInstance3D.new()
-	mi.mesh = st.commit()
-	mi.material_override = Comic.kit_material(0.02)
-	add_child(mi)
+		if k % 48 == 0 or k >= samples.size() - 3:  # a section per ~100 m, batched by where it is
+			st.generate_normals()
+			batches.add_arrays(st.commit_to_arrays(), Transform3D.IDENTITY, 450.0, true, at)
+			st = SurfaceTool.new()
+			st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i in 3:
 		var car := Comic.kit_instance("districts/mono_car", Vector3.ZERO, 0.0, 1.0)
 		add_child(car)
@@ -347,6 +347,8 @@ func _deploy_pad(at: Vector3) -> void:
 	var torus := TorusMesh.new()
 	torus.inner_radius = WorldLayout.DEPLOY_RADIUS - 0.4
 	torus.outer_radius = WorldLayout.DEPLOY_RADIUS
+	torus.rings = 48
+	torus.ring_segments = 4
 	ring.mesh = torus
 	ring.position = at + Vector3(0, 0.08, 0)
 	var glow := StandardMaterial3D.new()
@@ -384,6 +386,10 @@ func _roads() -> void:
 	for road: Array in WorldLayout.roads():
 		var pts := WorldLayout.road_samples(road, 1.5)
 		for i in pts.size() - 1:
+			if i > 0 and i % 64 == 0:  # a section per ~100 m, batched by where it is
+				_road_section(st, pts[i][0])
+				st = SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
 			var a: Vector2 = pts[i][0]
 			var b: Vector2 = pts[i + 1][0]
 			var da: Vector2 = pts[i][1]
@@ -397,12 +403,17 @@ func _roads() -> void:
 				_skirt(st, a, b, na, nb, side * ROAD_HALF, tarmac)  # no gap under the edge, from any angle
 			if i % 4 < 2:  # the dashed centre line
 				_strip(st, a, b, na, nb, -0.12, 0.12, 0.08, yellow)
+		_road_section(st, pts[pts.size() - 1][0])
+		st = SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+
+
+## A stretch of road into the batches: no outline (it's flat), drawn to 300 m.
+func _road_section(st: SurfaceTool, near: Vector2) -> void:
 	st.generate_normals()
-	var mi := MeshInstance3D.new()
-	mi.mesh = st.commit()
-	mi.material_override = Comic.kit_material(0.0)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mi)
+	var arrays := st.commit_to_arrays()
+	if not arrays.is_empty() and arrays[Mesh.ARRAY_VERTEX] != null and (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() > 0:
+		batches.add_arrays(arrays, Transform3D.IDENTITY, 300.0, false, WorldTerrain.at(near.x, near.y))
 
 
 ## The road's side from its edge (offset `o` across) down into the ground.
@@ -444,10 +455,35 @@ func _footing(at: Vector3, size: Vector2, yaw_deg: float) -> void:
 			var corner := at + b * Vector3(size.x * cx, 0, size.y * cz)
 			low = minf(low, WorldTerrain.height(corner.x, corner.z))
 	var depth := at.y - low + 1.5
-	var mi := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3(size.x, depth, size.y)
-	mi.mesh = CityMode._tinted(box, Color(0.36, 0.32, 0.3))
-	mi.material_override = Comic.kit_material(0.012)
-	mi.transform = Transform3D(b, at + Vector3(0, -depth * 0.5 + 0.06, 0))
-	add_child(mi)
+	batches.add_mesh(CityMode._tinted(box, Color(0.36, 0.32, 0.3)), Transform3D(b, at + Vector3(0, -depth * 0.5 + 0.06, 0)), 380.0)
+
+
+## The terrain's 160 m tiles merged into TERRAIN_TILE squares (fewer
+## draws), each with its own detail levels.
+const TERRAIN_TILE := 320.0
+## Coarser detail levels sooner: smooth dunes lose little, and the ground was
+## a third of a frame's triangles.
+const TERRAIN_LOD_BIAS := 0.35
+
+
+func _merge_terrain(terrain_scene: Node, mat: Material) -> void:
+	var groups := {}
+	for mi: MeshInstance3D in terrain_scene.find_children("*", "MeshInstance3D", true, false):
+		var c := Comic._transform_to(terrain_scene, mi) * mi.mesh.get_aabb().get_center()
+		var key := Vector2i(floori((c.x + WorldTerrain.SIZE * 0.5) / TERRAIN_TILE), floori((c.z + WorldTerrain.SIZE * 0.5) / TERRAIN_TILE))
+		var list: Array = groups.get(key, [])
+		list.append(mi)
+		groups[key] = list
+	for key: Vector2i in groups:
+		var st := SurfaceTool.new()
+		for mi: MeshInstance3D in groups[key]:
+			st.append_from(mi.mesh, 0, Comic._transform_to(terrain_scene, mi))
+		var out := MeshInstance3D.new()
+		out.name = "Terrain_%d_%d" % [key.x, key.y]
+		out.mesh = Comic.compact_mesh(st.commit_to_arrays(), true)
+		out.lod_bias = TERRAIN_LOD_BIAS
+		out.material_override = mat
+		add_child(out)
+	terrain_scene.free()

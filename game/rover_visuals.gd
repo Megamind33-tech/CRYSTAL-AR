@@ -118,12 +118,16 @@ func _fly_pose(i: int, v: SimVehicle, mi: MeshInstance3D, at: Vector3, world: Si
 ## hub at the pivot), for model `kit`.
 func _build(i: int, kit: String) -> void:
 	var mi := _rovers[i]
-	mi.mesh = Comic.kit_mesh(kit)
+	mi.mesh = Comic.kit_mesh_lod(kit)
 	_wheels[i] = add_wheels(mi, kit)
 
 
 ## Puts model `kit`'s wheels on body `mi` (any vehicle drawn anywhere: the
 ## valley's traffic, the showroom): [[steering pivot, steers, wheel], ...].
+## Wheels aren't drawn past this (metres): the body carries the vehicle.
+const WHEEL_RANGE := 45.0
+
+
 static func add_wheels(mi: Node3D, kit: String) -> Array:
 	var out := []
 	for c in mi.get_children():
@@ -141,6 +145,9 @@ static func add_wheels(mi: Node3D, kit: String) -> Array:
 		pivot.position = Vector3(p.x, r, p.z)
 		mi.add_child(pivot)
 		var wheel := Comic.kit_instance(kit + ("_wheel_l" if p.x < 0.0 else "_wheel_r"), Vector3.ZERO, 0.0)
+		# Dark tyres: no outline pass (one draw, not two), and none from afar.
+		wheel.material_override = Comic.kit_material_plain()
+		wheel.visibility_range_end = WHEEL_RANGE
 		pivot.add_child(wheel)  # spins (about X)
 		out.append([pivot, absf(p.z - front) < 0.01, wheel])
 	return out

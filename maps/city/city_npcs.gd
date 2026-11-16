@@ -174,6 +174,7 @@ func _board(text: String, at: Vector3) -> void:
 	board.modulate = ComicUI.YELLOW
 	board.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	board.position = at
+	board.visibility_range_end = 30.0  # two draws each (text, outline): read up close
 	add_child(board)
 
 
@@ -192,12 +193,23 @@ func _body(display_name: String, color: Color, variant: int, indoors: bool = tru
 ## the fighters' keep theirs) and not drawn past NPC_RANGE, where they're a
 ## few pixels tall. Most of a frame's triangles were their bodies.
 const NPC_RANGE := 50.0
+## Faces (eyes, brows) and small gear are drawn only this near (metres).
+const FACE_RANGE := 8.0
+const GEAR_RANGE := 20.0
+
+
 func _light_weight(v: Node) -> void:
 	for gi: GeometryInstance3D in v.find_children("*", "GeometryInstance3D", true, false):
 		gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		if gi.visibility_range_end <= 0.0 or gi.visibility_range_end > NPC_RANGE:
-			gi.visibility_range_end = NPC_RANGE
-			gi.visibility_range_end_margin = 4.0
+		var reach := NPC_RANGE
+		var mi := gi as MeshInstance3D
+		if gi.name in [&"Eyes", &"Eyebrows"]:
+			reach = FACE_RANGE  # thousands of triangles for a few pixels
+		elif mi != null and mi.mesh != null and mi.mesh.get_aabb().get_longest_axis_size() < 0.6:
+			reach = GEAR_RANGE  # small kit on the body (two draws each)
+		if gi.visibility_range_end <= 0.0 or gi.visibility_range_end > reach:
+			gi.visibility_range_end = reach
+			gi.visibility_range_end_margin = 2.0
 
 
 func _state(at: Vector3, yaw: float) -> PlayerSimState:
