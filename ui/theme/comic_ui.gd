@@ -64,6 +64,17 @@ static func draw_panel(ci: CanvasItem, r: Rect2, fill: Color, border: Color = IN
 		slant: float = -1.0, shadow: bool = true) -> void:
 	var k := r.size.y * SKEW if slant < 0.0 else slant
 	var q := quad(r, k)
+	if _batch_owner == ci and _shapes != null:
+		if shadow:
+			var sh2 := q.duplicate()
+			for i in sh2.size():
+				sh2[i] += Vector2(5, 6)
+			_shapes.colored_polygon(sh2, Color(MAGENTA.darkened(0.6), 0.8 * fill.a))
+		_shapes.colored_polygon(q, fill)
+		var line2 := q.duplicate()
+		line2.append(q[0])
+		_shapes.polyline(line2, border, width)
+		return
 	if shadow:
 		var sh := q.duplicate()
 		for i in sh.size():
@@ -103,15 +114,18 @@ static func draw_text(ci: CanvasItem, pos: Vector2, text: String, font: Font, px
 
 static var _batch_owner: CanvasItem = null
 static var _batch: Array = []  ## [pos, text, font, px, colour, outline]
+static var _shapes: ShapeBatch = null  ## panels go here too, if given
 
 
-static func begin_text_batch(ci: CanvasItem) -> void:
+static func begin_text_batch(ci: CanvasItem, shapes: ShapeBatch = null) -> void:
 	_batch_owner = ci
+	_shapes = shapes
 	_batch.clear()
 
 
 static func flush_text_batch(ci: CanvasItem) -> void:
 	_batch_owner = null
+	_shapes = null
 	if _batch.is_empty():
 		return
 	var by_outline := _batch.duplicate()

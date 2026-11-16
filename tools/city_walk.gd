@@ -1212,8 +1212,15 @@ func _dig_run(me: SimPlayer) -> void:
 
 
 ## --budget: the phone budget (86 draws, 100k triangles, 86 MB video
-## memory) at each probe spot, and what spends it: each group hidden in
-## turn, and the textures the scene holds.
+## memory) at each probe spot (--spot NAME for one), and what spends it:
+## --cats hides each category in turn (world batches, terrain, people, the
+## HUD...), --ui detaches each HUD element in turn, --outside lists what's
+## drawn outside the world's presentation, --hold waits 40 s per spot for a
+## remote debugger's video-memory list. Draw counts include the 2D HUD.
+## Run it at the phone's resolution with the phone's settings:
+##   xvfb-run -s "-screen 0 2400x1080x24" godot --resolution 2400x1080 \
+##     res://tools/city_walk.tscn -- --budget --phone-lod \
+##     --quality medium,lod=4.0,probe=false,msaa=1 --cats
 func _budget_probe(me: SimPlayer) -> void:
 	var spots := [["plaza", CityLayout.ORIGIN + Vector3(0, 0.05, 10), 0.0],
 			["hollow", WorldTerrain.at(WorldLayout.HOLLOW.x, WorldLayout.HOLLOW.z + 10) + Vector3(0, 0.1, 0), 0.0],
@@ -1302,16 +1309,6 @@ func _budget_probe(me: SimPlayer) -> void:
 				var d := cam.global_position.distance_to(b.global_position)
 				if d < b.visibility_range_end + 10.0 or b.visibility_range_end == 0.0:
 					print("BUDGET %s   %s d=%.0f tris %d outline %s" % [place[0], b.name, d, b.mesh.surface_get_array_index_len(0) / 3, b.material_override.next_pass != null])
-		if Platform.user_args.has("--groups"):
-			for g: Array in _budget_groups():
-				for n: Node3D in g[1]:
-					n.visible = not n.visible
-				var less := await _measure()
-				for n: Node3D in g[1]:
-					n.visible = not n.visible
-				all = await _measure()
-				if all.x - less.x != 0 or all.y - less.y > 500:
-					print("BUDGET %s   %-28s draws %4d  triangles %5.1fk  (x%d)" % [place[0], g[0], all.x - less.x, (all.y - less.y) / 1000.0, g[1].size()])
 		if Platform.user_args.has("--hold"):
 			print("BUDGET HOLD %s %d" % [place[0], Time.get_ticks_msec()])
 			await get_tree().create_timer(40.0, true).timeout
@@ -1363,41 +1360,6 @@ func _measure() -> Vector2i:
 		d += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
 		p += Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)
 	return Vector2i(int(d / 4), int(p / 4))
-
-
-## Visible 3D nodes grouped by what they are.
-func _budget_groups() -> Array:
-	var groups := {}
-	for gi: GeometryInstance3D in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
-		if not gi.is_visible_in_tree():
-			continue
-		var key := ""
-		var target: Node3D = gi
-		var n: Node = gi
-		while n != null and key.is_empty():
-			var nm := str(n.name)
-			if n is PlayerVisual:
-				key = "character"
-				target = n
-			elif nm.begins_with("Tree_"):
-				key = "tree"
-			elif nm.begins_with("Batch_"):
-				key = "batch" + ("_flat" if nm.ends_with("_flat") else "")
-			elif nm.begins_with("Terrain_"):
-				key = "terrain"
-			elif nm.begins_with("Kit_"):
-				key = "kit:" + nm.trim_prefix("Kit_").get_slice("/", 0)
-			n = n.get_parent()
-		if key.is_empty():
-			key = gi.get_class() + " @" + str(gi.get_parent().name).left(20)
-		var arr: Array = groups.get(key, [])
-		if not arr.has(target):
-			arr.append(target)
-		groups[key] = arr
-	var out := []
-	for k: String in groups:
-		out.append([k, groups[k]])
-	return out
 
 
 ## Every texture reachable from the scene (materials, shader parameters,

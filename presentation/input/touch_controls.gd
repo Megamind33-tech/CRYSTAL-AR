@@ -130,12 +130,12 @@ func _draw_drive() -> void:
 		if FLY.has(id):
 			var cc := r.get_center()
 			var rr := r.size.x * 0.5
-			draw_circle(cc + Vector2(4, 5), rr, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
-			draw_circle(cc, rr * (0.94 if on else 1.0), Color(ComicUI.CYAN, 0.55) if on else Color(ComicUI.INK, 0.62))
-			draw_arc(cc, rr, 0.0, TAU, 48, ComicUI.INK, 6.0)
-			draw_arc(cc, rr - 3.0, 0.0, TAU, 48, ComicUI.CYAN, 2.5)
+			_sb.circle(cc + Vector2(4, 5), rr, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
+			_sb.circle(cc, rr * (0.94 if on else 1.0), Color(ComicUI.CYAN, 0.55) if on else Color(ComicUI.INK, 0.62))
+			_sb.arc(cc, rr, 0.0, TAU, 48, ComicUI.INK, 6.0)
+			_sb.arc(cc, rr - 3.0, 0.0, TAU, 48, ComicUI.CYAN, 2.5)
 			var up := -1.0 if id == "climb" else 1.0
-			draw_colored_polygon(PackedVector2Array([cc + Vector2(0, up * rr * 0.5), cc + Vector2(-rr * 0.42, -up * rr * 0.25),
+			_sb.colored_polygon(PackedVector2Array([cc + Vector2(0, up * rr * 0.5), cc + Vector2(-rr * 0.42, -up * rr * 0.25),
 					cc + Vector2(rr * 0.42, -up * rr * 0.25)]), Color(1, 1, 1, 0.9))
 			ComicUI.draw_text(self, cc + Vector2(0, rr + s * 0.03), tr("TOUCH_CLIMB" if id == "climb" else "TOUCH_DIVE"),
 					UiStyle.font_hud_bold, roundi(s * 0.026), Color(1, 1, 1, 0.9), 1, 3)
@@ -145,27 +145,27 @@ func _draw_drive() -> void:
 		if id.begins_with("steer"):
 			var c := r.get_center()
 			var rad := r.size.x * 0.5
-			draw_circle(c + Vector2(4, 5), rad, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
-			draw_circle(c, rad * (0.94 if on else 1.0), fill)
-			draw_arc(c, rad, 0.0, TAU, 48, ComicUI.INK, 6.0)
-			draw_arc(c, rad - 3.0, 0.0, TAU, 48, accent, 2.5)
+			_sb.circle(c + Vector2(4, 5), rad, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
+			_sb.circle(c, rad * (0.94 if on else 1.0), fill)
+			_sb.arc(c, rad, 0.0, TAU, 48, ComicUI.INK, 6.0)
+			_sb.arc(c, rad - 3.0, 0.0, TAU, 48, accent, 2.5)
 			var dir := -1.0 if id == "steer_left" else 1.0
-			draw_colored_polygon(PackedVector2Array([c + Vector2(dir * rad * 0.5, 0), c + Vector2(-dir * rad * 0.25, -rad * 0.42),
+			_sb.colored_polygon(PackedVector2Array([c + Vector2(dir * rad * 0.5, 0), c + Vector2(-dir * rad * 0.25, -rad * 0.42),
 					c + Vector2(-dir * rad * 0.25, rad * 0.42)]), Color(1, 1, 1, 0.9))
 		else:
 			var q := ComicUI.quad(r, r.size.y * 0.08)
 			var sh := q.duplicate()
 			for i in sh.size():
 				sh[i] += Vector2(4, 5)
-			draw_colored_polygon(sh, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
-			draw_colored_polygon(q, fill)
+			_sb.colored_polygon(sh, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
+			_sb.colored_polygon(q, fill)
 			var line := q.duplicate()
 			line.append(q[0])
-			draw_polyline(line, ComicUI.INK, 6.0)
-			draw_polyline(line, accent, 2.5)
+			_sb.polyline(line, ComicUI.INK, 6.0)
+			_sb.polyline(line, accent, 2.5)
 			for k in 4:  # the pedal's tread
 				var y := r.position.y + r.size.y * (0.25 + k * 0.15)
-				draw_line(Vector2(r.position.x + r.size.x * 0.22, y), Vector2(r.end.x - r.size.x * 0.12, y), Color(1, 1, 1, 0.5), 3.0)
+				_sb.line(Vector2(r.position.x + r.size.x * 0.22, y), Vector2(r.end.x - r.size.x * 0.12, y), Color(1, 1, 1, 0.5), 3.0)
 			ComicUI.draw_text(self, Vector2(r.get_center().x, r.end.y - s * 0.02), tr("TOUCH_GAS" if id == "gas" else "TOUCH_BRAKE"),
 					UiStyle.font_hud_big, roundi(s * 0.032), Color(1, 1, 1, 0.95), 1, 4)
 
@@ -456,7 +456,33 @@ func _is_pressed(button: Dictionary) -> bool:
 	return false
 
 
+## Shapes first, then the icons and text (2D batching: a button's circle,
+## icon and circle again in turn cost a draw call each).
+var _icons: Array = []  ## [texture, rect, colour] queued during _draw
+var _queue_icons: bool = false
+
+
+var _sb: ShapeBatch  ## circles, rings and arrows: one draw call
+
+
 func _draw() -> void:
+	if _sb == null:
+		_sb = ShapeBatch.new(self)
+	_sb.begin()
+	_icons.clear()
+	_queue_icons = true
+	ComicUI.begin_text_batch(self, _sb)
+	_draw_controls()
+	_queue_icons = false
+	_icons.sort_custom(func(a: Array, b: Array) -> bool: return (a[0] as Texture2D).get_instance_id() < (b[0] as Texture2D).get_instance_id())
+	for i: Array in _icons:
+		draw_texture_rect(i[0], i[1], false, i[2])
+	_icons.clear()
+	ComicUI.flush_text_batch(self)
+	_sb.flush()
+
+
+func _draw_controls() -> void:
 	var screen := _screen()
 	if driving and not editing:
 		_draw_drive()
@@ -464,9 +490,9 @@ func _draw() -> void:
 			if b.id == "interact" and show_interact:
 				var c := _center(b)
 				var r: float = b.radius * screen.y
-				draw_circle(c, r, Color(ComicUI.INK, 0.62))
-				draw_arc(c, r, 0.0, TAU, 48, ComicUI.INK, 6.0)
-				draw_arc(c, r - 3.0, 0.0, TAU, 48, ComicUI.GREEN, 2.5)
+				_sb.circle(c, r, Color(ComicUI.INK, 0.62))
+				_sb.arc(c, r, 0.0, TAU, 48, ComicUI.INK, 6.0)
+				_sb.arc(c, r - 3.0, 0.0, TAU, 48, ComicUI.GREEN, 2.5)
 				_icon(b.id, c, r * 0.66, Color(1, 1, 1, 0.9))
 		return
 	for b in _buttons:
@@ -484,36 +510,36 @@ func _draw() -> void:
 			accent = ComicUI.GREEN
 		if pressed:
 			r *= 0.94  # a slight push-in
-		draw_circle(center + Vector2(4, 5), r, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
-		draw_circle(center, r, Color(accent, 0.55) if pressed else Color(ComicUI.INK, 0.62))
-		draw_arc(center, r, 0.0, TAU, 48, ComicUI.INK, 6.0)
-		draw_arc(center, r - 3.0, 0.0, TAU, 48, Color(accent, 1.0 if pressed else 0.85), 3.0 if b.id == "fire" else 2.5)
+		_sb.circle(center + Vector2(4, 5), r, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
+		_sb.circle(center, r, Color(accent, 0.55) if pressed else Color(ComicUI.INK, 0.62))
+		_sb.arc(center, r, 0.0, TAU, 48, ComicUI.INK, 6.0)
+		_sb.arc(center, r - 3.0, 0.0, TAU, 48, Color(accent, 1.0 if pressed else 0.85), 3.0 if b.id == "fire" else 2.5)
 		if b.id == "fire":
-			draw_arc(center, r * 0.8, 0.0, TAU, 48, Color(accent, 0.35), 2.0)
+			_sb.arc(center, r * 0.8, 0.0, TAU, 48, Color(accent, 0.35), 2.0)
 		_icon(b.id, center, r * (0.5 if b.id == "fire" else 0.66), Color(1, 1, 1, 0.95 if pressed else 0.88))
 		if editing and b.id == selected:
-			draw_arc(center, r + 8.0, 0.0, TAU, 48, UiStyle.WARN, 3.0)
+			_sb.arc(center, r + 8.0, 0.0, TAU, 48, UiStyle.WARN, 3.0)
 	var moving := false
 	for f in _fingers.values():
 		if f.kind == Kind.MOVE:
 			moving = true
 			var offset: Vector2 = (f.pos - f.origin).limit_length(JOYSTICK_RADIUS)
 			var sprint := -offset.y / JOYSTICK_RADIUS >= SPRINT_THRESHOLD
-			draw_circle(f.origin, JOYSTICK_RADIUS, Color(ComicUI.INK, 0.35))
-			draw_arc(f.origin, JOYSTICK_RADIUS, 0.0, TAU, 64, Color(ComicUI.YELLOW, 0.6), 3.0)
-			draw_arc(f.origin, JOYSTICK_RADIUS + 8.0, -PI * 0.5 - 0.35, -PI * 0.5 + 0.35, 16,
+			_sb.circle(f.origin, JOYSTICK_RADIUS, Color(ComicUI.INK, 0.35))
+			_sb.arc(f.origin, JOYSTICK_RADIUS, 0.0, TAU, 64, Color(ComicUI.YELLOW, 0.6), 3.0)
+			_sb.arc(f.origin, JOYSTICK_RADIUS + 8.0, -PI * 0.5 - 0.35, -PI * 0.5 + 0.35, 16,
 					Color(UiStyle.WARN, 0.95 if sprint else 0.35), 4.0)
-			draw_circle(f.origin + offset, 36.0, Color(ComicUI.YELLOW, 0.45))
-			draw_arc(f.origin + offset, 36.0, 0.0, TAU, 40, Color(1, 1, 1, 0.5), 2.0)
+			_sb.circle(f.origin + offset, 36.0, Color(ComicUI.YELLOW, 0.45))
+			_sb.arc(f.origin + offset, 36.0, 0.0, TAU, 40, Color(1, 1, 1, 0.5), 2.0)
 	if not moving:
 		# Ghost stick where the left thumb rests (it floats: any touch on the
 		# left side starts it), with the sprint notch on top.
 		var hint := Vector2(STICK_HINT.x * screen.y, screen.y * (1.0 - STICK_HINT.y))
-		draw_circle(hint, JOYSTICK_RADIUS * 0.8, Color(ComicUI.INK, 0.28))
-		draw_arc(hint, JOYSTICK_RADIUS * 0.8, 0.0, TAU, 48, Color(ComicUI.YELLOW, 0.45), 2.5)
-		draw_arc(hint, JOYSTICK_RADIUS * 0.8 + 7.0, -PI * 0.5 - 0.3, -PI * 0.5 + 0.3, 12, Color(UiStyle.WARN, 0.45), 3.0)
-		draw_circle(hint, 30.0, Color(ComicUI.YELLOW, 0.22))
-		draw_arc(hint, 30.0, 0.0, TAU, 32, Color(1, 1, 1, 0.35), 1.5)
+		_sb.circle(hint, JOYSTICK_RADIUS * 0.8, Color(ComicUI.INK, 0.28))
+		_sb.arc(hint, JOYSTICK_RADIUS * 0.8, 0.0, TAU, 48, Color(ComicUI.YELLOW, 0.45), 2.5)
+		_sb.arc(hint, JOYSTICK_RADIUS * 0.8 + 7.0, -PI * 0.5 - 0.3, -PI * 0.5 + 0.3, 12, Color(UiStyle.WARN, 0.45), 3.0)
+		_sb.circle(hint, 30.0, Color(ComicUI.YELLOW, 0.22))
+		_sb.arc(hint, 30.0, 0.0, TAU, 32, Color(1, 1, 1, 0.35), 1.5)
 
 
 ## Icons that picture the action, so buttons read without text: white
@@ -522,7 +548,10 @@ func _draw() -> void:
 func _icon(id: String, c: Vector2, s: float, col: Color) -> void:
 	var tex: Texture2D = ICONS.get(id)
 	if tex == null:
-		draw_circle(c, s * 0.3, col)
+		_sb.circle(c, s * 0.3, col)
+		return
+	if _queue_icons:
+		_icons.append([tex, Rect2(c - Vector2(s, s), Vector2(s, s) * 2.0), col])
 		return
 	draw_texture_rect(tex, Rect2(c - Vector2(s, s), Vector2(s, s) * 2.0), false, col)
 

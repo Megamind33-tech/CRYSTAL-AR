@@ -2009,12 +2009,19 @@ class _CityHud extends Control:
 	func _process(_delta: float) -> void:
 		queue_redraw()
 
-	## Text is queued and drawn after the shapes, grouped by font (ComicUI's
-	## text batch): the HUD was ~70 draw calls, text and shapes taking turns.
+	## Shapes go into one triangle array (ShapeBatch) and text is queued and
+	## drawn after them grouped by font (ComicUI's text batch): the HUD was
+	## ~70 draw calls, a call per circle, line and string.
+	var _sb: ShapeBatch  ## the HUD's shapes: one draw call
+
 	func _draw() -> void:
-		ComicUI.begin_text_batch(self)
+		if _sb == null:
+			_sb = ShapeBatch.new(self)
+		_sb.begin()
+		ComicUI.begin_text_batch(self, _sb)
 		_draw_hud()
 		ComicUI.flush_text_batch(self)
+		_sb.flush()
 
 	func _draw_hud() -> void:
 		if city == null or city.screen.visible:
@@ -2133,8 +2140,8 @@ class _CityHud extends Control:
 		var to_map := func(p: Vector2) -> Vector2:
 			var d := p - mp
 			return c + Vector2(d.dot(right), -d.dot(fwd)) * k
-		draw_circle(c + Vector2(4, 5) * s, rad, Color(0, 0, 0, 0.4))
-		draw_circle(c, rad, Color(0.16, 0.08, 0.06, 0.88))
+		_sb.circle(c + Vector2(4, 5) * s, rad, Color(0, 0, 0, 0.4))
+		_sb.circle(c, rad, Color(0.16, 0.08, 0.06, 0.88))
 		for road: Array in WorldLayout.roads():
 			var prev := Vector2.INF
 			for pt: Vector2 in road:
@@ -2143,17 +2150,17 @@ class _CityHud extends Control:
 					var a := prev
 					var b := q
 					if a.distance_to(c) < rad * 1.6 or b.distance_to(c) < rad * 1.6:
-						draw_line(a, b, Color(0.55, 0.5, 0.46), 5.0 * s)
+						_sb.line(a, b, Color(0.55, 0.5, 0.46), 5.0 * s)
 				prev = q
 		var mono := PackedVector2Array()
 		for pt: Vector2 in WorldLayout.monorail():
 			mono.append(to_map.call(pt))
 		for i in mono.size() - 1:
 			if mono[i].distance_to(c) < rad * 1.6 or mono[i + 1].distance_to(c) < rad * 1.6:
-				draw_line(mono[i], mono[i + 1], Color(0.3, 0.9, 1.0, 0.6), 2.0 * s)
+				_sb.line(mono[i], mono[i + 1], Color(0.3, 0.9, 1.0, 0.6), 2.0 * s)
 		var dome: Vector2 = to_map.call(Vector2(CityLayout.ORIGIN.x, CityLayout.ORIGIN.z))
 		if dome.distance_to(c) < rad + WorldLayout.DOME_RADIUS * k:
-			draw_arc(dome, WorldLayout.DOME_RADIUS * k, 0.0, TAU, 48, Color(0.4, 0.8, 0.9, 0.7), 2.0 * s)
+			_sb.arc(dome, WorldLayout.DOME_RADIUS * k, 0.0, TAU, 48, Color(0.4, 0.8, 0.9, 0.7), 2.0 * s)
 		var places := []
 		var letters := {"exchange": "$", "arms": "G", "guns": "G", "store": "S", "salvage": "P", "bar": "B", "saloon": "B", "post": "T"}
 		for shop: Array in WorldLayout.shops():
@@ -2174,7 +2181,7 @@ class _CityHud extends Control:
 				var eq: Vector2 = to_map.call(Vector2((ev[0] as Vector3).x, (ev[0] as Vector3).z))
 				if eq.distance_to(c) > rad - 10 * s:  # off the map: at its edge, pointing the way
 					var edge := c + (eq - c).normalized() * (rad - 12 * s)
-					draw_circle(edge, 7 * s, ComicUI.CYAN)
+					_sb.circle(edge, 7 * s, ComicUI.CYAN)
 					ComicUI.draw_text(self, edge + Vector2(0, 20 * s), tr("EVENT_MAP"), UiStyle.font_hud_bold, roundi(11 * s),
 							ComicUI.CYAN, 1, roundi(3 * s))
 				else:
@@ -2182,12 +2189,12 @@ class _CityHud extends Control:
 		for p: Array in places:
 			var q: Vector2 = to_map.call(Vector2((p[0] as Vector3).x, (p[0] as Vector3).z))
 			if q.distance_to(c) < rad - 6 * s:
-				draw_circle(q, 8 * s, Color(ComicUI.INK, 0.9))
+				_sb.circle(q, 8 * s, Color(ComicUI.INK, 0.9))
 				ComicUI.draw_text(self, q + Vector2(0, 5 * s), p[1], UiStyle.font_hud_big, roundi(14 * s), p[2], 1, 0)
 		for v: SimVehicle in world.vehicles:
 			var q: Vector2 = to_map.call(Vector2(v.position.x, v.position.z))
 			if q.distance_to(c) < rad - 3 * s and v.driver != me.net_id:
-				draw_rect(Rect2(q - Vector2(3, 3) * s, Vector2(6, 6) * s), ComicUI.GREEN if v.owner == me.net_id else ComicUI.PAPER)
+				_sb.rect(Rect2(q - Vector2(3, 3) * s, Vector2(6, 6) * s), ComicUI.GREEN if v.owner == me.net_id else ComicUI.PAPER)
 		var blink := fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
 		for id: int in world.players:
 			var p: SimPlayer = world.players[id]
@@ -2200,7 +2207,7 @@ class _CityHud extends Control:
 				continue  # the outlaw's hiding: you find them
 			var q: Vector2 = to_map.call(Vector2(p.state.position.x, p.state.position.z))
 			if q.distance_to(c) < rad - 3 * s:
-				draw_circle(q, 4 * s, (ComicUI.CYAN if blink else ComicUI.RED) if cop else ComicUI.RED)
+				_sb.circle(q, 4 * s, (ComicUI.CYAN if blink else ComicUI.RED) if cop else ComicUI.RED)
 		if city.bounty != null:
 			city.bounty.draw_on_map(self, to_map, c, rad, k, s)
 		var job: Dictionary = Profile.career().d.job
@@ -2210,7 +2217,7 @@ class _CityHud extends Control:
 			if q.distance_to(c) > rad - 8 * s:
 				q = c + (q - c).normalized() * (rad - 8 * s)  # off the map: at its edge, pointing the way
 			var d := 7.0 * s
-			draw_colored_polygon(PackedVector2Array([q + Vector2(0, -d), q + Vector2(d, 0), q + Vector2(0, d), q + Vector2(-d, 0)]), ComicUI.YELLOW)
+			_sb.colored_polygon(PackedVector2Array([q + Vector2(0, -d), q + Vector2(d, 0), q + Vector2(0, d), q + Vector2(-d, 0)]), ComicUI.YELLOW)
 		# The districts: on the map, or named at its edge pointing the way.
 		for dist: Array in [[WorldLayout.HELIOS, "MAP_HELIOS"], [WorldLayout.GALLERIA, "MAP_GALLERIA"],
 				[WorldLayout.TERRACE, "MAP_TERRACE"], [WorldLayout.SKYPORT, "MAP_SKYPORT"],
@@ -2225,11 +2232,11 @@ class _CityHud extends Control:
 		# You: an arrow pointing up (the map turns with you).
 		var a := 9.0 * s
 		var arrow := PackedVector2Array([c + Vector2(0, -a * 1.3), c + Vector2(a * 0.8, a), c + Vector2(0, a * 0.45), c + Vector2(-a * 0.8, a)])
-		draw_colored_polygon(arrow, ComicUI.PAPER)
+		_sb.colored_polygon(arrow, ComicUI.PAPER)
 		arrow.append(arrow[0])
-		draw_polyline(arrow, ComicUI.INK, 2.0 * s)
-		draw_arc(c, rad, 0.0, TAU, 64, ComicUI.INK, 5.0 * s)
-		draw_arc(c, rad - 2.5 * s, 0.0, TAU, 64, ComicUI.YELLOW, 2.0 * s)
+		_sb.polyline(arrow, ComicUI.INK, 2.0 * s)
+		_sb.arc(c, rad, 0.0, TAU, 64, ComicUI.INK, 5.0 * s)
+		_sb.arc(c, rad - 2.5 * s, 0.0, TAU, 64, ComicUI.YELLOW, 2.0 * s)
 		ComicUI.draw_text(self, c + Vector2(0, -rad + 16 * s), "N" if absf(wrapf(yaw, -PI, PI)) < 0.4 else "", UiStyle.font_hud_big,
 				roundi(14 * s), ComicUI.PAPER, 1, 0)
 		ComicUI.draw_text(self, c + Vector2(0, rad + 22 * s), GameClock.label(city.hour()), UiStyle.font_hud_big, roundi(20 * s),
@@ -2238,10 +2245,10 @@ class _CityHud extends Control:
 	func _gauge(at: Vector2, s: float, label: String, pct: float, col: Color) -> void:
 		var w := 150.0 * s
 		var r := Rect2(at + Vector2(0, 8 * s), Vector2(w, 12 * s))
-		draw_rect(r, Color(ComicUI.INK, 0.8))
+		_sb.rect(r, Color(ComicUI.INK, 0.8))
 		var c := ComicUI.RED if pct < 20.0 else col
-		draw_rect(Rect2(r.position, Vector2(w * clampf(pct / 100.0, 0.0, 1.0), r.size.y)), c)
-		draw_rect(r, ComicUI.INK, false, 2.0 * s)
+		_sb.rect(Rect2(r.position, Vector2(w * clampf(pct / 100.0, 0.0, 1.0), r.size.y)), c)
+		_sb.rect(r, ComicUI.INK, false, 2.0 * s)
 		ComicUI.draw_text(self, at + Vector2(w + 8 * s, 20 * s), "%s %d%%" % [label, roundi(pct)], UiStyle.font_hud_bold,
 				roundi(18 * s), c, 0, roundi(3 * s))
 
@@ -2259,7 +2266,7 @@ class _CityHud extends Control:
 			var c := size * 0.5
 			var rad := size.y * 0.42
 			for sx in [-1.0, 1.0]:
-				draw_arc(c + Vector2(sx * rad * 0.55, 0), rad, 0.0, TAU, 64, Color(0, 0, 0, 0.85), 14.0 * s)
+				_sb.arc(c + Vector2(sx * rad * 0.55, 0), rad, 0.0, TAU, 64, Color(0, 0, 0, 0.85), 14.0 * s)
 		var job: Dictionary = Profile.career().d.job
 		if not job.is_empty() and WorldLayout.job_sites().has(job.id):  # the waypoint: always shown
 			marks = marks + [[(WorldLayout.job_sites()[job.id][0] as Vector3) + Vector3(0, 3, 0),
@@ -2279,9 +2286,9 @@ class _CityHud extends Control:
 				continue  # binoculars name what you're looking at
 			var d := 10.0 * s
 			var dia := PackedVector2Array([p + Vector2(0, -d), p + Vector2(d, 0), p + Vector2(0, d), p + Vector2(-d, 0)])
-			draw_colored_polygon(dia, col)
+			_sb.colored_polygon(dia, col)
 			dia.append(dia[0])
-			draw_polyline(dia, ComicUI.INK, 2.5 * s)
+			_sb.polyline(dia, ComicUI.INK, 2.5 * s)
 			ComicUI.draw_text(self, p + Vector2(0, -16 * s), "%s · %dm" % [m[1], roundi(dist)], UiStyle.font_hud_bold,
 					roundi(18 * s), col, 1, roundi(4 * s))
 
@@ -2303,10 +2310,10 @@ class _CityHud extends Control:
 			var shadow := pts.duplicate()
 			for j in shadow.size():
 				shadow[j] += Vector2(3, 4) * s
-			draw_colored_polygon(shadow, Color(0, 0, 0, 0.45))
-			draw_colored_polygon(pts, (ComicUI.PAPER if blink else ComicUI.YELLOW) if on else Color(ComicUI.INK, 0.5))
+			_sb.colored_polygon(shadow, Color(0, 0, 0, 0.45))
+			_sb.colored_polygon(pts, (ComicUI.PAPER if blink else ComicUI.YELLOW) if on else Color(ComicUI.INK, 0.5))
 			pts.append(pts[0])
-			draw_polyline(pts, ComicUI.INK, 3.0 * s)
+			_sb.polyline(pts, ComicUI.INK, 3.0 * s)
 		if w.unseen > 0.0:
 			ComicUI.draw_text(self, Vector2(size.x * 0.5, 92 * s), tr("CITY_WANTED_SEARCHING") % ceili(w.escape_time() - w.unseen),
 					UiStyle.font_hud_bold, roundi(20 * s), ComicUI.PAPER, 1, roundi(4 * s))
@@ -2332,7 +2339,7 @@ class _CityHud extends Control:
 					ComicUI.draw_panel(self, br, Color(ComicUI.INK, 0.8), ComicUI.INK, 3.0 * s, 10 * s)
 					var fill := Rect2(br.position + Vector2(4, 4) * s, Vector2((br.size.x - 8 * s) * float(bar[0]), br.size.y - 8 * s))
 					if fill.size.x > 0.0:
-						draw_colored_polygon(ComicUI.quad(fill, 8 * s), bar[1])
+						_sb.colored_polygon(ComicUI.quad(fill, 8 * s), bar[1])
 					ComicUI.draw_text(self, Vector2(br.end.x + 22 * s, br.end.y), str(bar[3]), UiStyle.font_hud_big, roundi(22 * s),
 							ComicUI.PAPER, 0, roundi(4 * s))
 		elif c.owns_hollow() and c.d.hollow.raid_due:
