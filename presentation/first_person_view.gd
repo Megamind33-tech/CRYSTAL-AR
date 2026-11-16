@@ -57,6 +57,7 @@ const TP_LAG := 14.0  ## how fast the camera catches up (1/s)
 var _tp_pos := Vector3.INF
 ## Driving the rover: the camera rides higher and further back, centred.
 var driving: bool = false
+var flying: bool = false  ## an aircraft: the camera hangs further back and higher
 var _tp_focus: float = 30.0  ## smoothed distance to what the eyes look at
 var camera := Camera3D.new()
 var _viewmodel := Node3D.new()  ## pose root, animated every frame
@@ -380,6 +381,9 @@ func _third_person(feet: Vector3, yaw: float, pitch: float, delta: float) -> voi
 	if driving:
 		shoulder = Vector3(0.0, 1.1, 0.0)
 		distance = 7.5
+	if flying:
+		shoulder = Vector3(0.0, 3.2, 0.0)
+		distance = 16.0
 	var from := pivot + flat * Vector3(0.0, shoulder.y, 0.0)
 	var side := pivot + flat * Vector3(shoulder.x, shoulder.y, 0.0)
 	var want := side + look * Vector3(0.0, 0.0, distance)

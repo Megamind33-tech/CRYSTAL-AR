@@ -53,6 +53,27 @@ static func height(x: float, z: float) -> float:
 	return h
 
 
-## A point on the ground.
+## A point on the ground as you stand on it and see it: the terrain is a
+## grid of STEP-metre cells, each split into two triangles on its
+## (i+1, j)-(i, j+1) diagonal, like the physics height map and the mesh.
 static func at(x: float, z: float) -> Vector3:
-	return Vector3(x, height(x, z), z)
+	return Vector3(x, surface(x, z), z)
+
+
+static func surface(x: float, z: float) -> float:
+	var half := SIZE * 0.5
+	var gx := (x + half) / STEP
+	var gz := (z + half) / STEP
+	var i := floorf(gx)
+	var j := floorf(gz)
+	var fx := gx - i
+	var fz := gz - j
+	var x0 := -half + i * STEP
+	var z0 := -half + j * STEP
+	var h10 := height(x0 + STEP, z0)
+	var h01 := height(x0, z0 + STEP)
+	if fx + fz < 1.0:
+		var h00 := height(x0, z0)
+		return h00 + (h10 - h00) * fx + (h01 - h00) * fz
+	var h11 := height(x0 + STEP, z0 + STEP)
+	return h11 + (h01 - h11) * (1.0 - fx) + (h10 - h11) * (1.0 - fz)

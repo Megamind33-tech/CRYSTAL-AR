@@ -71,6 +71,20 @@ var driving: bool = false:
 				input.touch_move = Vector2.ZERO
 			queue_redraw()
 var _drive_axes := {}  ## finger index -> control id held
+## Flying (an aircraft from the Skyport): climb and descend buttons too.
+var flying: bool = false:
+	set(v):
+		if v != flying:
+			flying = v
+			queue_redraw()
+const FLY := {
+	"climb": ["left", Vector2(0.16, 0.5), Vector2(0.085, 0.085)],
+	"dive": ["left", Vector2(0.42, 0.5), Vector2(0.085, 0.085)],
+}
+
+
+func _drive_ids() -> Array:
+	return DRIVE.keys() + (FLY.keys() if flying else [])
 ## id -> [anchor ("left"/"right"), offset in screen heights from that bottom
 ## corner, size in screen heights]: circles for steering, tall pedals.
 const DRIVE := {
@@ -84,7 +98,7 @@ const DRIVE := {
 ## A drive control's rectangle on screen.
 func _drive_rect(id: String) -> Rect2:
 	var screen := _screen()
-	var d: Array = DRIVE[id]
+	var d: Array = DRIVE[id] if DRIVE.has(id) else FLY[id]
 	var size: Vector2 = (d[2] as Vector2) * screen.y
 	var off: Vector2 = (d[1] as Vector2) * screen.y
 	var c := Vector2(off.x, screen.y - off.y) if d[0] == "left" else Vector2(screen.x - off.x, screen.y - off.y)
@@ -94,7 +108,7 @@ func _drive_rect(id: String) -> Rect2:
 
 
 func _drive_at(pos: Vector2) -> String:
-	for id: String in DRIVE:
+	for id: String in _drive_ids():
 		if _drive_rect(id).grow(_screen().y * 0.02).has_point(pos):
 			return id
 	return ""
@@ -104,14 +118,28 @@ func _apply_drive() -> void:
 	var held := _drive_axes.values()
 	input.touch_move = Vector2((1.0 if "steer_right" in held else 0.0) - (1.0 if "steer_left" in held else 0.0),
 			(1.0 if "gas" in held else 0.0) - (1.0 if "brake" in held else 0.0))
+	input.touch_held = (PlayerCommand.Held.JUMP if "climb" in held else 0) | (PlayerCommand.Held.CROUCH if "dive" in held else 0)
 	queue_redraw()
 
 
 func _draw_drive() -> void:
 	var s := _screen().y
-	for id: String in DRIVE:
+	for id: String in _drive_ids():
 		var r := _drive_rect(id)
 		var on := id in _drive_axes.values()
+		if FLY.has(id):
+			var cc := r.get_center()
+			var rr := r.size.x * 0.5
+			draw_circle(cc + Vector2(4, 5), rr, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
+			draw_circle(cc, rr * (0.94 if on else 1.0), Color(ComicUI.CYAN, 0.55) if on else Color(ComicUI.INK, 0.62))
+			draw_arc(cc, rr, 0.0, TAU, 48, ComicUI.INK, 6.0)
+			draw_arc(cc, rr - 3.0, 0.0, TAU, 48, ComicUI.CYAN, 2.5)
+			var up := -1.0 if id == "climb" else 1.0
+			draw_colored_polygon(PackedVector2Array([cc + Vector2(0, up * rr * 0.5), cc + Vector2(-rr * 0.42, -up * rr * 0.25),
+					cc + Vector2(rr * 0.42, -up * rr * 0.25)]), Color(1, 1, 1, 0.9))
+			ComicUI.draw_text(self, cc + Vector2(0, rr + s * 0.03), tr("TOUCH_CLIMB" if id == "climb" else "TOUCH_DIVE"),
+					UiStyle.font_hud_bold, roundi(s * 0.026), Color(1, 1, 1, 0.9), 1, 3)
+			continue
 		var accent: Color = ComicUI.GREEN if id == "gas" else (ComicUI.RED if id == "brake" else ComicUI.YELLOW)
 		var fill := Color(accent, 0.55) if on else Color(ComicUI.INK, 0.62)
 		if id.begins_with("steer"):

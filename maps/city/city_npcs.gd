@@ -279,8 +279,56 @@ static func _line(key: String) -> String:
 	return lines[randi() % lines.size()]
 
 
+## Your gang's crew (Career.d.gang.members): they walk with you, a few
+## steps around you, run to catch up, and wait out of the way while a fight
+## is on (the fight has them as fighters then). Presentation only.
+var _crew: Array = []  ## [PlayerVisual, PlayerSimState, name]
+var crew_hidden: bool = false
+
+
+func set_crew(names: Array) -> void:
+	var have := _crew.map(func(c: Array) -> String: return c[2])
+	if have == names:
+		return
+	for c: Array in _crew:
+		(c[0] as Node).queue_free()
+	_crew.clear()
+	for i in names.size():
+		var start := player_position if player_position != Vector3.INF else Vector3.ZERO
+		var v := _body(str(names[i]), ComicUI.MAGENTA, 40 + i, false, "worker")
+		_crew.append([v, _state(start + Vector3(2 + i, 0, 2), 0.0), names[i]])
+
+
+func _step_crew(delta: float) -> void:
+	for i in _crew.size():
+		var v: PlayerVisual = _crew[i][0]
+		var s: PlayerSimState = _crew[i][1]
+		v.visible = not crew_hidden and player_position != Vector3.INF
+		if not v.visible:
+			continue
+		var a := i * 2.1 + 2.4
+		var spot := player_position + Vector3(cos(a), 0, sin(a)) * (2.6 + (i % 3) * 0.9)
+		var to := spot - s.position
+		to.y = 0.0
+		if to.length() > 40.0:  # left far behind (a drive, a lift): they catch up
+			s.position = spot
+			to = Vector3.ZERO
+		var speed := 0.0 if to.length() < 0.6 else clampf(to.length() * 1.6, WALK_SPEED, 7.5)  # keep up with you
+		var dir := to.normalized() if to.length() > 0.01 else Vector3.ZERO
+		s.sprinting = speed > 4.0
+		s.velocity = dir * speed
+		s.position += s.velocity * delta
+		if s.position.y > WorldLayout.FARM_FLOOR + 50.0 or player_position.y < WorldLayout.FARM_FLOOR + 50.0:
+			s.position.y = player_position.y if absf(player_position.y - WorldTerrain.surface(s.position.x, s.position.z)) > 1.5 \
+					else WorldTerrain.surface(s.position.x, s.position.z)
+		if dir != Vector3.ZERO:
+			s.yaw = atan2(-dir.x, -dir.z)
+		v.update_from(null, s, 1.0, _time)
+
+
 func _process(delta: float) -> void:
 	_time += delta
+	_step_crew(delta)
 	for b: Label3D in _bubbles.keys():
 		_bubbles[b] = float(_bubbles[b]) - delta
 		if float(_bubbles[b]) <= 0.0 or not is_instance_valid(b):
@@ -343,7 +391,7 @@ func _process(delta: float) -> void:
 		s.velocity = dir * speed
 		s.position += s.velocity * delta
 		if s.position.y > WorldLayout.FARM_FLOOR + 50.0:
-			s.position.y = WorldTerrain.height(s.position.x, s.position.z)  # walk the ground
+			s.position.y = WorldTerrain.surface(s.position.x, s.position.z)  # walk the ground (as drawn)
 		if dir != Vector3.ZERO:
 			s.yaw = atan2(-dir.x, -dir.z)
 		v.update_from(null, s, 1.0, _time)

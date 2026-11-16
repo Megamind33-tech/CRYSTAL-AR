@@ -64,6 +64,7 @@ var _b_was_down: bool = false
 var eat_button: Button
 var drink_button: Button
 var _kit_seen := {}
+var estate: CityEstate   ## doors, property, visas, aircraft, the gang, trees
 var draw_button: Button
 var torch_button: Button
 var drawn: bool = false          ## your gun out by choice (not a fight's)
@@ -228,6 +229,8 @@ func update() -> void:
 	room = WorldLayout.room_at(pos + Vector3(0, 0.5, 0))
 	var was := region
 	region = "farm" if pos.y < WorldLayout.FARM_FLOOR + 40.0 else WorldLayout.region_at(pos.x, pos.z)
+	if pos.y < WorldLayout.INTERIOR_Y + 100.0:
+		region = "interior"
 	if region == "city" and was != "city" and was != "":
 		_checkpoint()
 	_step_raid(me)
@@ -290,6 +293,12 @@ func update() -> void:
 			_near = "job_" + str(job.id)
 	if _near.is_empty() and me.state.vehicle < 0 and pos.distance_to(WorldLayout.showroom_spot()) < 2.6:
 		_near = "showroom"
+	if estate == null:
+		estate = CityEstate.new(self)
+	var estate_near := estate.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	if _near.is_empty() or (_near == "exit_rover" and estate_near.is_empty()):
+		if not estate_near.is_empty():
+			_near = estate_near
 	var c := Profile.career()
 	_hollow_sign.text = tr("WORLD_HOLLOW") + "\n" + (tr("WORLD_HOLLOW_SIGN_YOURS") if c.owns_hollow() else tr("WORLD_HOLLOW_SIGN_THARSIS"))
 	_hollow_sign.modulate = ComicUI.GREEN if c.owns_hollow() else ComicUI.CYAN
@@ -329,6 +338,8 @@ func update() -> void:
 		if _near.begins_with("shop:") or _near.begins_with("hold:") or _near.begins_with("drop:") \
 				or _near.begins_with("holdup:") or _near.begins_with("home:"):
 			_use_goods(me)
+		elif _near.begins_with("estate:"):
+			estate.act(_near, me)
 		elif _near.begins_with("kiosk:"):
 			open_terminal(_near.substr(6))
 		elif _near == "showroom":
@@ -390,7 +401,7 @@ func update() -> void:
 ## stopping for you (on foot or driving) in the way.
 const TRAFFIC := 12
 const TRAFFIC_SPEED := 13.0
-var _traffic: Array = []  ## [mesh, road points, distance along, direction, speed]
+var _traffic: Array = []  ## [mesh, road points, distance along, direction, speed, blocked s, honk cooldown, wheels, wheel turn]
 
 
 func _step_traffic(me: SimPlayer, dt: float) -> void:
@@ -400,9 +411,12 @@ func _step_traffic(me: SimPlayer, dt: float) -> void:
 			var pts: Array = []
 			for sample: Array in WorldLayout.road_samples(roads[k % roads.size()], 2.0):
 				pts.append(sample[0])
-			var mi := Comic.kit_instance(VehicleSim.MODELS[k % VehicleSim.MODELS.size()].kit, Vector3.ZERO, 0.0)
+			var kit: String = VehicleSim.MODELS[k % VehicleSim.MODELS.size()].kit
+			var mi := Comic.kit_instance(kit, Vector3.ZERO, 0.0)
 			match_node.add_child(mi)
-			_traffic.append([mi, pts, 30.0 + float(k * 53 % maxi(pts.size() * 2 - 60, 1)), 1.0 if k % 2 == 0 else -1.0, TRAFFIC_SPEED])
+			var wheels := RoverVisuals.add_wheels(mi, kit)
+			_traffic.append([mi, pts, 30.0 + float(k * 53 % maxi(pts.size() * 2 - 60, 1)), 1.0 if k % 2 == 0 else -1.0, TRAFFIC_SPEED,
+					0.0, 0.0, wheels, 0.0])
 	var me_pos := me.state.position
 	for t: Array in _traffic:
 		var pts: Array = t[1]
@@ -418,10 +432,11 @@ func _step_traffic(me: SimPlayer, dt: float) -> void:
 		var to := me_pos - at
 		var blocked := to.length() < 12.0 and fwd.dot(to.normalized()) > 0.6
 		t[4] = move_toward(t[4], 0.0 if blocked else TRAFFIC_SPEED, dt * (14.0 if blocked else 4.0))
+		# The wheels roll with the road.
+		t[8] = fmod(float(t[8]) - float(t[4]) * dt / 0.6, TAU)
+		for w: Array in t[7]:
+			(w[2] as Node3D).rotation.x = t[8]
 		# Stuck behind you: the horn, and a word from the cab.
-		if t.size() < 7:
-			t.append(0.0)
-			t.append(0.0)
 		t[5] = float(t[5]) + dt if blocked else 0.0
 		t[6] = maxf(float(t[6]) - dt, 0.0)
 		if float(t[5]) > 0.7 and float(t[6]) <= 0.0:
@@ -513,6 +528,7 @@ func _animate_factory(delta: float) -> void:
 			var car := MeshInstance3D.new()
 			car.mesh = Comic.kit_mesh(VehicleSim.MODELS[k].kit)
 			car.material_override = Comic.kit_material()
+			RoverVisuals.add_wheels(car, VehicleSim.MODELS[k].kit)
 			match_node.add_child(car)
 			_line_cars.append(car)
 	for arm: Array in _arms:
@@ -652,6 +668,8 @@ static func _tinted(mesh: PrimitiveMesh, c: Color) -> ArrayMesh:
 func crime(kind: String) -> void:
 	var before := wanted.stars
 	wanted.commit(kind, Profile.career().masked())
+	if estate != null:
+		estate.on_crime()
 	if wanted.stars > before:
 		_flash_text(tr("CITY_WANTED") % wanted.stars, ComicUI.RED)
 		match_node.audio.play_ui("shield_break", -2.0)
@@ -891,6 +909,8 @@ func _step_police(me: SimPlayer, dt: float) -> void:
 			at.y = CityLayout.ORIGIN.y
 		_police.start_guards(me.net_id, [at], "marshal", "Marshal·%d", _police.raiders.size() + 1)
 		_pending_says[_police.raiders.back()] = CityNpcs._line("BOT_BARK_MARSHAL")
+		if _police.militia.is_empty() and estate != null:
+			estate.crew_join(_police, me)  # your gang stands with you
 	# Seen? An officer near with a clear line to you.
 	var seen := false
 	var space: PhysicsDirectSpaceState3D = match_node.get_world_3d().direct_space_state
@@ -1257,14 +1277,34 @@ func _motors_options() -> Array:
 		if i == int(c.d.get("ride", 0)):
 			out.append([tr("MOTORS_YOURS") % m.name, false, ComicUI.PAPER, "none"])
 			continue
+		if VehicleSim.flies(i):
+			continue  # aircraft are Kasei Aero's, at the Skyport
 		var cost := c.ride_price(i)
 		out.append([tr("MOTORS_BUY") % [m.name, roundi(float(m.max) * 3.6), int(m.slots), cost], c.d.wallet >= cost,
 				ComicUI.CYAN, "ride:%d" % i])
 	return out
 
 
+## A menu on the garage panel (the Immigration office, Kasei Aero, a door,
+## the gang): `options` are [text, enabled, accent, id].
+func open_menu(title: String, line: String, options: Array) -> void:
+	garage.open_menu(title, line, options)
+	match_node.input.enabled = false
+	match_node.touch.release_all()
+	_touch_was_visible = match_node.touch.visible
+	match_node.touch.visible = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
 func _garage_act(what: String) -> void:
 	var c := Profile.career()
+	if what.begins_with("estate:"):
+		var em: SimPlayer = match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
+		if em != null:
+			estate.menu_act(what.substr(7), em)
+		return
+	if what == "none":
+		return
 	if what.begins_with("ride:"):
 		var model := int(what.substr(5))
 		if c.buy_ride(model):
@@ -1657,6 +1697,11 @@ func prompt() -> String:
 			return tr("CITY_BREAKING_IN") % roundi(_breakin_t / _breakin_seconds() * 100.0)
 		else:
 			text = tr("CITY_PROMPT_BREAK_IN") % home[2]
+	elif _near.begins_with("estate:"):
+		var et := estate.prompt(_near)
+		if _near.begins_with("estate:tree:") and et.contains("%"):
+			return et
+		text = et
 	elif _near.begins_with("kiosk:"):
 		text = tr("CITY_PROMPT_KIOSK")
 	elif _near == "showroom":
@@ -1777,11 +1822,14 @@ class _CityHud extends Control:
 				"galleria": ["WORLD_GALLERIA", "WORLD_GALLERIA_SUB", "WORLD_GALLERIA_RULE"],
 				"terrace": ["WORLD_TERRACE", "WORLD_TERRACE_SUB", "WORLD_LAWFUL_RULE"],
 				"skyport": ["WORLD_SKYPORT", "WORLD_SKYPORT_SUB", "WORLD_LAWFUL_RULE"],
+				"interior": ["WORLD_INTERIOR", "WORLD_INTERIOR_SUB", "WORLD_INTERIOR_RULE"],
 				"open": ["WORLD_OPEN", "WORLD_OPEN_SUB", "WORLD_OPEN_RULE"]}
 		var n: Array = names.get(city.region, names.open)
 		var accent: Color = {"city": ComicUI.YELLOW, "hollow": ComicUI.CYAN, "dig": ComicUI.MAGENTA, "helios": ComicUI.CYAN,
 				"galleria": ComicUI.MAGENTA, "terrace": ComicUI.GREEN, "skyport": ComicUI.YELLOW}.get(city.region, ComicUI.PAPER)
 		var title := tr(n[0])
+		if city.region == "interior" and city.estate != null and not city.estate.inside.is_empty():
+			title = str(Career.PROPERTIES[city.estate.inside[0]].name).to_upper()
 		var tw := UiStyle.font_hud_big.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(22 * s)).x
 		var tag := Rect2(Vector2(34, 22) * s, Vector2(tw + 44 * s, 30 * s))
 		ComicUI.draw_panel(self, tag, accent, ComicUI.INK, 3.0 * s)

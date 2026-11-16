@@ -21,7 +21,24 @@ const MODELS := [
 			"half": Vector2(1.0, 1.7), "kit": "world/buggy"},
 	{"name": "Hauler", "max": 19.0, "rev": 5.0, "accel": 6.5, "turn": 1.25, "slots": 30, "price": 2600,
 			"half": Vector2(1.35, 3.2), "kit": "world/hauler"},
+	# Aircraft (Kasei Aero at the Skyport; a flight licence to buy one).
+	# "fly": "vtol" hovers and lifts straight up; "jet" needs a run to fly.
+	{"name": "Skyhopper VTOL", "max": 48.0, "rev": 6.0, "accel": 11.0, "turn": 1.3, "slots": 6, "price": 9000,
+			"half": Vector2(2.6, 3.4), "kit": "world/skyhopper", "fly": "vtol"},
+	{"name": "Kestrel jet", "max": 105.0, "rev": 0.0, "accel": 17.0, "turn": 0.95, "slots": 2, "price": 24000,
+			"half": Vector2(4.2, 5.6), "kit": "world/kestrel", "fly": "jet"},
 ]
+## Flight (aircraft only): how fast it climbs and sinks, the speed a jet
+## lifts off at, how high anything flies above the ground below it.
+const CLIMB := 11.0
+const JET_CLIMB := 16.0
+const LIFT_OFF := 30.0
+const TAXI := 9.0
+const CEILING := 320.0
+
+
+static func flies(model: int) -> bool:
+	return MODELS[clampi(model, 0, MODELS.size() - 1)].has("fly")
 ## The Rover's numbers, for anyone who asks the old way.
 const MAX_SPEED := 26.0
 const ACCEL := 10.0
@@ -86,6 +103,9 @@ static func drive(p: SimPlayer, cmd: PlayerCommand) -> void:
 	var mv := cmd.move_vector()
 	var throttle := mv.y
 	var steer := mv.x
+	if m.has("fly"):
+		_fly(p, cmd, m)
+		return
 	if absf(throttle) > 0.05:
 		var pushing_against := signf(throttle) != signf(s.vehicle_speed) and absf(s.vehicle_speed) > 0.3
 		var rate: float = BRAKE if pushing_against else float(m.accel)
@@ -125,3 +145,50 @@ static func drive(p: SimPlayer, cmd: PlayerCommand) -> void:
 	var moved := Vector2(s.position.x - before.x, s.position.z - before.z).length() / dt
 	if moved < absf(s.vehicle_speed) * 0.5 and absf(s.vehicle_speed) > 2.0:
 		s.vehicle_speed *= 0.5
+
+
+## One tick of flying `p`'s aircraft. Gas and brake set the airspeed, the
+## steering turns it, climb (jump) and descend (crouch) set the climb rate.
+## A VTOL hovers when you let go and lifts at any speed; a jet sinks when
+## it's slow and only leaves the ground above LIFT_OFF. On the ground both
+## taxi slowly; touching down hard is a crash (wear_and_tear).
+static func _fly(p: SimPlayer, cmd: PlayerCommand, m: Dictionary) -> void:
+	var s := p.state
+	var dt := Sim.TICK_DT
+	var mv := cmd.move_vector()
+	var on_floor := s.is_on_floor()
+	var climb := (1.0 if cmd.is_held(PlayerCommand.Held.JUMP) else 0.0) - (1.0 if cmd.is_held(PlayerCommand.Held.CROUCH) else 0.0)
+	var jet: bool = m.fly == "jet"
+	var top: float = m.max
+	if on_floor and climb <= 0.0 and not (jet and absf(s.vehicle_speed) > LIFT_OFF * 0.8):
+		top = TAXI  # taxiing
+	if absf(mv.y) > 0.05:
+		s.vehicle_speed += mv.y * float(m.accel) * dt
+	else:
+		s.vehicle_speed = move_toward(s.vehicle_speed, 0.0, (DRAG * 0.4 if not on_floor else DRAG) * dt)
+	s.vehicle_speed = clampf(s.vehicle_speed, -float(m.rev), top)
+	var grip := 1.0 if not jet else clampf(absf(s.vehicle_speed) / 20.0, 0.25, 1.0)
+	s.vehicle_yaw = wrapf(s.vehicle_yaw - mv.x * float(m.turn) * grip * dt, -PI, PI)
+	var fwd := Vector3(-sin(s.vehicle_yaw), 0.0, -cos(s.vehicle_yaw))
+	var vy := s.velocity.y
+	if jet:
+		var lift := clampf((absf(s.vehicle_speed) - LIFT_OFF * 0.7) / (LIFT_OFF * 0.6), 0.0, 1.0)
+		var target := climb * JET_CLIMB * lift - (1.0 - lift) * 7.0
+		if on_floor and lift < 1.0 and climb <= 0.0:
+			target = minf(target, 0.0)
+		vy = move_toward(vy, target, 14.0 * dt)
+	else:
+		vy = move_toward(vy, climb * CLIMB, 16.0 * dt)
+	# The ceiling: thin air high over the ground below.
+	var ground := WorldTerrain.height(s.position.x, s.position.z)
+	if s.position.y > ground + CEILING:
+		vy = minf(vy, 0.0)
+	if on_floor and vy < 0.0:
+		vy = 0.0
+	s.velocity = fwd * s.vehicle_speed + Vector3(0.0, vy, 0.0)
+	var before := s.position
+	PlayerMovement._move_and_collide(p)
+	s.position = p.global_position
+	var moved := Vector2(s.position.x - before.x, s.position.z - before.z).length() / dt
+	if moved < absf(s.vehicle_speed) * 0.5 and absf(s.vehicle_speed) > 3.0:
+		s.vehicle_speed *= 0.4  # flew into something

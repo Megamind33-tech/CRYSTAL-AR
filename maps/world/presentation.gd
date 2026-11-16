@@ -52,11 +52,15 @@ func _ready() -> void:
 	_roads()
 	_districts()
 	_monorail()
+	_estates()
 	MarsLighting.add(self)
 	MarsLighting.add_moons(self)
 	var weather := DustStorms.new()
 	weather.name = "Weather"
 	add_child(weather)
+	var devils := DustDevils.new()
+	devils.name = "Wind"
+	add_child(devils)
 	var people := CityNpcs.new()
 	people.name = "People"
 	add_child(people)
@@ -75,8 +79,13 @@ func _city_life() -> void:
 		mi.position = (l[0] as Vector3) + Vector3(0, 0.05, 0)
 		mi.material_override = grass
 		add_child(mi)
+	var ti := 0
 	for p: Array in CityLayout.plants():
-		add_child(Comic.kit_instance(p[0], p[1], p[2], 1.0))
+		var plant := Comic.kit_instance(p[0], p[1], p[2], 1.0)
+		if p[0] == "life/tree":
+			plant.name = "Tree_c%d" % ti
+			ti += 1
+		add_child(plant)
 	add_child(Comic.kit_instance("life/city_dome", CityLayout.ORIGIN + Vector3(0, -0.4, 0), 0.0, 1.0))
 	var glass := MeshInstance3D.new()
 	var sphere := SphereMesh.new()
@@ -161,6 +170,30 @@ func _districts() -> void:
 		l.omni_range = 22.0
 		l.position = WorldTerrain.at(g.x, g.y) + Vector3(x, 5.0, 0)
 		add_child(l)
+
+
+## Interiors (deep under the valley), the outland groves (each tree named
+## "Tree_<id>" so a felled one can be hidden), the visa office's and Kasei
+## Aero's kiosks.
+func _estates() -> void:
+	for kind: String in WorldLayout.INTERIORS:
+		add_child(Comic.kit_instance("districts/" + kind, WorldLayout.INTERIORS[kind], 0.0, 1.0))
+		for x in [-4.0, 4.0]:
+			var l := OmniLight3D.new()
+			l.light_color = Color(1.0, 0.9, 0.75)
+			l.light_energy = 1.3
+			l.omni_range = 9.0
+			l.position = (WorldLayout.INTERIORS[kind] as Vector3) + Vector3(x, 3.0, 0)
+			add_child(l)
+	for t: Array in WorldLayout.trees():
+		if t[2]:
+			continue  # the city's own trees are drawn with its parks
+		var tree := Comic.kit_instance("life/tree", t[1], float(hash(t[0]) % 360), 1.6)
+		tree.name = "Tree_" + str(t[0])
+		tree.visibility_range_end = 320.0
+		add_child(tree)
+	add_child(Comic.kit_instance("kiosk", WorldLayout.visa_office() + Vector3(0, 0, -1.4), 0.0, 1.2))
+	add_child(Comic.kit_instance("kiosk", WorldLayout.aero_counter() + Vector3(0, 0, -1.4), 0.0, 1.2))
 
 
 ## The monorail (WorldLayout.monorail): a white guideway on pylons every

@@ -76,7 +76,8 @@ static func terminals() -> Array:
 ## Pieces whose collision is their own mesh (walk-in): everything else in
 ## pieces() with a ZERO box and a piece name.
 const WALK_IN := ["life/hab_open", "shopfront", "hangar", "life/greenhouse", "life/mining_rig", "life/lift_head", "life/farm_hall",
-		"life/factory", "districts/galleria", "districts/pod_a", "districts/pod_b", "districts/pod_c"]
+		"life/factory", "districts/galleria", "districts/pod_a", "districts/pod_b", "districts/pod_c",
+		"districts/apartment", "districts/office"]
 
 ## The city's parks (green is wealth on Mars): lawn rectangles [centre,
 ## size] and the trees, shrubs and benches on them [piece, position, yaw].

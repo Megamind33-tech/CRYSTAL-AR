@@ -105,14 +105,19 @@ def terrain():
             bm.verts.ensure_lookup_table()
             for j in range(j0, j1):
                 for i in range(i0, i1):
-                    f = bm.faces.new([grid[(i, j)], grid[(i + 1, j)], grid[(i + 1, j + 1)], grid[(i, j + 1)]])
-                    for loop in f.loops:
+                    # Two triangles split on the (i+1, j)-(i, j+1) diagonal: the
+                    # same split as the game's physics height map (Jolt), so
+                    # what you see is exactly what you stand on.
+                    a, b = grid[(i, j)], grid[(i + 1, j)]
+                    c, d = grid[(i + 1, j + 1)], grid[(i, j + 1)]
+                    for f in (bm.faces.new([a, b, d]), bm.faces.new([b, c, d])):
+                      for loop in f.loops:
                         v = loop.vert
                         x, z, h = v.co.x, -v.co.y, v.co.z
                         gx = (W.height(x + 2, z) - W.height(x - 2, z)) / 4.0
                         gz = (W.height(x, z + 2) - W.height(x, z - 2)) / 4.0
-                        r, g, b = color_at(x, z, h, math.hypot(gx, gz))
-                        loop[col] = (r, g, b, 1.0)
+                        cr, cg, cb = color_at(x, z, h, math.hypot(gx, gz))
+                        loop[col] = (cr, cg, cb, 1.0)
             bm.faces.ensure_lookup_table()
             bm.normal_update()
             if bm.faces[0].normal.z < 0:  # normals up after the axis flip
@@ -181,8 +186,17 @@ def rbox(name, size, loc, mat, bevel=0.06, rot=(0, 0, 0), taper=None):
     return o
 
 
+# Vehicles export their wheels separately (<model>_wheel_l/_r.glb, hub at
+# the origin) so the game can spin and steer them: wheel() records where
+# each goes instead of building it into the body.
+SPLIT_WHEELS = None
+
+
 def wheel(x, y, r, w, hub="trim"):
     """A tyre with tread blocks round it, a rim and a hub cap; axis along X."""
+    if SPLIT_WHEELS is not None and SPLIT_WHEELS != "build":
+        SPLIT_WHEELS.append((x, y, r, w, hub))
+        return
     bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=r, depth=w, location=(x, y, r), rotation=(0, math.pi / 2, 0))
     o = bpy.context.object
     m = o.modifiers.new("bevel", "BEVEL"); m.width = r * 0.12; m.segments = 1
@@ -195,6 +209,10 @@ def wheel(x, y, r, w, hub="trim"):
     side = 1 if x > 0 else -1
     cyl("rim", r * 0.62, w * 0.2, (x + side * w * 0.42, y, r), "white", verts=12, rot=(0, math.pi / 2, 0))
     cyl("hub", r * 0.25, w * 0.24, (x + side * w * 0.46, y, r), hub, verts=8, rot=(0, math.pi / 2, 0))
+    for k in range(5):  # spokes on the rim, so you see it turn
+        a = k * 2 * math.pi / 5
+        rbox("spoke", (w * 0.06, r * 0.1, r * 0.5), (x + side * w * 0.53, y + math.cos(a) * r * 0.3, r + math.sin(a) * r * 0.3),
+             "dark", bevel=0.0, rot=(-a + math.pi / 2, 0, 0))
 
 
 def arch(x, y, r, w):
@@ -422,9 +440,28 @@ def marshal_gear():
 
 terrain()
 freighter_wreck()
-rover()
-buggy()
-hauler()
+def split_vehicle(build, name):
+    """The body without its wheels, then one wheel of each side: hub at the
+    origin, axis along X. Prints where the wheels go (Godot axes)."""
+    global SPLIT_WHEELS
+    SPLIT_WHEELS = []
+    build()
+    placed = SPLIT_WHEELS
+    x, y, r, w, hub = placed[0]
+    for side, sx in (("l", -1), ("r", 1)):
+        SPLIT_WHEELS = "build"
+        reset()
+        wheel(sx * 0.001, 0.0, r, w, hub)
+        for o in bpy.context.scene.objects:
+            o.location.z -= r
+        finish("%s_wheel_%s" % (name, side))
+    SPLIT_WHEELS = None
+    print("WHEELS %s r=%.2f %s" % (name, r, [(round(px, 2), round(r, 2), round(-py, 2)) for px, py, r, w, h in placed]))
+
+
+split_vehicle(rover, "rover")
+split_vehicle(buggy, "buggy")
+split_vehicle(hauler, "hauler")
 merc_gear()
 faction_gear()
 marshal_gear()

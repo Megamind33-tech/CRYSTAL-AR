@@ -356,6 +356,8 @@ static func rooms() -> Array:
 		var dome := Vector2(at.x - CityLayout.ORIGIN.x, at.z - CityLayout.ORIGIN.z).length() < DOME_RADIUS
 		_rooms.append([box, dome or p[0] in PRESSURISED])
 	_rooms.append([farm_air(), true])
+	for air: AABB in interior_air():
+		_rooms.append([air, true])
 	return _rooms
 
 
@@ -613,3 +615,82 @@ static func hollow_walks() -> Array:
 		[Vector3(h.x + 20, 0, h.z + 24), Vector3(h.x - 4, 0, h.z + 24), Vector3(h.x - 4, 0, h.z + 8)],
 		[Vector3(h.x + 26, 0, h.z - 2), Vector3(h.x + 26, 0, h.z - 28), Vector3(h.x + 10, 0, h.z - 28)],
 	]
+
+
+# --- Estates: interiors, property doors, the visa office, Kasei Aero, trees ---
+
+## Interiors deep under the valley (a building's door takes you in): kind
+## -> floor centre ("districts/<kind>" pieces; their door wall faces +Z).
+const INTERIOR_Y := -450.0
+const INTERIORS := {"apartment": Vector3(0, -450, 0), "office": Vector3(80, -450, 0)}
+
+
+static func interior_exit(kind: String) -> Vector3:
+	return (INTERIORS[kind] as Vector3) + Vector3(0, 0.1, 4.6 if kind == "apartment" else 4.1)
+
+
+## Interiors have air.
+static func interior_air() -> Array:
+	return [AABB(INTERIORS.apartment + Vector3(-8.2, -0.5, -5.8), Vector3(16.4, 4.4, 11.6)),
+			AABB(INTERIORS.office + Vector3(-6.2, -0.5, -5.3), Vector3(12.4, 4.4, 10.6))]
+
+
+## Property doors: [Career.PROPERTIES id, where you stand at the door,
+## interior kind ("" for a unit you walk into)]. From the district pieces.
+static func property_doors() -> Array:
+	var out := []
+	var h := HELIOS
+	var door := func(id: String, c: Vector2, dx: float, dz: float, yaw_deg: float, local: Vector3, sc: float, kind: String) -> void:
+		var b := Basis(Vector3.UP, deg_to_rad(yaw_deg))
+		var p := b * (local * sc)
+		out.append([id, WorldTerrain.at(c.x + dx + p.x, c.y + dz + p.z) + Vector3(0, 0.1, 0), kind])
+	var face := func(dx: float, dz: float) -> float:
+		return rad_to_deg(atan2(-dx, -dz))
+	door.call("helios_spire", h, -62.0, -58.0, face.call(-62.0, -58.0), Vector3(0, 0, 19.5), 1.0, "apartment")
+	door.call("helios_spire_2", h, -92.0, 30.0, face.call(-92.0, 30.0), Vector3(0, 0, 19.5), 0.8, "apartment")
+	door.call("helios_lens", h, 66.0, -54.0, face.call(66.0, -54.0), Vector3(0, 0, 11.6), 1.0, "apartment")
+	door.call("helios_arc", h, 0.0, -92.0, 0.0, Vector3(-20, 0, 9.6), 1.0, "apartment")
+	door.call("helios_ring", h, 0.0, 0.0, 0.0, Vector3(0, 0, 5.6), 1.0, "apartment")
+	door.call("terrace_tower", TERRACE, 0.0, 100.0, 180.0, Vector3(0, 0, 11.6), 0.7, "apartment")
+	door.call("skyport_office", SKYPORT, -62.0, -8.0, 0.0, Vector3(0, 0, 3.2), 1.0, "office")
+	var g := WorldTerrain.at(GALLERIA.x, GALLERIA.y)
+	out.append(["galleria_unit_a", g + Vector3(-35, 0.1, 8.9), ""])
+	out.append(["galleria_unit_b", g + Vector3(35, 0.1, 8.9), ""])
+	return out
+
+
+## The Immigration office (visas and permits), by Tharsis Gate's gate, and
+## Kasei Aero's counter at the Skyport (aircraft); where aircraft park.
+static func visa_office() -> Vector3:
+	return CityLayout.ORIGIN + Vector3(-12, 0, 27)
+
+
+static func aero_counter() -> Vector3:
+	return WorldTerrain.at(SKYPORT.x - 40, SKYPORT.y + 20) + Vector3(0, 0.1, 0)
+
+
+static func aircraft_spot() -> Array:
+	return [WorldTerrain.at(SKYPORT.x + 45, SKYPORT.y - 30) + Vector3(0, 0.6, 0), PI * 0.5]
+
+
+## Trees you can cut (a plasma saw): the city's park trees (protected: it's
+## vandalism) and the outland groves of rust pine (timber, no questions).
+## [id, position, protected].
+const GROVES := [Vector2(-250, 300), Vector2(225, -390), Vector2(-60, 430), Vector2(560, 120)]
+const TREE_REGROW := 900  ## seconds before a felled tree stands again
+
+
+static func trees() -> Array:
+	var out := []
+	var i := 0
+	for p: Array in CityLayout.plants():
+		if p[0] == "life/tree":
+			out.append(["c%d" % i, p[1], true])
+			i += 1
+	for gi in GROVES.size():
+		var c: Vector2 = GROVES[gi]
+		for k in 9:
+			var a := k * TAU / 9.0 + gi
+			var r := 7.0 + float((k * 37 + gi * 11) % 13)
+			out.append(["g%d_%d" % [gi, k], WorldTerrain.at(c.x + cos(a) * r, c.y + sin(a) * r), false])
+	return out

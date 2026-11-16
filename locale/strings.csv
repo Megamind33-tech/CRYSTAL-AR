@@ -854,3 +854,59 @@ MAP_GALLERIA,Galleria
 MAP_TERRACE,Terrace
 MAP_SKYPORT,Skyport
 MAP_CITY,Tharsis
+ESTATE_INCOME,Your businesses paid $%d
+ESTATE_EVICTED,Rent unpaid: you've lost %s
+ESTATE_PROMPT_EXIT,Go outside
+ESTATE_NOT_YOURS,Not yours: rent or buy the place first
+ESTATE_PROMPT_HOME,Go home: %s
+ESTATE_PROMPT_DOOR,"%s: rent, buy or look around"
+ESTATE_PROMPT_VISA,Immigration office: visas and permits
+ESTATE_PROMPT_AERO,Kasei Aero: aircraft
+ESTATE_PROMPT_GANG,The back room: your gang
+ESTATE_CUTTING,Cutting… %d%%
+ESTATE_PROMPT_TREE,Cut the tree down (plasma saw)
+VISA_OFFICE,Immigration office
+AERO_NAME,Kasei Aero
+GANG_TITLE,Your gang
+ESTATE_RENTED,Rented: %s
+ESTATE_BOUGHT,It's yours: %s
+VISA_ISSUED,Issued: %s
+AERO_BOUGHT,Your %s is on the pad
+GANG_FORMED,The %s are born
+GANG_RECRUITED,%s joins the crew
+ESTATE_WELCOME,Home: %s
+ESTATE_VIEWING,Just looking: rent or buy at the door
+ESTATE_OWNED,You own this place.
+ESTATE_RENTING,"You rent this place: $%d a sol, paid each sol."
+ESTATE_FOR_LET,To let: $%d a sol · or buy it for $%d
+ESTATE_BUSINESS,A business: it pays you $%d every sol.
+ESTATE_NEEDS_VISA,"Needs a %s (Immigration office, Tharsis Gate)"
+ESTATE_WALLET,Wallet: $%d
+ESTATE_GO_IN,Go in
+ESTATE_LOOK,Look around
+ESTATE_RENT,Rent it: $%d a sol
+ESTATE_BUY,Buy it: $%d
+VISA_LINE,Papers the colony asks for. Each lasts so many sols.
+VISA_VALID,"valid, %d sols left"
+VISA_NONE,none
+VISA_EXTEND,Extend %s: $%d (+%d sols)
+VISA_BUY,%s: $%d (%d sols)
+AERO_LINE,Aircraft for the valley's skies. Yours: %s
+AERO_NONE,none yet
+AERO_NEED_LICENCE,"You need a flight licence (Immigration office, Tharsis Gate)."
+AERO_BUY,%s · %d km/h · $%d
+GANG_NONE,"Run with your own crew. Forming a gang costs $%d; then recruit, earn respect, climb the ranks."
+GANG_TOP,the top rank
+GANG_NEXT,%d respect to %s
+GANG_LINE,%s · rank: %s · respect %d (%s) · crew %d of %d
+GANG_FORM,Form the %s
+GANG_RECRUIT,Recruit someone: $%d
+GANG_DISMISS,Let %s go
+GANG_RANK_UP,The %s are now %s!
+VISA_HELIOS_WARN,"No Helios residency visa: leave the Arcology, or the Marshals are called"
+ESTATE_FELLED,Timber! Two logs of Mars timber
+TOUCH_CLIMB,Climb
+TOUCH_DIVE,Descend
+WORLD_INTERIOR,INSIDE
+WORLD_INTERIOR_SUB,A HOME HIGH OVER THE VALLEY
+WORLD_INTERIOR_RULE,Pressurised · the door takes you back out

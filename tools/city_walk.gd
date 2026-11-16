@@ -111,6 +111,10 @@ func _run() -> void:
 		print("CITY WALK: ate, food now %.0f, meat left %s" % [me.state.food, mc.d.stash])
 		get_tree().quit(0)
 		return
+	if Platform.user_args.has("--estates"):
+		await _estates_run(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--districts"):
 		await _districts_run(me)
 		get_tree().quit(0)
@@ -264,6 +268,9 @@ func _run() -> void:
 		get_tree().quit(0)
 		return
 	if Platform.user_args.has("--rover-only"):
+		var wx: DustStorms = m.get_tree().root.find_child("Weather", true, false)
+		CityNpcs.hour_offset = fposmod(12.0 - GameClock.hour(Time.get_unix_time_from_system()), 24.0)
+		wx.hour_offset = CityNpcs.hour_offset
 		await _pose(me, o + Vector3(4.5, 0.05, 49.5), PI * 0.5 + 2.4, -0.15)
 		await _shot("r1_rover_parked")
 		m.input.press(PlayerCommand.Action.INTERACT)
@@ -271,9 +278,17 @@ func _run() -> void:
 		print("CITY WALK: driving = %s" % (me.state.vehicle >= 0))
 		m.input.look_yaw = PI
 		m.input.touch_move = Vector2(0, 1)
-		await _frames(150)
+		await _frames(45)
 		await _shot("r2_driving")
 		print("CITY WALK: speed %.1f m/s at %s" % [me.state.vehicle_speed, me.state.position])
+		# Off the road onto the dust, a long turn: tracks behind, the front wheels steered.
+		m.input.touch_move = Vector2(0.8, 0.6)
+		await _frames(40)
+		await _shot("r3_turning_tracks")
+		m.input.touch_move = Vector2(0, -0.3)
+		await _frames(30)
+		print("CITY WALK: tyre marks %d" % (m.get_children().filter(func(c: Node) -> bool: return c is RoverVisuals)[0] as RoverVisuals)._mark_i)
+		await _shot("r4_tracks_behind")
 		get_tree().quit(0)
 		return
 	await _pose(me, o + Vector3(-15, 0.05, 6), PI * 0.5 + 0.3, -0.1)
@@ -614,6 +629,82 @@ func _garage_run(me: SimPlayer) -> void:
 ## The living valley: the plaza by day (minimap, clock), roads and traffic,
 ## the new rides, Kasei Motors, the Red Lantern of an evening, a shop shut
 ## at night, the Hollow on its footings.
+func _estates_run(me: SimPlayer) -> void:
+	var c := Profile.career()
+	c.d.wallet = 150000
+	var now := int(Time.get_unix_time_from_system())
+	c.buy_visa("helios", now)
+	c.buy_visa("flight", now)
+	c.d.stash["cutter"] = 1
+	c.form_gang("Phobos Cartel")
+	c.recruit()
+	c.recruit()
+	var weather: DustStorms = m.get_tree().root.find_child("Weather", true, false)
+	CityNpcs.hour_offset = fposmod(11.0 - GameClock.hour(Time.get_unix_time_from_system()), 24.0)
+	weather.hour_offset = CityNpcs.hour_offset
+	# The crew walks with you through the plaza.
+	var o := CityLayout.ORIGIN
+	await _pose(me, o + Vector3(0, 0.05, 4), 0.0, -0.1)
+	m.input.touch_move = Vector2(0, 1)
+	await _frames(40)
+	m.input.touch_move = Vector2.ZERO
+	await _frames(20)
+	m.input.look_yaw = PI
+	await _frames(10)
+	await _shot("e1_crew")
+	# A Helios door: rent the penthouse, go in.
+	var door: Array = WorldLayout.property_doors()[0]
+	await _pose(me, door[1], 0.0, 0.0)
+	await _frames(5)
+	print("CITY WALK: at the door, near = %s" % m.city._near)
+	m.city.estate.menu_act("rent:helios_spire", me)
+	m.city.estate.menu_act("enter:helios_spire", me)
+	await _frames(40)
+	m.input.look_yaw = PI
+	m.input.look_pitch = 0.05
+	await _frames(30)
+	print("CITY WALK: inside %s, room %d, yours %s" % [m.city.estate.inside, m.city.room, c.has_property("helios_spire", now)])
+	await _shot("e2_apartment")
+	m.input.look_yaw = PI * 0.6
+	await _frames(20)
+	await _shot("e3_apartment_bed")
+	# Kasei Aero: buy the VTOL, fly it.
+	var vtol := 3
+	m.city.estate.menu_act("plane:%d" % vtol, me)
+	m.city.estate.inside = []
+	var spot: Array = WorldLayout.aircraft_spot()
+	await _pose(me, (spot[0] as Vector3) + Vector3(0, 0, 3.0), 0.0, -0.1)
+	await _frames(10)
+	await _shot("e4_vtol_parked")
+	m.input.press(PlayerCommand.Action.INTERACT)
+	await _frames(10)
+	print("CITY WALK: in the aircraft = %s, model %d" % [me.state.vehicle >= 0, me.state.vehicle_model])
+	m.input.touch_held = PlayerCommand.Held.JUMP
+	await _frames(60)
+	m.input.touch_held = 0
+	m.input.touch_move = Vector2(0, 1)
+	await _frames(50)
+	print("CITY WALK: flying at %.0f m over the ground, %.0f m/s" % [me.state.position.y - WorldTerrain.surface(me.state.position.x,
+			me.state.position.z), me.state.vehicle_speed])
+	await _shot("e5_flying")
+	m.input.touch_move = Vector2.ZERO
+	m.input.press(PlayerCommand.Action.INTERACT)
+	await _frames(10)
+	if m.city.shelf.visible:
+		m.city.shelf.close()
+	# A grove: fell a tree.
+	var tree: Array = WorldLayout.trees().filter(func(t: Array) -> bool: return not t[2])[0]
+	var tp: Vector3 = tree[1]
+	await _pose(me, tp + Vector3(2.0, 0.1, 0), PI * 0.5, -0.05)
+	await _frames(5)
+	print("CITY WALK: near the tree = %s" % m.city._near)
+	await _shot("e6_grove")
+	m.input.press(PlayerCommand.Action.INTERACT)
+	await _frames(240)
+	print("CITY WALK: timber %d" % int(c.d.stash.get("timber", 0)))
+	await _shot("e7_felled")
+
+
 func _districts_run(me: SimPlayer) -> void:
 	var weather: DustStorms = m.get_tree().root.find_child("Weather", true, false)
 	var now_h := GameClock.hour(Time.get_unix_time_from_system())

@@ -35,6 +35,8 @@ func _ready() -> void:
 		if p[0] == "life/tree":
 			_box(body, (p[1] as Vector3) + Vector3(0, 1.6, 0), Vector3(0.5, 3.2, 0.5), 0.0)
 	KitCollision.add(body, "life/farm_hall", WorldLayout.farm_origin(), 0.0)
+	for kind: String in WorldLayout.INTERIORS:
+		KitCollision.add(body, "districts/" + kind, WorldLayout.INTERIORS[kind], 0.0)
 	for t: Array in CityLayout.terminals():
 		_box(body, (t[1] as Vector3) + Vector3(0, 1.2, 0), Vector3(1.2, 2.4, 1.2), 0.0)
 	for p: Array in WorldLayout.pieces():

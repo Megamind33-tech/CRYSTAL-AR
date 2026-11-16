@@ -239,7 +239,7 @@ func _ready() -> void:
 		# THE HUNT's open world (free roam or a run at the dig): its rovers,
 		# and the canyon is deep.
 		if config.map == GameMode.CITY_MAP:
-			server.world.kill_y = -260.0  # below Deep Furrow, 200 m down
+			server.world.kill_y = -600.0  # below Deep Furrow (200 m down) and the interiors (450 m)
 			for spot: Array in WorldLayout.rover_spots():
 				server.world.add_vehicle(spot[0], spot[1])
 			if config.game_mode == GameMode.CITY:

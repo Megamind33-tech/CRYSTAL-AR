@@ -41,6 +41,8 @@ const ITEMS := {
 	"meal_pack": {"name": "Meal pack", "base": 15},
 	"red_ale": {"name": "Red ale", "base": 8},
 	"torch": {"name": "Torch", "base": 15, "tool": true},
+	"cutter": {"name": "Plasma saw", "base": 140, "tool": true},
+	"timber": {"name": "Mars timber", "base": 90},
 	"jetpack": {"name": "Jetpack", "base": 900, "tool": true},
 	"grill_plate": {"name": "Grill plate", "base": 30},
 	"water_ration": {"name": "Water ration", "base": 45},
@@ -106,7 +108,7 @@ const SHOPS := {
 					"fuel_cell": 35, "binoculars": 90, "torch": 30},
 			"buys": ""},
 	"salvage": {"name": "Rook's Pawn & Salvage", "keeper": "Rook",
-			"sells": {"crowbar": 35, "hand_drill": 240, "fuel_cell": 30, "repair_kit": 60, "torch": 28}, "buys": "all"},
+			"sells": {"crowbar": 35, "hand_drill": 240, "fuel_cell": 30, "repair_kit": 60, "torch": 28, "cutter": 160}, "buys": "all"},
 	# The bars: drink, a hot plate, and talk (rumours).
 	"bar": {"name": "The Red Lantern", "keeper": "Lena", "hours": "bar",
 			"sells": {"red_ale": 12, "grill_plate": 45, "water_ration": 60, "stim_cola": 15}, "buys": ""},
@@ -130,7 +132,7 @@ const SHOPS := {
 	"pharmacy": {"name": "Helix Pharmacy", "keeper": "Dr. Sato",
 			"sells": {"medkit": 75, "oxygen_canister": 80, "water_ration": 65, "stim_cola": 14}, "buys": ""},
 	"outfitter": {"name": "Redline Outfitters", "keeper": "Kaya", "gear": true,
-			"sells": {"armour_plate": 105, "mask": 85, "lockpick": 32, "crowbar": 38, "hand_drill": 230}, "buys": ""},
+			"sells": {"armour_plate": 105, "mask": 85, "lockpick": 32, "crowbar": 38, "hand_drill": 230, "cutter": 150}, "buys": ""},
 	"prism": {"name": "Prism Exchange", "keeper": "Amara",
 			"sells": {"supply_crate": 65, "vat_meat": 38, "fuel_cell": 40}, "buys": "all"},
 	"noodle": {"name": "Red Planet Noodles", "keeper": "Mei", "hours": "bar",
@@ -255,7 +257,8 @@ static func fresh() -> Dictionary:
 			"hollow": {"owner": "tharsis", "supplies": 0, "ingots": 0, "unrest": 0, "since_raid": 0, "raid_due": false},
 			"oxygen": 100.0, "fatigue": 0.0, "water": 100.0, "lab": {}, "job": {}, "jobs_done": {}, "companion": "",
 			"armed": "", "rover_cargo": {},
-			"home": {"locker": {}, "lock": 0, "checked_at": 0, "robbed": {}}, "ride": 0}
+			"home": {"locker": {}, "lock": 0, "checked_at": 0, "robbed": {}}, "ride": 0,
+			"aircraft": -1, "visas": {}, "property": {}, "gang": {}, "felled": {}}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -861,7 +864,7 @@ func ride_price(model: int) -> int:
 
 
 func buy_ride(model: int) -> bool:
-	if model < 0 or model >= VehicleSim.MODELS.size() or model == int(d.get("ride", 0)):
+	if model < 0 or model >= VehicleSim.MODELS.size() or model == int(d.get("ride", 0)) or VehicleSim.flies(model):
 		return false
 	var cost := ride_price(model)
 	if d.wallet < cost:
@@ -873,6 +876,213 @@ func buy_ride(model: int) -> bool:
 		var item: String = cargo.keys()[0]
 		receive(item, int(cargo[item]))
 		cargo.erase(item)
+	return true
+
+
+# --- Aircraft (Kasei Aero, at the Skyport) ----------------------------------
+
+## Your aircraft (a VehicleSim model that flies), bought outright: a flight
+## licence first. A second one trades the first in like a ride.
+func buy_aircraft(model: int, now: int) -> bool:
+	if not VehicleSim.flies(model) or model == int(d.get("aircraft", -1)) or not has_visa("flight", now):
+		return false
+	var cost := aircraft_price(model)
+	if not pay(cost):
+		return false
+	d["aircraft"] = model
+	return true
+
+
+func aircraft_price(model: int) -> int:
+	var old := int(d.get("aircraft", -1))
+	var back := roundi(float(VehicleSim.MODELS[old].price) * TRADE_IN) if old >= 0 else 0
+	return maxi(int(VehicleSim.MODELS[model].price) - back, 0)
+
+
+# --- Visas and permits (the Immigration office in Tharsis Gate) -------------
+
+## Papers the colony asks for: a flight licence to buy and fly aircraft;
+## a Helios residency visa to stay in the Arcology (and live there); a work
+## visa to run a business in the outlands. Each lasts so many sols.
+const VISAS := {
+	"flight": {"name": "Flight licence", "price": 650, "sols": 10},
+	"helios": {"name": "Helios residency visa", "price": 420, "sols": 7},
+	"work": {"name": "Outlands work visa", "price": 180, "sols": 5},
+}
+
+
+func visa_left(id: String, now: int) -> int:
+	return maxi(int(d.visas.get(id, 0)) - now, 0)
+
+
+func has_visa(id: String, now: int) -> bool:
+	return visa_left(id, now) > 0
+
+
+## Buys (or extends) a visa: VISAS[id].sols sols from now or its expiry.
+func buy_visa(id: String, now: int) -> bool:
+	if not VISAS.has(id) or not pay(int(VISAS[id].price)):
+		return false
+	d.visas[id] = maxi(int(d.visas.get(id, 0)), now) + int(VISAS[id].sols * GameClock.DAY_SECONDS)
+	return true
+
+
+# --- Property: rent or own (homes and businesses) ---------------------------
+
+## Places you can rent by the sol or buy outright. Homes give you a bed (a
+## checkpoint) and your locker; businesses pay you every sol. Some need a
+## visa to take on. Where their doors are: WorldLayout.property_doors().
+const PROPERTIES := {
+	"helios_spire": {"name": "Helios Spire penthouse", "price": 48000, "rent": 900, "visa": "helios"},
+	"helios_spire_2": {"name": "Spire Two apartment", "price": 30000, "rent": 600, "visa": "helios"},
+	"helios_lens": {"name": "Lens Tower sky-deck flat", "price": 36000, "rent": 700, "visa": "helios"},
+	"helios_arc": {"name": "Arc Towers bridge loft", "price": 42000, "rent": 800, "visa": "helios"},
+	"helios_ring": {"name": "Ring habitat suite", "price": 55000, "rent": 1000, "visa": "helios"},
+	"terrace_tower": {"name": "Terrace Tower flat", "price": 16000, "rent": 320},
+	"skyport_office": {"name": "Skyport tower office", "price": 22000, "rent": 450, "income": 700, "visa": "work"},
+	"galleria_unit_a": {"name": "Galleria shop unit A", "price": 26000, "rent": 520, "income": 820, "visa": "work"},
+	"galleria_unit_b": {"name": "Galleria shop unit B", "price": 26000, "rent": 520, "income": 820, "visa": "work"},
+}
+
+
+## Whether `id` is yours now (owned, or rent paid up).
+func has_property(id: String, now: int) -> bool:
+	var p: Dictionary = d.property.get(id, {})
+	return not p.is_empty() and (bool(p.get("own", false)) or int(p.get("paid_to", 0)) > now)
+
+
+func property_owned(id: String) -> bool:
+	return bool((d.property.get(id, {}) as Dictionary).get("own", false))
+
+
+## Why you can't take `id` on ("" if you can).
+func property_blocker(id: String, now: int) -> String:
+	var info: Dictionary = PROPERTIES[id]
+	if info.has("visa") and not has_visa(info.visa, now):
+		return info.visa
+	return ""
+
+
+## Rents `id` for a sol (it renews itself every sol after: settle_property).
+func rent_property(id: String, now: int) -> bool:
+	if not PROPERTIES.has(id) or property_owned(id) or not property_blocker(id, now).is_empty():
+		return false
+	if not pay(int(PROPERTIES[id].rent)):
+		return false
+	var p: Dictionary = d.property.get(id, {"income_at": now})
+	p["own"] = false
+	p["paid_to"] = maxi(int(p.get("paid_to", 0)), now) + int(GameClock.DAY_SECONDS)
+	d.property[id] = p
+	return true
+
+
+func buy_property(id: String, now: int) -> bool:
+	if not PROPERTIES.has(id) or property_owned(id) or not property_blocker(id, now).is_empty():
+		return false
+	if not pay(int(PROPERTIES[id].price)):
+		return false
+	var p: Dictionary = d.property.get(id, {"income_at": now})
+	p["own"] = true
+	d.property[id] = p
+	return true
+
+
+## Every sol: rent comes out of your wallet (no money: you're out), and
+## businesses you hold pay their takings. Returns what happened.
+func settle_property(now: int) -> Dictionary:
+	var out := {"rent": 0, "income": 0, "evicted": []}
+	var day := int(GameClock.DAY_SECONDS)
+	for id: String in d.property.keys():
+		var p: Dictionary = d.property[id]
+		var info: Dictionary = PROPERTIES.get(id, {})
+		if info.is_empty():
+			d.property.erase(id)
+			continue
+		if not bool(p.get("own", false)):
+			while int(p.get("paid_to", 0)) <= now:
+				if not pay(int(info.rent)):
+					d.property.erase(id)
+					out.evicted.append(id)
+					break
+				p["paid_to"] = int(p.get("paid_to", now)) + day
+				out.rent += int(info.rent)
+			if id in out.evicted:
+				continue
+		if info.has("income"):
+			var since := int(p.get("income_at", now))
+			var sols := (now - since) / day
+			if sols > 0:
+				var got := sols * int(info.income)
+				d.wallet += got
+				d.earned += got
+				out.income += got
+				p["income_at"] = since + sols * day
+	return out
+
+
+# --- Your gang --------------------------------------------------------------
+
+## A crew of your own: you name it, recruit people, and earn respect (jobs
+## done, raids won, robberies, fights with the Marshals); respect lifts its
+## rank, and a higher rank holds more members. Members walk with you in
+## town and fight beside you when it comes to it.
+const GANG_COST := 1500
+const RECRUIT_COST := 250
+## [rank name, respect needed, members it can hold].
+const GANG_RANKS := [["Street crew", 0, 2], ["Runners", 100, 3], ["Enforcers", 300, 4], ["Syndicate", 700, 6],
+		["Cartel", 1500, 8], ["Kingpins of Mars", 3000, 10]]
+const RECRUITS := ["Zuri", "Dax", "Imani", "Kofi", "Rhea", "Tomas", "Lerato", "Yuki", "Bram", "Ola", "Nikolai", "Sade"]
+
+
+func in_gang() -> bool:
+	return not (d.gang as Dictionary).is_empty()
+
+
+func form_gang(gang_name: String) -> bool:
+	if in_gang() or gang_name.strip_edges().is_empty() or not pay(GANG_COST):
+		return false
+	d.gang = {"name": gang_name.strip_edges().left(24), "respect": 0, "members": []}
+	return true
+
+
+func gang_rank() -> int:
+	var r := 0
+	for i in GANG_RANKS.size():
+		if int(d.gang.get("respect", 0)) >= int(GANG_RANKS[i][1]):
+			r = i
+	return r
+
+
+func gang_slots() -> int:
+	return int(GANG_RANKS[gang_rank()][2]) if in_gang() else 0
+
+
+## Respect for the gang; returns true when it climbs a rank.
+func gang_respect(amount: int) -> bool:
+	if not in_gang():
+		return false
+	var before := gang_rank()
+	d.gang.respect = maxi(int(d.gang.respect) + amount, 0)
+	return gang_rank() > before
+
+
+## Takes on the next recruit who isn't in already ("" if full or broke).
+func recruit() -> String:
+	if not in_gang() or (d.gang.members as Array).size() >= gang_slots():
+		return ""
+	for who: String in RECRUITS:
+		if not who in d.gang.members:
+			if not pay(RECRUIT_COST):
+				return ""
+			(d.gang.members as Array).append(who)
+			return who
+	return ""
+
+
+func dismiss(who: String) -> bool:
+	if not in_gang() or not who in d.gang.members:
+		return false
+	(d.gang.members as Array).erase(who)
 	return true
 
 
@@ -1031,6 +1241,7 @@ func finish_job() -> Dictionary:
 		_trust(j.trust, 4)
 	d.jobs_done[job] = int(Time.get_unix_time_from_system())
 	d.job = {}
+	gang_respect(10)
 	return {"job": job, "pay": int(j.pay)}
 
 

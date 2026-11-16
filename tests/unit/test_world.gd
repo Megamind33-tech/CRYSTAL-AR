@@ -15,6 +15,22 @@ func test_terrain_matches_blender() -> void:
 		assert_almost_eq(WorldTerrain.height(p[0], p[1]), float(p[2]), 0.001, "height at %s, %s" % [p[0], p[1]])
 
 
+## The ground you stand on and see (the physics height map and the mesh,
+## both triangles split on the same diagonal) is WorldTerrain.surface: it
+## meets the height function at the grid's corners and is flat in between.
+func test_surface_is_the_walked_ground() -> void:
+	var step := WorldTerrain.STEP
+	for corner: Vector2 in [Vector2(300, -100), Vector2(-455, 0), Vector2(0, 0)]:
+		assert_almost_eq(WorldTerrain.surface(corner.x, corner.y), WorldTerrain.height(corner.x, corner.y), 0.0001)
+	# Inside a cell: on the plane through its triangle's corners.
+	var x0 := 300.0
+	var z0 := -100.0
+	var h10 := WorldTerrain.height(x0 + step, z0)
+	var h01 := WorldTerrain.height(x0, z0 + step)
+	var h00 := WorldTerrain.height(x0, z0)
+	assert_almost_eq(WorldTerrain.surface(x0 + 1.0, z0 + 1.0), h00 + (h10 - h00) * 0.2 + (h01 - h00) * 0.2, 0.0001)
+
+
 func test_places_on_flat_ground() -> void:
 	assert_almost_eq(WorldTerrain.height(CityLayout.ORIGIN.x, CityLayout.ORIGIN.z), CityLayout.ORIGIN.y, 0.01, "city plateau")
 	for c: Vector3 in [Vector3(-40, 0, -40), Vector3(40, 0, 40), Vector3(0, 0, 30)]:
@@ -72,7 +88,7 @@ func test_dig_run_layout() -> void:
 	for t: Transform3D in WorldLayout.dig_spawns():
 		points.append(t.origin)
 	for p: Vector3 in points:
-		assert_almost_eq(p.y, WorldTerrain.height(p.x, p.z), 0.25, "on the ground at %s" % p)
+		assert_almost_eq(p.y, WorldTerrain.surface(p.x, p.z), 0.25, "on the ground at %s" % p)
 		assert_true(area.has_point(p), "inside the bots' navigation at %s" % p)
 	assert_lt((data.vault as Vector3).y, -15.0, "the relic vault is down in the canyon")
 	var c := MatchConfig.for_place(GameMode.HUNT, "You")
