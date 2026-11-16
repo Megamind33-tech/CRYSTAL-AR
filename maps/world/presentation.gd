@@ -27,7 +27,9 @@ func _ready() -> void:
 	add_child(paving)
 	for p: Array in CityLayout.pieces():
 		if not str(p[0]).is_empty():
-			add_child(Comic.kit_instance(p[0], p[1], p[2], p[3]))
+			var piece := Comic.kit_instance(p[0], p[1], p[2], p[3])
+			piece.visibility_range_end = 420.0  # the city from the outlands: the dome carries it
+			add_child(piece)
 		if p[0] == "life/hab_open" or p[0] == "shopfront":
 			_room_light(p[1])
 	for t: Array in CityLayout.terminals():
@@ -40,8 +42,9 @@ func _ready() -> void:
 		var base := WorldTerrain.at(p[1], p[2])
 		var sink := 0.15 if FOOTINGS.has(p[0]) else 0.3  # small props bed into the dust
 		var kit := Comic.kit_instance(p[0], base + Vector3(0, -sink, 0), p[3], p[4])
-		if VIEW_RANGE.has(p[0]):
-			kit.visibility_range_end = VIEW_RANGE[p[0]]
+		var reach: float = VIEW_RANGE.get(p[0], 0.0 if LANDMARKS.has(p[0]) else 380.0)
+		if reach > 0.0:
+			kit.visibility_range_end = reach
 			kit.visibility_range_end_margin = 10.0
 		add_child(kit)
 		if FOOTINGS.has(p[0]):
@@ -134,6 +137,9 @@ func _deep_furrow() -> void:
 		_farm.append(light)
 
 
+## Seen from anywhere (the skyline): everything else has a view distance.
+const LANDMARKS := ["districts/spire_a", "districts/spire_b", "districts/arc_towers", "districts/ring_hab", "districts/galleria",
+		"districts/control_tower", "districts/shuttle", "comms_tower", "world/freighter_wreck", "life/factory", "life/mining_rig"]
 ## Small street furniture isn't drawn from far off (the towers always are).
 const VIEW_RANGE := {"districts/lamp_neo": 180.0, "districts/planter": 140.0, "districts/holo_sign": 260.0,
 		"districts/solar_tree": 260.0, "crate_stack": 180.0, "street_lamp": 180.0, "districts/pod_a": 420.0,
@@ -266,6 +272,7 @@ func _monorail() -> void:
 			var ground := WorldTerrain.at(q.x, q.y)
 			var pylon := Comic.kit_instance("districts/mono_pylon", ground, rad_to_deg(atan2(dir.x, dir.y)), 1.0)
 			pylon.scale = Vector3(1.0, (at.y - 1.1 - ground.y) / 9.9, 1.0)
+			pylon.visibility_range_end = 450.0
 			add_child(pylon)
 		if k == 0:
 			continue

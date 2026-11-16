@@ -17,7 +17,7 @@ const COLORS := [Color(0.95, 0.33, 0.04), Color(0.14, 0.24, 0.52), Color(0.88, 0
 ## How well known you are on MarsNet (Career.fame_tier): people say so.
 static var fame_tier: int = 0
 ## Beyond this (metres) people aren't animated (they're out of sight).
-const FAR := 130.0
+const FAR := 70.0
 var _vendors: Array = []  ## [PlayerVisual, PlayerSimState, home yaw]
 var _walkers: Array = []  ## [PlayerVisual, PlayerSimState, path, next index]
 var _time: float = 0.0
@@ -191,7 +191,7 @@ func _body(display_name: String, color: Color, variant: int, indoors: bool = tru
 ## The city's people are many: no sun shadow of their own (the player's and
 ## the fighters' keep theirs) and not drawn past NPC_RANGE, where they're a
 ## few pixels tall. Most of a frame's triangles were their bodies.
-const NPC_RANGE := 75.0
+const NPC_RANGE := 50.0
 func _light_weight(v: Node) -> void:
 	for gi: GeometryInstance3D in v.find_children("*", "GeometryInstance3D", true, false):
 		gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

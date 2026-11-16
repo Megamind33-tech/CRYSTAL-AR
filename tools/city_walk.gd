@@ -111,6 +111,24 @@ func _run() -> void:
 		print("CITY WALK: ate, food now %.0f, meat left %s" % [me.state.food, mc.d.stash])
 		get_tree().quit(0)
 		return
+	if Platform.user_args.has("--roads"):
+		var wx: DustStorms = m.get_tree().root.find_child("Weather", true, false)
+		CityNpcs.hour_offset = fposmod(11.0 - GameClock.hour(Time.get_unix_time_from_system()), 24.0)
+		wx.hour_offset = CityNpcs.hour_offset
+		m.city.events._next = 1.0e9
+		# Low by the road's edge, looking along it and up at it from the dip.
+		for spot: Array in [[Vector2(-300, 140), Vector2(-420, 190), 0.0, "rd1"], [Vector2(-100, 300), Vector2(150, 385), -0.05, "rd2"],
+				[Vector2(20, -30), Vector2(60, -60), 0.1, "rd3"]]:
+			var a2: Vector2 = spot[0]
+			var b2: Vector2 = spot[1]
+			var mid := a2.lerp(b2, 0.3)
+			var side := (b2 - a2).normalized().orthogonal() * 7.0
+			var at := WorldTerrain.at(mid.x + side.x, mid.y + side.y)
+			var d := b2 - (mid + side)
+			await _pose(me, at + Vector3(0, 0.1, 0), atan2(-d.x, -d.y), spot[2])
+			await _shot(spot[3])
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--style"):
 		await _style_run(me)
 		get_tree().quit(0)
