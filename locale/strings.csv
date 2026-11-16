@@ -1042,3 +1042,39 @@ HEIST_GOT_BONDS,The bonds! Now get clear of Helios
 HEIST_PAID,Clean getaway: $%d after the crew's shares
 HEIST_FAILED,The job's blown: the bonds are lost (the prep still stands)
 HEIST_VAULT_ROOM,THE RING'S COUNTING ROOM
+MARSNET_SNAP,Snap a photo
+MARSNET_FAME,Fame: %s (%d)
+MARSNET_EMPTY,Nothing on your feed yet.
+MARSNET_YOU,you
+MARSNET_LIKES,♥ %d
+MARSNET_NEWS,KaseiNews
+MARSNET_PING,MarsNet: %s
+MARSNET_POSTED,Posted: %d likes and counting
+MARSNET_TIER,MarsNet knows you now: %s
+MARSNET_SNAP_CAPTION,"Out here in %s.|Views from %s. Not bad for Mars.|%s, today. No filter.|Another sol in %s."
+MARSNET_CHATTER,"Lena_V::who's selling Frost near the Galleria tonight?|DustDevil88::storm's coming in from the west, tie your rovers down|KaseiMarshals::Reminder: carrying contraband in the city is a crime.|Okon_Saloon::half-price ale at the Dust Devil till dark|HeliosLiving::Penthouse views from the Spire, now leasing|SkyportOps::Shuttle KX-4 delayed: dust on the pads|Tobi::anyone seen my rover? left it by the Terrace|RedLantern::live music tonight. Masks off at the door.|MinerMags::Hollow refinery hiring. Bring your own suit.|Ash_H::the Ring at sunset >>>|NovaTerrace::water fund still missing. Marshals say nothing|Ledger_Watch::the Blue Line are getting nervous on their corner"
+MARSNET_MANHUNT,Manhunt across Kasei Valley: the Marshals are after an armed suspect
+MARSNET_BOUNTY_ALIVE,Bounty hunter brings in %s alive. The Marshals say thanks.
+MARSNET_BOUNTY_DEAD,%s won't be troubling anyone now: a bounty paid in full.
+MARSNET_HEIST,"The Helios Ring's vault cleaned out! Bonds gone, the thieves vanished into the dust."
+MARSNET_BOUGHT,New money in the valley: someone just bought %s.
+MARSNET_AIRCRAFT,Spotted over Kasei: a brand new %s.
+MARSNET_GANG_RANK,The %s are moving up: now %s.
+MARSNET_TURF,The Blue Line crew are off the Galleria corner. Someone new runs it now.
+MARSNET_COUPLE,Seen together again: %s and a certain someone. Kasei's newest couple?
+NPC_BARK_FAMOUS,"Hey, you're the one from MarsNet!|Saw you on my feed!|Can I get a snap with you?|Big fan. Don't shoot me."
+PARTNER_PROMPT_MEET,Say hello to %s
+PARTNER_PROMPT_TOGETHER,With %s · %d%%
+PARTNER_PROMPT_TALK,Talk to %s
+PARTNER_MET,"You met %s, %s: watch MarsNet for her messages"
+PARTNER_INVITE,%s: meet me at %s?
+PARTNER_STOOD_UP,You stood %s up
+PARTNER_HUNG_OUT,A good time with %s (bond %d)
+PARTNER_FIGHTS,%s has your back now: she'll fight beside you
+PARTNER_HELLO,Oh! Hi. I'm Rhea. I fix shuttles at the Skyport.|Hey. New in the valley? I'm Rhea.
+PARTNER_HAPPY,This was nice.|Same time next sol?|You're good company.|I needed that.
+PARTNER_CHAT,Busy sol?|Don't get yourself shot.|The pads are lovely at sunset.|Text me.
+HANGOUT_BAR,the Red Lantern
+HANGOUT_ATRIUM,the Galleria atrium
+HANGOUT_HELIOS,the Helios plaza
+HANGOUT_SKYPORT,the Skyport pads

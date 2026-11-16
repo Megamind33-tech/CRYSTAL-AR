@@ -190,6 +190,7 @@ func menu_act(what: String, me: SimPlayer) -> void:
 		"buy":
 			if c.buy_property(parts[1], now):
 				city._flash_text(_t("ESTATE_BOUGHT") % Career.PROPERTIES[parts[1]].name, ComicUI.GREEN)
+				city.news("MARSNET_BOUGHT", [Career.PROPERTIES[parts[1]].name], 6)
 			city.garage.set_menu(_door_line(parts[1]), _door_options(parts[1]))
 		"visa":
 			if c.buy_visa(parts[1], now):
@@ -199,6 +200,7 @@ func menu_act(what: String, me: SimPlayer) -> void:
 			var model := int(parts[1])
 			if c.buy_aircraft(model, now):
 				_place_aircraft(me, model)
+				city.news("MARSNET_AIRCRAFT", [VehicleSim.MODELS[model].name], 5)
 				city._flash_text(_t("AERO_BOUGHT") % VehicleSim.MODELS[model].name, ComicUI.GREEN)
 			city.garage.set_menu(_aero_line(), _aero_options())
 		"form":
@@ -394,6 +396,7 @@ func _respect(c: Career, n: int) -> void:
 		return
 	if c.gang_respect(n):
 		city._flash_text(_t("GANG_RANK_UP") % [c.d.gang.name, Career.GANG_RANKS[c.gang_rank()][0]], ComicUI.MAGENTA)
+		city.news("MARSNET_GANG_RANK", [c.d.gang.name, Career.GANG_RANKS[c.gang_rank()][0]], 8)
 	Profile.save()
 
 
@@ -403,6 +406,8 @@ func crew_join(director: RaidDirector, me: SimPlayer) -> void:
 	if not c.in_gang():
 		return
 	var k := 0
+	if c.partner_met() and c.bond() >= Career.BOND_FIGHTS:  # she has your back
+		director.militia.append(director._bot(c.PARTNER.name, 0, true, me.state.position + Vector3(-2, 0.3, 2)))
 	for who: String in c.d.gang.members:
 		var a := k * 1.7
 		var at := me.state.position + Vector3(cos(a), 0, sin(a)) * 3.0

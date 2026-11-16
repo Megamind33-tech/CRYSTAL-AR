@@ -234,6 +234,7 @@ func surrender(id: int) -> bool:
 			(dr.items as Dictionary).erase("bounty_proof")  # they go with the Marshals, not in pieces
 		var pay := Profile.career().claim_bounty(true, _now())
 		Profile.save()
+		city.news("MARSNET_BOUNTY_ALIVE", [str(info().get("name", "?"))], 12)
 		city._flash_text(TranslationServer.translate("BOUNTY_TAKEN_ALIVE") % [str(info().get("name", "")), pay]
 				if not info().is_empty() else TranslationServer.translate("BOUNTY_PAID") % pay, ComicUI.GREEN)
 		_clear()
@@ -284,8 +285,10 @@ func menu_act(what: String) -> void:
 				city._flash_text(TranslationServer.translate("BOUNTY_TAKEN") % info().name, ComicUI.YELLOW)
 				return
 		"proof":
+			var dead_name := str(info().get("name", "?"))
 			var pay := c.claim_bounty(false, _now())
 			if pay > 0:
+				city.news("MARSNET_BOUNTY_DEAD", [dead_name], 8)
 				city._flash_text(TranslationServer.translate("BOUNTY_PAID") % pay, ComicUI.GREEN)
 				_clear()
 		"drop":

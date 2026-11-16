@@ -69,6 +69,8 @@ var bounty: CityBounty   ## the Marshals' Bounty Board
 var trade: CityTrade     ## the Red Dust Trade
 var events: CityEvents   ## things that turn up out in the valley
 var heist: CityHeist     ## heists in stages
+var social: CitySocial   ## MarsNet and the people in your life
+var marsnet_button: Button
 var burner_button: Button
 var draw_button: Button
 var torch_button: Button
@@ -134,6 +136,7 @@ func setup(layer: CanvasLayer) -> void:
 	layer.add_child(garage)
 	garage.closed.connect(_close_talk)
 	garage.act.connect(_garage_act)
+	social = CitySocial.new(self, layer)
 	bino_button = _side_button(ComicUI.CYAN, 290, func() -> void: toggle_binoculars())
 	bino_button.text = tr("CITY_BINOCULARS")
 	scan_button = _side_button(ComicUI.MAGENTA, 356, func() -> void: scan())
@@ -150,6 +153,14 @@ func setup(layer: CanvasLayer) -> void:
 	burner_button.offset_top = 384
 	burner_button.offset_bottom = 432
 	layer.add_child(burner_button)
+	marsnet_button = _side_button(ComicUI.CYAN, 0, func() -> void: social.open())
+	marsnet_button.text = "MarsNet"
+	marsnet_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	marsnet_button.offset_left = 232
+	marsnet_button.offset_right = 352
+	marsnet_button.offset_top = 440
+	marsnet_button.offset_bottom = 488
+	layer.add_child(marsnet_button)
 	for b: Button in [draw_button, torch_button]:
 		b.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		b.offset_left = 232
@@ -188,7 +199,7 @@ func setup(layer: CanvasLayer) -> void:
 	# The touch controls take every tap first: let our buttons have their own.
 	match_node.touch.ui_blocks = func(pos: Vector2) -> bool:
 		for b: Button in [pack_button, quick_button, bino_button, scan_button, eat_button, drink_button, draw_button, torch_button,
-				burner_button]:
+				burner_button, marsnet_button]:
 			if b.visible and b.get_global_rect().grow(6).has_point(pos):
 				return true
 		return false
@@ -310,31 +321,35 @@ func update() -> void:
 		_near = "showroom"
 	if estate == null:
 		estate = CityEstate.new(self)
-	var estate_near := estate.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	var estate_near := estate.update(me, _panels_open())
 	if _near.is_empty() or (_near == "exit_rover" and estate_near.is_empty()):
 		if not estate_near.is_empty():
 			_near = estate_near
 	if bounty == null:
 		bounty = CityBounty.new(self)
-	var bounty_near := bounty.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	var bounty_near := bounty.update(me, _panels_open())
 	if _near.is_empty() and not bounty_near.is_empty():
 		_near = bounty_near
 	if trade == null:
 		trade = CityTrade.new(self)
-	var trade_near := trade.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	var trade_near := trade.update(me, _panels_open())
 	if _near.is_empty() and not trade_near.is_empty():
 		_near = trade_near
 	if events == null:
 		events = CityEvents.new(self)
-	var event_near := events.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	var event_near := events.update(me, _panels_open())
 	if _near.is_empty() and not event_near.is_empty():
 		_near = event_near
 	if heist == null:
 		heist = CityHeist.new(self)
-	var heist_near := heist.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	var heist_near := heist.update(me, _panels_open())
 	if (_near.is_empty() or _near == "exit_rover") and not heist_near.is_empty():
 		_near = heist_near
-	burner_button.visible = Profile.career().chain_step() >= 1 and not (screen.visible or talk.visible or shelf.visible or garage.visible)
+	var social_near := social.update(me, _panels_open())
+	if _near.is_empty() and not social_near.is_empty():
+		_near = social_near
+	marsnet_button.visible = not _panels_open()
+	burner_button.visible = Profile.career().chain_step() >= 1 and not (_panels_open())
 	var c := Profile.career()
 	_hollow_sign.text = tr("WORLD_HOLLOW") + "\n" + (tr("WORLD_HOLLOW_SIGN_YOURS") if c.owns_hollow() else tr("WORLD_HOLLOW_SIGN_THARSIS"))
 	_hollow_sign.modulate = ComicUI.GREEN if c.owns_hollow() else ComicUI.CYAN
@@ -343,7 +358,7 @@ func update() -> void:
 	if shelf.visible and (not me.state.alive or vit < _shelf_vit - 0.5):
 		shelf.close()
 	_shelf_vit = vit
-	var busy := screen.visible or talk.visible or shelf.visible or garage.visible
+	var busy := _panels_open()
 	if not busy and not match_node.input.enabled:
 		_close_talk()  # nothing open: the controls are yours again
 	match_node.touch.show_interact = not _near.is_empty() and not busy
@@ -384,6 +399,8 @@ func update() -> void:
 			events.act(_near, me)
 		elif _near.begins_with("heist:"):
 			heist.act(_near, me)
+		elif _near.begins_with("social:"):
+			social.act(_near, me)
 		elif _near == "bounty:ask":
 			bounty.ask(me)
 		elif _near.begins_with("kiosk:"):
@@ -743,6 +760,17 @@ func _sync_combat() -> void:
 func toggle_drawn() -> void:
 	drawn = not drawn
 	_sync_combat()
+
+
+## Any of the city's panels open (the controls are theirs).
+func _panels_open() -> bool:
+	return screen.visible or talk.visible or shelf.visible or garage.visible or (social != null and social.panel.visible)
+
+
+## A line on MarsNet about what just happened (and fame for it).
+func news(key: String, args: Array, fame: int) -> void:
+	if social != null:
+		social.news(key, args, fame)
 
 
 func _open_burner() -> void:
@@ -1783,6 +1811,11 @@ func prompt() -> String:
 		text = trade.prompt(_near)
 	elif _near.begins_with("event:"):
 		text = events.prompt(_near)
+	elif _near.begins_with("social:"):
+		var st := social.prompt(_near)
+		if st.contains("%"):
+			return st
+		text = st
 	elif _near.begins_with("heist:"):
 		var ht := heist.prompt(_near)
 		if ht.contains("%"):

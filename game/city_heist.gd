@@ -138,6 +138,7 @@ func _paid(c: Career) -> void:
 	city._sync_combat()
 	if pay > 0:
 		city._flash_text(_t("HEIST_PAID") % pay, ComicUI.GREEN)
+		city.news("MARSNET_HEIST", [], 30)
 
 
 func _set_down(c: Career) -> void:

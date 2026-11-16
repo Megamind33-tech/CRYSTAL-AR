@@ -764,3 +764,23 @@ static func getaway_spot() -> Vector3:
 
 
 const HEIST_ESCAPE := 320.0  ## metres from the Ring: you're clear
+
+
+# --- MarsNet and the companion ---
+
+## Where you first meet Rhea (the Galleria's food court side), and where
+## she asks you to meet her.
+static func partner_first() -> Vector3:
+	return WorldTerrain.at(GALLERIA.x - 8, GALLERIA.y - 3) + Vector3(0, 0.1, 0)
+
+
+static func hangout_spot(place: String) -> Vector3:
+	match place:
+		"bar":
+			var bar: Array = shops()[5]
+			return (bar[1] as Vector3) + Basis(Vector3.UP, float(bar[3]) - PI) * Vector3(2.0, 0, 1.2)
+		"atrium":
+			return WorldTerrain.at(GALLERIA.x + 6, GALLERIA.y + 6) + Vector3(0, 0.1, 0)
+		"helios":
+			return WorldTerrain.at(HELIOS.x + 20, HELIOS.y + 40) + Vector3(0, 0.1, 0)
+	return WorldTerrain.at(SKYPORT.x - 10, SKYPORT.y + 15) + Vector3(0, 0.1, 0)

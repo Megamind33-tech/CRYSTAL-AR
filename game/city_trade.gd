@@ -166,6 +166,7 @@ func _step_turf(me: SimPlayer, c: Career) -> void:
 		c.won_turf()
 		Profile.save()
 		city._flash_text(_t("TRADE_TURF_WON"), ComicUI.GREEN)
+		city.news("MARSNET_TURF", [], 10)
 		city._sync_combat()
 	elif state == 2:
 		turf.finish()

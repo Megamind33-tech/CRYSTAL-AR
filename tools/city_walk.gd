@@ -111,6 +111,10 @@ func _run() -> void:
 		print("CITY WALK: ate, food now %.0f, meat left %s" % [me.state.food, mc.d.stash])
 		get_tree().quit(0)
 		return
+	if Platform.user_args.has("--social"):
+		await _social_run(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--heist"):
 		await _heist_run(me)
 		get_tree().quit(0)
@@ -645,6 +649,38 @@ func _garage_run(me: SimPlayer) -> void:
 ## The living valley: the plaza by day (minimap, clock), roads and traffic,
 ## the new rides, Kasei Motors, the Red Lantern of an evening, a shop shut
 ## at night, the Hollow on its footings.
+func _social_run(me: SimPlayer) -> void:
+	var c := Profile.career()
+	m.city.events._next = 1.0e9
+	var weather: DustStorms = m.get_tree().root.find_child("Weather", true, false)
+	CityNpcs.hour_offset = fposmod(17.5 - GameClock.hour(Time.get_unix_time_from_system()), 24.0)
+	weather.hour_offset = CityNpcs.hour_offset
+	await _pose(me, WorldLayout.partner_first() + Vector3(0, 0, 2.2), 0.0, -0.05)
+	await _frames(10)
+	print("CITY WALK: by Rhea, near = %s" % m.city._near)
+	m.input.press(PlayerCommand.Action.INTERACT)
+	await _frames(10)
+	await _shot("s1_meet_rhea")
+	c.d.partner.invite_at = 0
+	m.city.social._invite_t = 0.0
+	await _frames(20)
+	print("CITY WALK: invite %s" % c.d.partner.invite)
+	var spot := WorldLayout.hangout_spot(str(c.d.partner.invite.place))
+	await _pose(me, spot + Vector3(0, 0, 2.5), 0.0, -0.05)
+	var t0 := Time.get_ticks_msec()
+	while not (c.d.partner.invite as Dictionary).is_empty() and Time.get_ticks_msec() - t0 < 120000:
+		await _frames(10)
+	print("CITY WALK: bond %d" % c.bond())
+	await _shot("s2_hangout")
+	c.post("KaseiNews", "Bounty hunter brings in Vesna Kroll alive. The Marshals say thanks.", 88, int(Time.get_unix_time_from_system()), 12)
+	m.city.social.open()
+	await _frames(5)
+	await m.city.social._snap()
+	await _frames(10)
+	print("CITY WALK: feed %d posts, fame %d" % [(c.d.feed as Array).size(), int(c.d.fame)])
+	await _shot("s3_marsnet")
+
+
 func _heist_run(me: SimPlayer) -> void:
 	var c := Profile.career()
 	c.d.wallet = 20000

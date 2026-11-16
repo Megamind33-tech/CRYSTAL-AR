@@ -265,7 +265,8 @@ static func fresh() -> Dictionary:
 			"home": {"locker": {}, "lock": 0, "checked_at": 0, "robbed": {}}, "ride": 0,
 			"aircraft": -1, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
 			"trade": {"chain": 0, "sold": 0, "learned": [], "clients": {}, "orders": [], "dealers": {}, "order_at": 0},
-			"heist": {}, "heists_done": {}}
+			"heist": {}, "heists_done": {},
+			"feed": [], "fame": 0, "partner": {}}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -1100,7 +1101,7 @@ func next_order(now: int, roll: float) -> Dictionary:
 	var t := trade()
 	if (t.clients as Dictionary).is_empty() or (t.orders as Array).size() >= MAX_ORDERS or now < int(t.order_at):
 		return {}
-	t.order_at = now + ORDER_EVERY
+	t.order_at = now + ORDER_EVERY - 25 * fame_tier()  # word gets round
 	var ids: Array = t.clients.keys()
 	var who: String = ids[int(roll * ids.size()) % ids.size()]
 	for o: Dictionary in t.orders:
@@ -1275,6 +1276,87 @@ func carrying_dust() -> bool:
 		if int(d.stash.get(variant, 0)) > 0:
 			return true
 	return false
+
+
+# --- MarsNet (the valley's feed) and fame ----------------------------------
+
+const FEED_MAX := 40
+## [fame needed, what people call you].
+const FAME_TIERS := [[0, "Nobody"], [40, "Local name"], [150, "Talk of the valley"], [400, "MarsNet star"],
+		[1000, "Legend of Kasei"]]
+
+
+## A post on MarsNet (newest first). `fame`: what it does for yours.
+func post(who: String, text: String, likes: int, now: int, fame: int = 0, img: String = "") -> void:
+	var p := {"who": who, "text": text, "likes": likes, "at": now}
+	if not img.is_empty():
+		p["img"] = img
+	(d.feed as Array).push_front(p)
+	while (d.feed as Array).size() > FEED_MAX:
+		(d.feed as Array).pop_back()
+	d.fame = maxi(int(d.fame) + fame, 0)
+
+
+func fame_tier() -> int:
+	var t := 0
+	for i in FAME_TIERS.size():
+		if int(d.fame) >= int(FAME_TIERS[i][0]):
+			t = i
+	return t
+
+
+# --- A companion (MarsNet DMs: invites to hang out) --------------------------
+
+## Someone you meet at the Galleria. They ask you out (a place, a time);
+## turn up and stay a while and the bond grows, stand them up and it falls.
+## At BOND_FIGHTS they fight beside you; at BOND_HOME they live with you.
+const PARTNER := {"name": "Rhea Okoye", "role": "Skyport engineer"}
+const BOND_FIGHTS := 40
+const BOND_HOME := 75
+const INVITE_EVERY := 420
+const INVITE_TIME := 360
+const HANGOUT_SECONDS := 20.0
+const HANGOUTS := ["bar", "atrium", "helios", "skyport"]
+
+
+func partner_met() -> bool:
+	return not (d.partner as Dictionary).is_empty()
+
+
+func meet_partner(now: int) -> void:
+	if not partner_met():
+		d.partner = {"bond": 10, "invite": {}, "invite_at": now + 120}
+
+
+func bond() -> int:
+	return int(d.partner.get("bond", 0))
+
+
+## A new invite when it's time (`roll` 0..1 picks the place).
+func next_invite(now: int, roll: float) -> Dictionary:
+	if not partner_met() or not (d.partner.invite as Dictionary).is_empty() or now < int(d.partner.invite_at):
+		return {}
+	d.partner.invite = {"place": HANGOUTS[int(roll * HANGOUTS.size()) % HANGOUTS.size()], "due": now + INVITE_TIME}
+	return d.partner.invite
+
+
+## You turned up and stayed: the bond grows.
+func hung_out(now: int) -> void:
+	if not partner_met():
+		return
+	d.partner.bond = mini(bond() + 12, 100)
+	d.partner.invite = {}
+	d.partner.invite_at = now + INVITE_EVERY
+
+
+## Stood up: it falls. True when an invite lapsed.
+func invite_lapsed(now: int) -> bool:
+	if not partner_met() or (d.partner.invite as Dictionary).is_empty() or now <= int(d.partner.invite.due):
+		return false
+	d.partner.bond = maxi(bond() - 8, 0)
+	d.partner.invite = {}
+	d.partner.invite_at = now + INVITE_EVERY
+	return true
 
 
 # --- Heists (planned at your gang's back room) ------------------------------

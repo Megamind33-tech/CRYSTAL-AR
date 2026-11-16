@@ -212,3 +212,24 @@ func test_heist_in_stages() -> void:
 	assert_eq(pay, roundi(take * (1.0 - 2 * Career.CREW_CUT)), "the crew take their shares")
 	assert_eq(int(c.d.wallet), wallet + pay)
 	assert_false(c.plan_heist("ring", NOW + 10), "the Ring is on alert after")
+
+
+func test_marsnet_fame_and_partner() -> void:
+	var c := _rich()
+	assert_eq(c.fame_tier(), 0)
+	for i in 50:
+		c.post("x", "y", 1, NOW + i, 1)
+	assert_eq((c.d.feed as Array).size(), Career.FEED_MAX, "the feed keeps the latest")
+	assert_eq(c.fame_tier(), 1, "fame climbs the tiers")
+	assert_false(c.partner_met())
+	c.meet_partner(NOW)
+	assert_true(c.next_invite(NOW, 0.1).is_empty(), "she doesn't text straight away")
+	var inv := c.next_invite(NOW + 200, 0.6)
+	assert_false(inv.is_empty())
+	var b := c.bond()
+	c.hung_out(NOW + 210)
+	assert_gt(c.bond(), b, "turning up grows the bond")
+	c.next_invite(NOW + 210 + Career.INVITE_EVERY + 1, 0.2)
+	b = c.bond()
+	assert_true(c.invite_lapsed(NOW + 210 + Career.INVITE_EVERY + Career.INVITE_TIME + 5))
+	assert_lt(c.bond(), b, "standing her up costs")

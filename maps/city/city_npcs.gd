@@ -14,6 +14,8 @@ const WALK_SPEED := 1.4
 const COLORS := [Color(0.95, 0.33, 0.04), Color(0.14, 0.24, 0.52), Color(0.88, 0.9, 0.92), Color(0.08, 0.46, 0.48),
 		Color(0.78, 0.56, 0.06), Color(0.3, 0.34, 0.42), Color(0.34, 0.42, 0.16), Color(0.52, 0.1, 0.17)]
 
+## How well known you are on MarsNet (Career.fame_tier): people say so.
+static var fame_tier: int = 0
 ## Beyond this (metres) people aren't animated (they're out of sight).
 const FAR := 130.0
 var _vendors: Array = []  ## [PlayerVisual, PlayerSimState, home yaw]
@@ -303,6 +305,10 @@ func unmeet(key: String) -> void:
 		_meets.erase(key)
 
 
+func meet_position(key: String) -> Vector3:
+	return (_meets[key][1] as PlayerSimState).position if _meets.has(key) else Vector3.INF
+
+
 func meet_visual(key: String) -> Node3D:
 	return _meets[key][0] if _meets.has(key) else null
 
@@ -460,7 +466,7 @@ func _process(delta: float) -> void:
 			# Come up to them and they say hello (once in a while).
 			if s.position.distance_to(player_position) < 4.0 and _time - float(_said.get(pv, -99.0)) > 40.0:
 				var who: String = v[3] if v.size() > 3 else ""
-				var line := _line("NPC_BARK_GREET")
+				var line := _line("NPC_BARK_FAMOUS") if fame_tier >= 2 and randf() < 0.5 else _line("NPC_BARK_GREET")
 				if who.begins_with("shop:"):
 					line = TranslationServer.translate("NPC_BARK_SHOP") % Career.SHOPS[who.substr(5)].name
 				elif who == "patron":
