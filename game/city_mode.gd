@@ -67,6 +67,7 @@ var _kit_seen := {}
 var estate: CityEstate   ## doors, property, visas, aircraft, the gang, trees
 var bounty: CityBounty   ## the Marshals' Bounty Board
 var trade: CityTrade     ## the Red Dust Trade
+var events: CityEvents   ## things that turn up out in the valley
 var burner_button: Button
 var draw_button: Button
 var torch_button: Button
@@ -322,6 +323,11 @@ func update() -> void:
 	var trade_near := trade.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
 	if _near.is_empty() and not trade_near.is_empty():
 		_near = trade_near
+	if events == null:
+		events = CityEvents.new(self)
+	var event_near := events.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	if _near.is_empty() and not event_near.is_empty():
+		_near = event_near
 	burner_button.visible = Profile.career().chain_step() >= 1 and not (screen.visible or talk.visible or shelf.visible or garage.visible)
 	var c := Profile.career()
 	_hollow_sign.text = tr("WORLD_HOLLOW") + "\n" + (tr("WORLD_HOLLOW_SIGN_YOURS") if c.owns_hollow() else tr("WORLD_HOLLOW_SIGN_THARSIS"))
@@ -368,6 +374,8 @@ func update() -> void:
 			bounty.open_board()
 		elif _near.begins_with("trade:"):
 			trade.act(_near, me)
+		elif _near.begins_with("event:"):
+			events.act(_near, me)
 		elif _near == "bounty:ask":
 			bounty.ask(me)
 		elif _near.begins_with("kiosk:"):
@@ -710,7 +718,7 @@ func crime(kind: String) -> void:
 ## A fight on: a raid, guards after you, the Marshals, or a bounty gone hot.
 func in_fight() -> bool:
 	return _raid != null or _guards != null or _police != null or (bounty != null and bounty.hot) \
-			or (trade != null and trade.in_fight())
+			or (trade != null and trade.in_fight()) or (events != null and events.in_fight())
 
 
 func _sync_combat() -> void:
@@ -1610,6 +1618,8 @@ func _hostiles() -> Array[int]:
 		out.append_array(bounty.fighters())
 	if trade != null:
 		out.append_array(trade.fighters())
+	if events != null:
+		out.append_array(events.fighters())
 	return out
 
 
@@ -1753,6 +1763,8 @@ func prompt() -> String:
 			text = tr("CITY_PROMPT_BREAK_IN") % home[2]
 	elif _near.begins_with("trade:"):
 		text = trade.prompt(_near)
+	elif _near.begins_with("event:"):
+		text = events.prompt(_near)
 	elif _near == "bounty:board":
 		text = tr("BOUNTY_PROMPT_BOARD")
 	elif _near == "bounty:ask":
@@ -2019,6 +2031,16 @@ class _CityHud extends Control:
 				places.append([p[1], "J", ComicUI.YELLOW])
 		if city.trade != null:
 			places.append_array(city.trade.map_places())
+		if city.events != null:
+			for ev: Array in city.events.map_places():
+				var eq: Vector2 = to_map.call(Vector2((ev[0] as Vector3).x, (ev[0] as Vector3).z))
+				if eq.distance_to(c) > rad - 10 * s:  # off the map: at its edge, pointing the way
+					var edge := c + (eq - c).normalized() * (rad - 12 * s)
+					draw_circle(edge, 7 * s, ComicUI.CYAN)
+					ComicUI.draw_text(self, edge + Vector2(0, 20 * s), tr("EVENT_MAP"), UiStyle.font_hud_bold, roundi(11 * s),
+							ComicUI.CYAN, 1, roundi(3 * s))
+				else:
+					places.append(ev)
 		for p: Array in places:
 			var q: Vector2 = to_map.call(Vector2((p[0] as Vector3).x, (p[0] as Vector3).z))
 			if q.distance_to(c) < rad - 6 * s:

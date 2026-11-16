@@ -996,3 +996,12 @@ TRADE_RESTOCK,Restock the %s dealer
 TRADE_ARM,Arm the %s dealer (armour plate)
 TRADE_STATION,Put %s dealing in %s
 TRADE_MIXED,Mixed %d× %s
+EVENT_POD,"A supply pod's come down: %s · first come, first served"
+EVENT_METEOR,"Meteor fall: fragments to gather, %s"
+EVENT_CONVOY,"A Concern hauler's broken down, %s · its cargo's guarded"
+EVENT_PROMPT_POD,Crack open the supply pod
+EVENT_PROMPT_METEOR,Gather the meteor fragment
+EVENT_PROMPT_CONVOY,Open the hauler's hold
+EVENT_GUARDED,Not with its drivers still standing
+EVENT_TOOK,Took %s
+EVENT_MAP,EVENT
