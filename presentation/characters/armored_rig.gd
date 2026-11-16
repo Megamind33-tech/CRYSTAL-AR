@@ -15,10 +15,13 @@ const SCENE := "res://art/characters/ubc/Superhero_Male_FullBody.gltf"
 const ANIM_SOURCE := "res://art/characters/ual/UAL1_Standard.glb"
 const CLIPS := ["Idle", "Walk", "Jog_Fwd", "Sprint", "Crouch_Idle", "Crouch_Fwd", "Jump", "Pistol_Aim_Down",
 		"Pistol_Aim_Neutral", "Pistol_Aim_Up", "Pistol_Shoot"]
+## Emotes (a free-roam cosmetic): played standing still, in place of the idle.
+## Optional: a body whose library lacks them just doesn't emote.
+const EMOTES := ["Dance", "Idle_Talking", "Fixing_Kneeling", "Sitting_Idle"]
 const UPPER_BONES := ["spine_02", "spine_03", "neck_01", "Head", "clavicle_l", "upperarm_l", "lowerarm_l", "hand_l",
 		"clavicle_r", "upperarm_r", "lowerarm_r", "hand_r"]
 const LOOPING := ["Idle", "Walk", "Jog_Fwd", "Sprint", "Crouch_Idle", "Crouch_Fwd", "Jump", "Pistol_Idle",
-		"Pistol_Aim_Down", "Pistol_Aim_Neutral", "Pistol_Aim_Up"]
+		"Pistol_Aim_Down", "Pistol_Aim_Neutral", "Pistol_Aim_Up"] + EMOTES
 const MAX_LEG_TWIST := deg_to_rad(35.0)
 ## Low ready: the aim pitch the weapon sits at while relaxed.
 const RELAXED_PITCH := -0.8
@@ -114,6 +117,7 @@ var _color := Color.WHITE
 var _glow: float = 0.0
 var _flash: float = 0.0
 var _state_name: String = ""
+var _emotes: Array = []  ## the EMOTES this body's library has
 var _look_pitch: float = 0.0
 ## The held weapon's transform in this rig's space, set by _hold_weapon.
 var _weapon_local := Transform3D()
@@ -341,16 +345,33 @@ func _build_tree(library: AnimationLibrary, upper_bones: Array) -> void:
 	crouch.max_space = 3.0
 	bt.add_node("crouch", crouch)
 	bt.add_node("air", _clip("Jump"))
+	_emotes = EMOTES.filter(func(e: String) -> bool: return library.has_animation(e))
+	var emote := AnimationNodeTransition.new()
+	emote.input_count = maxi(_emotes.size(), 1)
+	for i in _emotes.size():
+		emote.set_input_name(i, _emotes[i])
+		bt.add_node("emote_" + _emotes[i], _clip(_emotes[i]))
+	if _emotes.is_empty():
+		emote.set_input_name(0, "none")
+		bt.add_node("emote_none", _clip("Idle"))
+	emote.xfade_time = 0.2
+	bt.add_node("emote", emote)
+	for i in _emotes.size():
+		bt.connect_node("emote", i, "emote_" + _emotes[i])
+	if _emotes.is_empty():
+		bt.connect_node("emote", 0, "emote_none")
 	var state := AnimationNodeTransition.new()
-	state.input_count = 3
+	state.input_count = 4
 	state.set_input_name(0, "ground")
 	state.set_input_name(1, "crouch")
 	state.set_input_name(2, "air")
+	state.set_input_name(3, "emote")
 	state.xfade_time = 0.15
 	bt.add_node("state", state)
 	bt.connect_node("state", 0, "loco_ts")
 	bt.connect_node("state", 1, "crouch")
 	bt.connect_node("state", 2, "air")
+	bt.connect_node("state", 3, "emote")
 	var aim := AnimationNodeBlendSpace1D.new()
 	aim.add_blend_point(_clip("Pistol_Aim_Down"), -1.0, -1, "down")
 	aim.add_blend_point(_clip("Pistol_Aim_Neutral"), 0.0, -1, "neutral")
@@ -451,7 +472,7 @@ static func _retargeted(target: Skeleton3D) -> AnimationLibrary:
 	var hips_dst := target.get_bone_global_rest(target.find_bone("pelvis")).origin.y
 	var ratio := hips_dst / maxf(hips_src, 0.01)
 	_library = AnimationLibrary.new()
-	for clip: String in CLIPS:
+	for clip: String in CLIPS + EMOTES:
 		if not src_player.has_animation(clip):
 			continue
 		var a: Animation = src_player.get_animation(clip).duplicate(true)
@@ -486,6 +507,13 @@ func animate(state: PlayerSimState, delta: float, _height: float) -> void:
 		target = "air"
 	elif state.stance != PlayerSimState.Stance.STAND:
 		target = "crouch"
+	elif not emote.is_empty() and speed < 0.3 and emote in _emotes:
+		target = "emote"
+		if emote != _emote_playing:
+			_emote_playing = emote
+			_tree.set("parameters/emote/transition_request", emote)
+	if target != "emote" and not emote.is_empty() and speed >= 0.3:
+		emote = ""  # moving ends it
 	if target != _state_name:
 		_state_name = target
 		_tree.set("parameters/state/transition_request", target)

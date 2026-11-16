@@ -71,6 +71,8 @@ var events: CityEvents   ## things that turn up out in the valley
 var heist: CityHeist     ## heists in stages
 var social: CitySocial   ## MarsNet and the people in your life
 var marsnet_button: Button
+var style: CityStyle     ## looks and the season
+var style_button: Button
 var burner_button: Button
 var draw_button: Button
 var torch_button: Button
@@ -137,6 +139,7 @@ func setup(layer: CanvasLayer) -> void:
 	garage.closed.connect(_close_talk)
 	garage.act.connect(_garage_act)
 	social = CitySocial.new(self, layer)
+	style = CityStyle.new(self)
 	bino_button = _side_button(ComicUI.CYAN, 290, func() -> void: toggle_binoculars())
 	bino_button.text = tr("CITY_BINOCULARS")
 	scan_button = _side_button(ComicUI.MAGENTA, 356, func() -> void: scan())
@@ -161,6 +164,14 @@ func setup(layer: CanvasLayer) -> void:
 	marsnet_button.offset_top = 440
 	marsnet_button.offset_bottom = 488
 	layer.add_child(marsnet_button)
+	style_button = _side_button(ComicUI.YELLOW, 0, func() -> void: style.open())
+	style_button.text = tr("STYLE_BUTTON")
+	style_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	style_button.offset_left = 232
+	style_button.offset_right = 352
+	style_button.offset_top = 496
+	style_button.offset_bottom = 544
+	layer.add_child(style_button)
 	for b: Button in [draw_button, torch_button]:
 		b.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		b.offset_left = 232
@@ -199,7 +210,7 @@ func setup(layer: CanvasLayer) -> void:
 	# The touch controls take every tap first: let our buttons have their own.
 	match_node.touch.ui_blocks = func(pos: Vector2) -> bool:
 		for b: Button in [pack_button, quick_button, bino_button, scan_button, eat_button, drink_button, draw_button, torch_button,
-				burner_button, marsnet_button]:
+				burner_button, marsnet_button, style_button]:
 			if b.visible and b.get_global_rect().grow(6).has_point(pos):
 				return true
 		return false
@@ -349,6 +360,8 @@ func update() -> void:
 	if _near.is_empty() and not social_near.is_empty():
 		_near = social_near
 	marsnet_button.visible = not _panels_open()
+	style_button.visible = not _panels_open()
+	style.apply()
 	burner_button.visible = Profile.career().chain_step() >= 1 and not (_panels_open())
 	var c := Profile.career()
 	_hollow_sign.text = tr("WORLD_HOLLOW") + "\n" + (tr("WORLD_HOLLOW_SIGN_YOURS") if c.owns_hollow() else tr("WORLD_HOLLOW_SIGN_THARSIS"))
@@ -769,8 +782,11 @@ func _panels_open() -> bool:
 
 ## A line on MarsNet about what just happened (and fame for it).
 func news(key: String, args: Array, fame: int) -> void:
+	var before := Profile.career().season_tier()
 	if social != null:
 		social.news(key, args, fame)
+	if Profile.career().season_tier() > before:
+		_flash_text(tr("STYLE_TIER_UP") % Profile.career().season_tier(), ComicUI.YELLOW)
 
 
 func _open_burner() -> void:
@@ -1390,6 +1406,9 @@ func open_menu(title: String, line: String, options: Array) -> void:
 
 func _garage_act(what: String) -> void:
 	var c := Profile.career()
+	if what.begins_with("style:"):
+		style.menu_act(what.substr(6))
+		return
 	if what.begins_with("heist:"):
 		heist.menu_act(what.substr(6))
 		return

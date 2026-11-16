@@ -1078,3 +1078,25 @@ HANGOUT_BAR,the Red Lantern
 HANGOUT_ATRIUM,the Galleria atrium
 HANGOUT_HELIOS,the Helios plaza
 HANGOUT_SKYPORT,the Skyport pads
+STYLE_BUTTON,Style
+STYLE_TITLE,Style & Season
+STYLE_SEASON,%s · tier %d of %d · %d / %d XP to the next
+STYLE_WEARING,Wearing: %s
+STYLE_DEFAULT,the colony issue
+STYLE_PAGE_SEASON,"Earn XP by making the news, dealing and taking what the valley throws up. Claim each tier's reward."
+STYLE_PAGE_WARDROBE,"What you own. Looks only: no stats, no edge."
+STYLE_PAGE_SHOP,Looks for your cash (you have $%d).
+STYLE_PAGE_EMOTES,Play one standing still: moving ends it.
+STYLE_TAB_SEASON,Season track
+STYLE_TAB_WARDROBE,Wardrobe
+STYLE_TAB_SHOP,Shop
+STYLE_TAB_EMOTES,Emotes
+STYLE_CLAIM,Tier %d: %s
+STYLE_PREMIUM,Premium track · coming with the store
+STYLE_TAKE_OFF,Take off: %s
+STYLE_WEAR,Wear: %s
+STYLE_BUY,%s · $%d
+STYLE_EMOTE,%s
+STYLE_CLAIMED,Season reward: %s
+STYLE_BOUGHT,Yours: %s
+STYLE_TIER_UP,Season tier %d reached: claim it in Style

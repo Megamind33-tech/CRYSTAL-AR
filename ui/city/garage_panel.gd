@@ -55,7 +55,13 @@ func _ready() -> void:
 	_buttons = VBoxContainer.new()
 	_buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_buttons.add_theme_constant_override("separation", 8)
-	row.add_child(_buttons)
+	# Long menus (the season, the board) scroll rather than spill off screen.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size.y = 300
+	row.add_child(scroll)
+	scroll.add_child(_buttons)
 
 
 ## Another counter using this panel (Kasei Motors' showroom): a title, a

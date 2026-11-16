@@ -266,7 +266,8 @@ static func fresh() -> Dictionary:
 			"aircraft": -1, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
 			"trade": {"chain": 0, "sold": 0, "learned": [], "clients": {}, "orders": [], "dealers": {}, "order_at": 0},
 			"heist": {}, "heists_done": {},
-			"feed": [], "fame": 0, "partner": {}}
+			"feed": [], "fame": 0, "partner": {},
+			"cosmetics": ["emote_dance", "emote_talk"], "equipped": {}, "season": {"xp": 0, "claimed": []}}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -1129,6 +1130,7 @@ func deliver(i: int, now: int) -> int:
 	var c: Dictionary = t.clients[o.client]
 	c.loyalty = mini(int(c.loyalty) + (10 if now <= int(o.due) else 2), 100)
 	t.sold = int(t.sold) + int(o.count)
+	add_xp(20)
 	(t.orders as Array).remove_at(i)
 	_standing("ledger", 1)
 	gang_respect(3)
@@ -1278,6 +1280,91 @@ func carrying_dust() -> bool:
 	return false
 
 
+# --- Cosmetics and the season (looks only: never power, never cash) ---------
+
+## Suits (your colour), jetpack flames, rover paint, titles (on MarsNet),
+## emotes (ArmoredRig.EMOTES). Some bought with your cash in the Style
+## menu ("price"), some earned on the season track ("season": the tier).
+const COSMETICS := {
+	"suit_crimson": {"kind": "suit", "name": "Crimson suit", "color": Color(0.85, 0.12, 0.15), "price": 800},
+	"suit_cobalt": {"kind": "suit", "name": "Cobalt suit", "color": Color(0.15, 0.35, 0.9), "price": 800},
+	"suit_jade": {"kind": "suit", "name": "Jade suit", "color": Color(0.1, 0.7, 0.45), "price": 800},
+	"suit_onyx": {"kind": "suit", "name": "Onyx suit", "color": Color(0.14, 0.14, 0.16), "season": 5},
+	"suit_gold": {"kind": "suit", "name": "Gold suit", "color": Color(0.95, 0.75, 0.2), "season": 10},
+	"flame_blue": {"kind": "flame", "name": "Blue flame", "color": Color(0.3, 0.6, 1.0), "price": 400},
+	"flame_pink": {"kind": "flame", "name": "Pink flame", "color": Color(1.0, 0.3, 0.7), "price": 400},
+	"flame_green": {"kind": "flame", "name": "Green flame", "color": Color(0.4, 1.0, 0.4), "season": 3},
+	"paint_neon": {"kind": "paint", "name": "Neon paint", "color": Color(1.0, 0.25, 0.6), "price": 1200},
+	"paint_sand": {"kind": "paint", "name": "Dune paint", "color": Color(0.95, 0.75, 0.5), "price": 900},
+	"paint_chrome": {"kind": "paint", "name": "Chrome paint", "color": Color(0.8, 0.85, 0.95), "season": 15},
+	"title_hunter": {"kind": "title", "name": "Bounty Hunter", "season": 2},
+	"title_tycoon": {"kind": "title", "name": "Tycoon", "season": 12},
+	"title_legend": {"kind": "title", "name": "Legend of Kasei", "season": 20},
+	"emote_dance": {"kind": "emote", "name": "Dance", "clip": "Dance"},
+	"emote_talk": {"kind": "emote", "name": "Chat", "clip": "Idle_Talking"},
+	"emote_sit": {"kind": "emote", "name": "Sit", "clip": "Sitting_Idle", "season": 4},
+	"emote_fix": {"kind": "emote", "name": "Tinker", "clip": "Fixing_Kneeling", "season": 7},
+}
+const SEASON_NAME := "Season 1: Dust & Glory"
+const SEASON_TIERS := 20
+const XP_PER_TIER := 250
+
+
+func owns_cosmetic(id: String) -> bool:
+	return id in d.cosmetics
+
+
+func buy_cosmetic(id: String) -> bool:
+	if not COSMETICS.has(id) or owns_cosmetic(id) or not COSMETICS[id].has("price") or not pay(int(COSMETICS[id].price)):
+		return false
+	(d.cosmetics as Array).append(id)
+	return true
+
+
+func equip_cosmetic(id: String) -> bool:
+	if not owns_cosmetic(id):
+		return false
+	var kind: String = COSMETICS[id].kind
+	if d.equipped.get(kind, "") == id:
+		d.equipped.erase(kind)  # take it off
+	else:
+		d.equipped[kind] = id
+	return true
+
+
+## The equipped cosmetic of `kind` ("" for none).
+func equipped(kind: String) -> String:
+	return str(d.equipped.get(kind, ""))
+
+
+func season_tier() -> int:
+	return mini(int(d.season.xp) / XP_PER_TIER, SEASON_TIERS)
+
+
+func add_xp(n: int) -> void:
+	d.season.xp = int(d.season.xp) + maxi(n, 0)
+
+
+## What tier `t` of the free track gives: a cosmetic, or cash.
+func season_reward(t: int) -> Dictionary:
+	for id: String in COSMETICS:
+		if int(COSMETICS[id].get("season", -1)) == t:
+			return {"cosmetic": id}
+	return {"cash": 150 * t}
+
+
+func claim_season(t: int) -> Dictionary:
+	if t < 1 or t > season_tier() or t in d.season.claimed:
+		return {}
+	(d.season.claimed as Array).append(t)
+	var r := season_reward(t)
+	if r.has("cosmetic"):
+		(d.cosmetics as Array).append(r.cosmetic)
+	else:
+		d.wallet += int(r.cash)
+	return r
+
+
 # --- MarsNet (the valley's feed) and fame ----------------------------------
 
 const FEED_MAX := 40
@@ -1292,6 +1379,7 @@ func post(who: String, text: String, likes: int, now: int, fame: int = 0, img: S
 	if not img.is_empty():
 		p["img"] = img
 	(d.feed as Array).push_front(p)
+	add_xp(fame * 15)
 	while (d.feed as Array).size() > FEED_MAX:
 		(d.feed as Array).pop_back()
 	d.fame = maxi(int(d.fame) + fame, 0)

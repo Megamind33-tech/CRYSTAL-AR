@@ -1721,6 +1721,8 @@ func _visual_for(id: int, display_name: String, is_bot: bool, character: int, co
 			style = "militia"
 	var team := _team_of(id)
 	var color: Color = GameMode.team_color(team) if team < 2 else PlayerVisual.color_for(id, color_pick, is_bot)
+	if id == local_id() and _game_mode() == GameMode.CITY and CityStyle.suit_color() != null:
+		color = CityStyle.suit_color()  # the suit you wear (the Style menu)
 	if v != null and (v.rig_style != style or v.color != color or _rebuild.has(id)):
 		_rebuild.erase(id)
 		v.queue_free()

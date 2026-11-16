@@ -14,6 +14,8 @@ uniform float saturation = 1.15;
 uniform sampler2D grime_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform float grime = 0.85;
 uniform float grime_scale = 0.22;
+// A paint job (Comic.kit_material_paint): the body's light panels take it.
+uniform vec4 paint = vec4(1.0, 1.0, 1.0, 0.0);
 global uniform float night_glow;
 varying vec3 world_pos;
 varying vec3 world_nrm;
@@ -70,6 +72,8 @@ void fragment() {
 		ALBEDO = mix(c * brushed * mix(1.0, dirt, 0.25), sky(r), 0.18 + 0.3 * fres);
 	} else {
 		// Painted panels: seams every metre, weathering, darker near the ground.
+		float bright = dot(c, vec3(0.299, 0.587, 0.114));
+		c = mix(c, paint.rgb * (0.55 + bright), paint.a * smoothstep(0.32, 0.45, bright));
 		vec3 g = abs(fract(world_pos) - 0.5);
 		float seam = smoothstep(0.47, 0.5, max(g.x, g.z)) * 0.08;
 		float low = 1.0 - smoothstep(0.0, 2.5, world_pos.y) * 0.25;

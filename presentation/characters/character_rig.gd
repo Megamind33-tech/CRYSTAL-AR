@@ -70,6 +70,9 @@ static func _create(style: String, variant: int) -> CharacterRig:
 ## (NAN: the look yaw) and whether the weapon is lowered (not fighting).
 var body_yaw: float = NAN
 var relaxed: bool = false
+## An emote to play standing still (ArmoredRig.EMOTES; "" for none).
+var emote: String = ""
+var _emote_playing: String = ""
 
 
 func setup(_color: Color) -> void:

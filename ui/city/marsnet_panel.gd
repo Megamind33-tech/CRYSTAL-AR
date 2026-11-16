@@ -106,7 +106,7 @@ func _card(p: Dictionary) -> Control:
 	var col := VBoxContainer.new()
 	card.add_child(col)
 	var who := Label.new()
-	who.text = "@" + str(p.who)
+	who.text = "@" + str(p.who) + (" · " + CityStyle.title() if you and not CityStyle.title().is_empty() else "")
 	who.add_theme_font_override("font", UiStyle.font_hud_big)
 	who.add_theme_font_size_override("font_size", 22)
 	who.add_theme_color_override("font_color", ComicUI.MAGENTA if you else ComicUI.CYAN)

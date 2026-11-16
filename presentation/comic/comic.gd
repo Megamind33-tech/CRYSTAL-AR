@@ -127,6 +127,18 @@ static func kit_material(outline_width: float = 0.03) -> ShaderMaterial:
 	return _kit_mats[outline_width]
 
 
+static var _paints: Dictionary = {}  ## colour -> ShaderMaterial
+
+
+## The kit material with a paint job: light body panels in `color`.
+static func kit_material_paint(color: Color) -> ShaderMaterial:
+	if not _paints.has(color):
+		var m := kit_material().duplicate() as ShaderMaterial
+		m.set_shader_parameter("paint", Color(color, 1.0))
+		_paints[color] = m
+	return _paints[color]
+
+
 ## A placed kit piece.
 static func kit_instance(piece: String, at: Vector3, yaw_deg: float = 0.0, scale: float = 1.0) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()

@@ -111,6 +111,10 @@ func _run() -> void:
 		print("CITY WALK: ate, food now %.0f, meat left %s" % [me.state.food, mc.d.stash])
 		get_tree().quit(0)
 		return
+	if Platform.user_args.has("--style"):
+		await _style_run(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--social"):
 		await _social_run(me)
 		get_tree().quit(0)
@@ -649,6 +653,46 @@ func _garage_run(me: SimPlayer) -> void:
 ## The living valley: the plaza by day (minimap, clock), roads and traffic,
 ## the new rides, Kasei Motors, the Red Lantern of an evening, a shop shut
 ## at night, the Hollow on its footings.
+func _style_run(me: SimPlayer) -> void:
+	var c := Profile.career()
+	c.d.wallet = 9000
+	m.city.events._next = 1.0e9
+	var weather: DustStorms = m.get_tree().root.find_child("Weather", true, false)
+	CityNpcs.hour_offset = fposmod(11.0 - GameClock.hour(Time.get_unix_time_from_system()), 24.0)
+	weather.hour_offset = CityNpcs.hour_offset
+	c.add_xp(Career.XP_PER_TIER * 6)
+	var o := CityLayout.ORIGIN
+	await _pose(me, o + Vector3(4.5, 0.05, 44.5), PI * 0.5 + 2.4, -0.15)
+	m.city.style.open()
+	await _frames(10)
+	await _shot("y1_style")
+	m.city.style.menu_act("page:shop")
+	m.city.style.menu_act("buy:suit_crimson")
+	m.city.style.menu_act("buy:paint_neon")
+	m.city.style.menu_act("page:season")
+	m.city.style.menu_act("claim:3")
+	m.city.style.menu_act("page:wardrobe")
+	m.city.style.menu_act("equip:flame_green")
+	await _frames(5)
+	await _shot("y2_wardrobe")
+	m.city.garage.visible = false
+	m.city._close_talk()
+	await _frames(30)  # the new suit: the body's rebuilt
+	m.city.style.menu_act("emote:emote_dance")
+	m.city.garage.visible = false
+	m.city._close_talk()
+	await _frames(60)
+	m.input.look_yaw = me.state.yaw + PI
+	await _frames(30)
+	print("CITY WALK: wearing %s, paint %s, flame %s" % [c.equipped("suit"), c.equipped("paint"), c.equipped("flame")])
+	var pv: PlayerVisual = m._visuals.get(me.net_id)
+	print("CITY WALK: rig %s emote '%s' state '%s'" % [pv.rig.get_class() if pv != null else "-", pv.rig.emote if pv != null else "",
+			pv.rig.get("_state_name") if pv != null else ""])
+	await _shot("y3_dance_paint")
+	await _frames(25)
+	await _shot("y4_dance_later")
+
+
 func _social_run(me: SimPlayer) -> void:
 	var c := Profile.career()
 	m.city.events._next = 1.0e9

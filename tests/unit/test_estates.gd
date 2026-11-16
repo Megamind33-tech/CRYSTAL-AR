@@ -233,3 +233,31 @@ func test_marsnet_fame_and_partner() -> void:
 	b = c.bond()
 	assert_true(c.invite_lapsed(NOW + 210 + Career.INVITE_EVERY + Career.INVITE_TIME + 5))
 	assert_lt(c.bond(), b, "standing her up costs")
+
+
+func test_cosmetics_and_season() -> void:
+	var c := _rich()
+	assert_true(c.owns_cosmetic("emote_dance"), "a couple of emotes to start")
+	assert_false(c.equip_cosmetic("suit_gold"), "you can't wear what you don't own")
+	assert_false(c.buy_cosmetic("suit_gold"), "season looks aren't for sale")
+	var wallet: int = c.d.wallet
+	assert_true(c.buy_cosmetic("suit_crimson"))
+	assert_eq(int(c.d.wallet), wallet - int(Career.COSMETICS.suit_crimson.price))
+	assert_true(c.equip_cosmetic("suit_crimson"))
+	assert_eq(c.equipped("suit"), "suit_crimson")
+	assert_true(c.equip_cosmetic("suit_crimson"))
+	assert_eq(c.equipped("suit"), "", "again takes it off")
+	assert_eq(c.season_tier(), 0)
+	assert_true(c.claim_season(1).is_empty(), "not reached")
+	c.add_xp(Career.XP_PER_TIER * 5)
+	assert_eq(c.season_tier(), 5)
+	var r := c.claim_season(5)
+	assert_eq(r.get("cosmetic", ""), "suit_onyx", "tier 5 is the Onyx suit")
+	assert_true(c.owns_cosmetic("suit_onyx"))
+	assert_true(c.claim_season(5).is_empty(), "once")
+	wallet = c.d.wallet
+	assert_true(c.claim_season(1).has("cash"))
+	assert_gt(int(c.d.wallet), wallet)
+	# Nothing cosmetic gives an edge: every cosmetic is a look.
+	for id: String in Career.COSMETICS:
+		assert_true(Career.COSMETICS[id].kind in ["suit", "flame", "paint", "title", "emote"])

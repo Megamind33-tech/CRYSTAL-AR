@@ -72,6 +72,11 @@ func _process(delta: float) -> void:
 		if v.driver != 0 and visuals.has(v.driver):
 			at = (visuals[v.driver] as Node3D).global_position
 		var mi := _rovers[i]
+		# Your own rides wear your paint job (the Style menu).
+		var paint: Variant = CityStyle.paint_color() if v.owner == ServerSession.LOCAL_PLAYER_ID else null
+		var want: Material = Comic.kit_material_paint(paint) if paint != null else Comic.kit_material()
+		if mi.material_override != want:
+			mi.material_override = want
 		if VehicleSim.flies(v.model):
 			_fly_pose(i, v, mi, at, world, delta)
 			continue
