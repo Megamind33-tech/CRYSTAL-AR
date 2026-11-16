@@ -1096,6 +1096,15 @@ func _vitals_of(id: int) -> Vector2:
 
 ## Where a flag carrier is drawn: us at our view, others as rendered.
 func _flag_carrier_at(id: int) -> Vector3:
+	# Driving: the case rides in the vehicle's bed (behind the cab), not over
+	# the driver's head (the driver's out of sight inside).
+	var world: SimWorld = server.world if server != null else null
+	var p: SimPlayer = world.players.get(id) if world != null else null
+	if p != null and p.state.vehicle >= 0 and p.state.vehicle < world.vehicles.size():
+		var v: SimVehicle = world.vehicles[p.state.vehicle]
+		var back := Vector3(sin(v.yaw), 0.0, cos(v.yaw))
+		var bed := WorldTerrain.surface(p.state.position.x, p.state.position.z) if config.map == GameMode.CITY_MAP else p.state.position.y
+		return Vector3(p.state.position.x, bed, p.state.position.z) + back * 1.3 + Vector3(0, 1.75 - HuntVisuals.CARRIED_LIFT + 0.55, 0)
 	if id == local_id():
 		var me := _local_player()
 		return me.state.position if me != null else Vector3.INF

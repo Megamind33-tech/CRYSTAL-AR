@@ -371,6 +371,12 @@ func _step_crew(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	var _t_npc := Time.get_ticks_usec()
+	_process_people(delta)
+	Diagnostics.time_section("npcs", _t_npc)
+
+
+func _process_people(delta: float) -> void:
 	_time += delta
 	_step_crew(delta)
 	_step_meets()

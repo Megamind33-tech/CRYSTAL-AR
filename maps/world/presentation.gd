@@ -121,7 +121,9 @@ func _room_light(at: Vector3) -> void:
 ## Deep Furrow, the farm under the Anvil: the hall, its grow lights.
 func _deep_furrow() -> void:
 	var o := WorldLayout.farm_origin()
-	add_child(Comic.kit_instance("life/farm_hall", o, 0.0, 1.0))
+	var hall := Comic.kit_instance("life/farm_hall", o, 0.0, 1.0)
+	add_child(hall)
+	_farm.append(hall)
 	for k in 4:
 		var light := OmniLight3D.new()
 		light.light_color = Color(1.0, 0.55, 0.85) if k % 2 == 0 else Color(0.85, 1.0, 0.8)
@@ -129,6 +131,7 @@ func _deep_furrow() -> void:
 		light.omni_range = 24.0
 		light.position = o + Vector3(0, 6.0, -20.0 + k * 14.0)
 		add_child(light)
+		_farm.append(light)
 
 
 ## Small street furniture isn't drawn from far off (the towers always are).
@@ -177,9 +180,12 @@ func _districts() -> void:
 ## Aero's kiosks.
 func _estates() -> void:
 	for kind: String in WorldLayout.INTERIORS:
-		add_child(Comic.kit_instance("districts/" + kind, WorldLayout.INTERIORS[kind], 0.0, 1.0))
+		var room := Comic.kit_instance("districts/" + kind, WorldLayout.INTERIORS[kind], 0.0, 1.0)
+		add_child(room)
+		_interiors.append(room)
 		for x in [-4.0, 4.0]:
 			var l := OmniLight3D.new()
+			_interiors.append(l)
 			l.light_color = Color(1.0, 0.9, 0.75)
 			l.light_energy = 1.3
 			l.omni_range = 9.0
@@ -292,7 +298,22 @@ func _box_strip(st: SurfaceTool, a: Vector3, b: Vector3, n: Vector3, hw: float, 
 			st.add_vertex(v)
 
 
+## Interiors (deep under the valley) are drawn only when you're down there.
+var _interiors: Array[Node3D] = []
+var _farm: Array[Node3D] = []  ## Deep Furrow: drawn when you're down there
+
+
 func _process(delta: float) -> void:
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		var down := cam.global_position.y < WorldLayout.INTERIOR_Y + 100.0
+		for n: Node3D in _interiors:
+			if n.visible != down:
+				n.visible = down
+		var farm := cam.global_position.y < WorldLayout.FARM_FLOOR + 60.0 and not down
+		for n: Node3D in _farm:
+			if n.visible != farm:
+				n.visible = farm
 	if _track.is_empty() or _train.is_empty():
 		return
 	var length := (_track.size() - 1) * 2.0
@@ -354,7 +375,7 @@ func _roads() -> void:
 	var white := Color(0.85, 0.82, 0.76).srgb_to_linear()
 	var yellow := Color(0.95, 0.72, 0.12).srgb_to_linear()
 	for road: Array in WorldLayout.roads():
-		var pts := WorldLayout.road_samples(road, 3.0)
+		var pts := WorldLayout.road_samples(road, 1.5)
 		for i in pts.size() - 1:
 			var a: Vector2 = pts[i][0]
 			var b: Vector2 = pts[i + 1][0]
@@ -362,17 +383,31 @@ func _roads() -> void:
 			var db: Vector2 = pts[i + 1][1]
 			var na := Vector2(-da.y, da.x)
 			var nb := Vector2(-db.y, db.x)
-			_strip(st, a, b, na, nb, -ROAD_HALF, ROAD_HALF, 0.12, tarmac)
-			for side in [-1.0, 1.0]:  # edge lines
-				_strip(st, a, b, na, nb, side * (ROAD_HALF - 0.6) - 0.12, side * (ROAD_HALF - 0.6) + 0.12, 0.14, white)
-			if i % 2 == 0:  # the dashed centre line
-				_strip(st, a, b, na, nb, -0.12, 0.12, 0.14, yellow)
+			for k in 3:  # three lanes' worth across, each following the ground under it
+				_strip(st, a, b, na, nb, -ROAD_HALF + k * ROAD_HALF * 2.0 / 3.0, -ROAD_HALF + (k + 1) * ROAD_HALF * 2.0 / 3.0, 0.06, tarmac)
+			for side in [-1.0, 1.0]:
+				_strip(st, a, b, na, nb, side * (ROAD_HALF - 0.6) - 0.12, side * (ROAD_HALF - 0.6) + 0.12, 0.08, white)  # edge lines
+				_skirt(st, a, b, na, nb, side * ROAD_HALF, tarmac)  # no gap under the edge, from any angle
+			if i % 4 < 2:  # the dashed centre line
+				_strip(st, a, b, na, nb, -0.12, 0.12, 0.08, yellow)
 	st.generate_normals()
 	var mi := MeshInstance3D.new()
 	mi.mesh = st.commit()
 	mi.material_override = Comic.kit_material(0.0)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
+
+
+## The road's side from its edge (offset `o` across) down into the ground.
+func _skirt(st: SurfaceTool, a: Vector2, b: Vector2, na: Vector2, nb: Vector2, o: float, col: Color) -> void:
+	var pa := a + na * o
+	var pb := b + nb * o
+	var ta := WorldTerrain.at(pa.x, pa.y) + Vector3(0, 0.06, 0)
+	var tb := WorldTerrain.at(pb.x, pb.y) + Vector3(0, 0.06, 0)
+	var v: Array[Vector3] = [ta, tb, tb - Vector3(0, 0.7, 0), ta - Vector3(0, 0.7, 0)]
+	st.set_color(col)
+	for idx in [0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2]:  # both faces
+		st.add_vertex(v[idx])
 
 
 ## A quad from a to b, between offsets `l` and `r` across, `lift` above the ground.

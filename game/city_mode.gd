@@ -236,6 +236,12 @@ func setup(layer: CanvasLayer) -> void:
 
 
 func update() -> void:
+	var _t_city := Time.get_ticks_usec()
+	_update()
+	Diagnostics.time_section("city", _t_city)
+
+
+func _update() -> void:
 	var me: SimPlayer = match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID) if match_node.server != null else null
 	if me == null:
 		return
@@ -259,7 +265,9 @@ func update() -> void:
 				break
 			if v.driver == 0 and v.position.distance_to(pos) < VehicleSim.BOARD_RANGE:
 				_near = "rover"
+	var _t_goods := Time.get_ticks_usec()
 	_near_goods(me)
+	Diagnostics.time_section("near_goods", _t_goods)
 	var pad := WorldLayout.dig_pad()
 	if _near.is_empty() and Vector2(pos.x - pad.x, pos.z - pad.z).length() < WorldLayout.DEPLOY_RADIUS:
 		_near = "deploy"
@@ -292,7 +300,9 @@ func update() -> void:
 		_rig = -1  # walked off: the shift stops
 	_animate_rigs(match_node.get_process_delta_time())
 	_animate_factory(match_node.get_process_delta_time())
+	var _t_traffic := Time.get_ticks_usec()
 	_step_traffic(me, match_node.get_process_delta_time())
+	Diagnostics.time_section("traffic", _t_traffic)
 	if _rig >= 0:
 		_rig_t += match_node.get_process_delta_time()
 		if _rig_t >= WorldLayout.RIG_SECONDS:
@@ -332,31 +342,43 @@ func update() -> void:
 		_near = "showroom"
 	if estate == null:
 		estate = CityEstate.new(self)
+	var _t_estate := Time.get_ticks_usec()
 	var estate_near := estate.update(me, _panels_open())
+	Diagnostics.time_section("estate", _t_estate)
 	if _near.is_empty() or (_near == "exit_rover" and estate_near.is_empty()):
 		if not estate_near.is_empty():
 			_near = estate_near
 	if bounty == null:
 		bounty = CityBounty.new(self)
+	var _t_bounty := Time.get_ticks_usec()
 	var bounty_near := bounty.update(me, _panels_open())
+	Diagnostics.time_section("bounty", _t_bounty)
 	if _near.is_empty() and not bounty_near.is_empty():
 		_near = bounty_near
 	if trade == null:
 		trade = CityTrade.new(self)
+	var _t_trade := Time.get_ticks_usec()
 	var trade_near := trade.update(me, _panels_open())
+	Diagnostics.time_section("trade", _t_trade)
 	if _near.is_empty() and not trade_near.is_empty():
 		_near = trade_near
 	if events == null:
 		events = CityEvents.new(self)
+	var _t_event := Time.get_ticks_usec()
 	var event_near := events.update(me, _panels_open())
+	Diagnostics.time_section("events", _t_event)
 	if _near.is_empty() and not event_near.is_empty():
 		_near = event_near
 	if heist == null:
 		heist = CityHeist.new(self)
+	var _t_heist := Time.get_ticks_usec()
 	var heist_near := heist.update(me, _panels_open())
+	Diagnostics.time_section("heist", _t_heist)
 	if (_near.is_empty() or _near == "exit_rover") and not heist_near.is_empty():
 		_near = heist_near
+	var _t_social := Time.get_ticks_usec()
 	var social_near := social.update(me, _panels_open())
+	Diagnostics.time_section("social", _t_social)
 	if _near.is_empty() and not social_near.is_empty():
 		_near = social_near
 	marsnet_button.visible = not _panels_open()

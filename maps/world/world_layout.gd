@@ -7,6 +7,9 @@ extends RefCounted
 ## landmarks to discover. Gameplay (collision) and presentation read this.
 
 const HOLLOW := Vector3(60.0, 2.0, -60.0)
+## The layout never changes in a match: lists built once (they're read
+## every frame: shops, homes, doors, trees...).
+static var _cache: Dictionary = {}
 ## The lift house at the Anvil's foot, and Deep Furrow, the underground farm
 ## hall below it (the hall's lift end is straight under the lift house).
 const LIFT := Vector3(-245.0, 0.0, -158.0)
@@ -198,6 +201,14 @@ static func dig_nav_area() -> AABB:
 ## centre by the plaza, and Sable, the Ledger's dealer, behind Dust
 ## Hollow's bunkhouses.
 static func people_spots() -> Array:
+	if _cache.has("people_spots"):
+		return _cache["people_spots"]
+	var result := _build_people_spots()
+	_cache["people_spots"] = result
+	return result
+
+
+static func _build_people_spots() -> Array:
 	var o := CityLayout.ORIGIN
 	return [
 		["chemist", o + Vector3(-29.5, 0, 17.5), -PI * 0.5],
@@ -209,6 +220,14 @@ static func people_spots() -> Array:
 
 ## Bunks where you can sleep: inside the walk-in habitats.
 static func bunks() -> Array:
+	if _cache.has("bunks"):
+		return _cache["bunks"]
+	var result := _build_bunks()
+	_cache["bunks"] = result
+	return result
+
+
+static func _build_bunks() -> Array:
 	return [
 		[CityLayout.ORIGIN + Vector3(-36, 0, -36), "CITY_NAME"],
 		[WorldTerrain.at(HOLLOW.x - 26, HOLLOW.z - 16), "WORLD_HOLLOW"],
@@ -247,6 +266,14 @@ const WATERY := [["water_ration", 2, 4.0], ["oxygen_canister", 1, 2.0], ["water_
 
 
 static func loot_spots() -> Array:
+	if _cache.has("loot_spots"):
+		return _cache["loot_spots"]
+	var result := _build_loot_spots()
+	_cache["loot_spots"] = result
+	return result
+
+
+static func _build_loot_spots() -> Array:
 	var h := HOLLOW
 	return [
 		["hollow_crates_a", WorldTerrain.at(h.x + 8, h.z - 4), WATERY, "LOOT_CRATES"],
@@ -372,6 +399,14 @@ static func room_at(pos: Vector3) -> int:
 ## Residences: [id, the locker inside (where you open or break it), whose
 ## it is ("" = yours)]. Yours is the gate-side hab in Tharsis Gate.
 static func residences() -> Array:
+	if _cache.has("residences"):
+		return _cache["residences"]
+	var result := _build_residences()
+	_cache["residences"] = result
+	return result
+
+
+static func _build_residences() -> Array:
 	var out := []
 	var habs := []
 	for p: Array in CityLayout.pieces():
@@ -419,6 +454,14 @@ static func person_at(who: String, work: Vector3, h: float) -> Vector3:
 
 
 static func shops() -> Array:
+	if _cache.has("shops"):
+		return _cache["shops"]
+	var result := _build_shops()
+	_cache["shops"] = result
+	return result
+
+
+static func _build_shops() -> Array:
 	var fronts := []
 	for p: Array in CityLayout.pieces():
 		if p[0] == "shopfront":
@@ -450,6 +493,14 @@ const GALLERIA_SHOPS := [["tech", -35.0, 1.0], ["foodcourt", -15.0, 1.0], ["phar
 
 
 static func pieces() -> Array:
+	if _cache.has("pieces"):
+		return _cache["pieces"]
+	var result := _build_pieces()
+	_cache["pieces"] = result
+	return result
+
+
+static func _build_pieces() -> Array:
 	var h := HOLLOW
 	var out := [
 		# Dust Hollow: the refinery (hangar), tanks, pipes, bunkhouses, the canteen.
@@ -638,6 +689,14 @@ static func interior_air() -> Array:
 ## Property doors: [Career.PROPERTIES id, where you stand at the door,
 ## interior kind ("" for a unit you walk into)]. From the district pieces.
 static func property_doors() -> Array:
+	if _cache.has("property_doors"):
+		return _cache["property_doors"]
+	var result := _build_property_doors()
+	_cache["property_doors"] = result
+	return result
+
+
+static func _build_property_doors() -> Array:
 	var out := []
 	var h := HELIOS
 	var door := func(id: String, c: Vector2, dx: float, dz: float, yaw_deg: float, local: Vector3, sc: float, kind: String) -> void:
@@ -681,6 +740,14 @@ const TREE_REGROW := 900  ## seconds before a felled tree stands again
 
 
 static func trees() -> Array:
+	if _cache.has("trees"):
+		return _cache["trees"]
+	var result := _build_trees()
+	_cache["trees"] = result
+	return result
+
+
+static func _build_trees() -> Array:
 	var out := []
 	var i := 0
 	for p: Array in CityLayout.plants():
