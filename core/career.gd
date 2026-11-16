@@ -258,7 +258,7 @@ static func fresh() -> Dictionary:
 			"oxygen": 100.0, "fatigue": 0.0, "water": 100.0, "lab": {}, "job": {}, "jobs_done": {}, "companion": "",
 			"armed": "", "rover_cargo": {},
 			"home": {"locker": {}, "lock": 0, "checked_at": 0, "robbed": {}}, "ride": 0,
-			"aircraft": -1, "visas": {}, "property": {}, "gang": {}, "felled": {}}
+			"aircraft": -1, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {}}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -1018,6 +1018,70 @@ func settle_property(now: int) -> Dictionary:
 				out.income += got
 				p["income_at"] = since + sols * day
 	return out
+
+
+# --- The Marshals' Bounty Board (free roam) --------------------------------
+
+## Wanted outlaws of Kasei Valley. Each has a story, a hideout
+## (WorldLayout.bounty_hideout) and a kind: a lone "gunman", one "guarded"
+## by two, or a "crew" of three. Alive pays BOUNTY_ALIVE times the reward
+## (hold them up: the Marshals collect); dead pays the reward against the
+## proof from their body. A bounty comes back on the board after a while.
+const BOUNTY_ALIVE := 1.6
+const BOUNTY_COOLDOWN := 1800
+const BOUNTIES := {
+	"kroll": {"name": "Vesna Kroll", "kind": "gunman", "reward": 900,
+			"crime": "Opened the Hollow refinery's valves: three dead in the fumes."},
+	"orlov": {"name": "Dima \"Rust\" Orlov", "kind": "guarded", "reward": 1400,
+			"crime": "Robbed the Concern's payroll hauler and burned it."},
+	"amos": {"name": "Brother Amos", "kind": "crew", "reward": 2200,
+			"crime": "Leads a cult that poisoned Deep Furrow's algae beds."},
+	"vance": {"name": "Kemi Vance", "kind": "gunman", "reward": 1100,
+			"crime": "Emptied Nova Terrace's water fund and fled with it."},
+	"hex": {"name": "Hex", "kind": "guarded", "reward": 1600,
+			"crime": "Ledger hacker: blacked out the Galleria's air curtains."},
+	"marrow": {"name": "The Marrow Twins", "kind": "crew", "reward": 2600,
+			"crime": "Ambush rovers on the outland roads and strip them."},
+	"brandt": {"name": "Captain Ilse Brandt", "kind": "guarded", "reward": 2000,
+			"crime": "Flew a stolen shuttle's cargo of medicine to the black market."},
+	"jonah": {"name": "Old Jonah", "kind": "gunman", "reward": 800,
+			"crime": "Killed a Marshal at a checkpoint and walked into the dust."},
+}
+
+
+func bounty_wait(id: String, now: int) -> int:
+	return maxi(int(d.bounties_done.get(id, 0)) + BOUNTY_COOLDOWN - now, 0)
+
+
+func take_bounty(id: String, now: int) -> bool:
+	if not BOUNTIES.has(id) or not (d.bounty as Dictionary).is_empty() or bounty_wait(id, now) > 0:
+		return false
+	d.bounty = {"id": id, "since": now}
+	return true
+
+
+func drop_bounty() -> void:
+	d.bounty = {}
+
+
+## The bounty's paid: alive (held up, the Marshals take them) or dead
+## (against the proof, which is handed over). Returns the pay (0: no claim).
+func claim_bounty(alive: bool, now: int) -> int:
+	if (d.bounty as Dictionary).is_empty():
+		return 0
+	var id: String = d.bounty.id
+	if not alive:
+		if int(d.stash.get("bounty_proof", 0)) <= 0:
+			return 0
+		use_up("bounty_proof")
+	var pay := roundi(float(BOUNTIES[id].reward) * (BOUNTY_ALIVE if alive else 1.0))
+	d.wallet += pay
+	d.earned += pay
+	d.bounties_done[id] = now
+	d.bounty = {}
+	_standing("kasei", 3)
+	gang_respect(25 if alive else 15)
+	return pay
 
 
 # --- Your gang --------------------------------------------------------------

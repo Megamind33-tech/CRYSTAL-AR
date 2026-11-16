@@ -194,6 +194,20 @@ func _estates() -> void:
 		add_child(tree)
 	add_child(Comic.kit_instance("kiosk", WorldLayout.visa_office() + Vector3(0, 0, -1.4), 0.0, 1.2))
 	add_child(Comic.kit_instance("kiosk", WorldLayout.aero_counter() + Vector3(0, 0, -1.4), 0.0, 1.2))
+	add_child(Comic.kit_instance("kiosk", WorldLayout.bounty_board() + Vector3(0, 0, -1.4), 0.0, 1.3))
+	add_child(Comic.kit_instance("kiosk", CityEstate.gang_spot() + Vector3(0, 0, -1.4), 0.0, 1.2))
+	for place: Array in [[WorldLayout.bounty_board(), "BOUNTY_BOARD_SIGN"], [WorldLayout.visa_office(), "VISA_OFFICE_SIGN"],
+			[WorldLayout.aero_counter(), "AERO_SIGN"], [CityEstate.gang_spot(), "GANG_SIGN"]]:
+		var sign := Label3D.new()
+		sign.text = tr(place[1])
+		sign.font = UiStyle.font_hud_big
+		sign.font_size = 64
+		sign.outline_size = 14
+		sign.outline_modulate = ComicUI.INK
+		sign.modulate = ComicUI.YELLOW
+		sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sign.position = (place[0] as Vector3) + Vector3(0, 4.0, -1.4)
+		add_child(sign)
 
 
 ## The monorail (WorldLayout.monorail): a white guideway on pylons every

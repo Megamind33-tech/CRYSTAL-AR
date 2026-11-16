@@ -111,6 +111,10 @@ func _run() -> void:
 		print("CITY WALK: ate, food now %.0f, meat left %s" % [me.state.food, mc.d.stash])
 		get_tree().quit(0)
 		return
+	if Platform.user_args.has("--bounty"):
+		await _bounty_run(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--estates"):
 		await _estates_run(me)
 		get_tree().quit(0)
@@ -629,6 +633,62 @@ func _garage_run(me: SimPlayer) -> void:
 ## The living valley: the plaza by day (minimap, clock), roads and traffic,
 ## the new rides, Kasei Motors, the Red Lantern of an evening, a shop shut
 ## at night, the Hollow on its footings.
+func _bounty_run(me: SimPlayer) -> void:
+	var c := Profile.career()
+	c.d.stash["scanner"] = 1
+	c.d.stash["binoculars"] = 1
+	var weather: DustStorms = m.get_tree().root.find_child("Weather", true, false)
+	CityNpcs.hour_offset = fposmod(11.0 - GameClock.hour(Time.get_unix_time_from_system()), 24.0)
+	weather.hour_offset = CityNpcs.hour_offset
+	await _pose(me, WorldLayout.bounty_board() + Vector3(0, 0.05, 2.0), 0.0, -0.05)
+	print("CITY WALK: at the board, near = %s" % m.city._near)
+	m.city.bounty.menu_act("take:kroll")
+	await _frames(30)
+	print("CITY WALK: target %d, search r %.0f" % [m.city.bounty.target_id, m.city.bounty.circle_r])
+	await _shot("b1_dossier")
+	# Ask a passer-by.
+	var w: Array = m.city._people._walkers[0]
+	var wp: Vector3 = (w[1] as PlayerSimState).position
+	await _pose(me, wp + Vector3(1.2, 0.05, 0), PI * 0.5, -0.05)
+	wp = (w[1] as PlayerSimState).position
+	m.server.world.teleport(me, wp + Vector3(1.2, 0.05, 0))
+	await _frames(2)
+	m.city.bounty.ask(me)
+	await _frames(10)
+	print("CITY WALK: asked, search r %.0f" % m.city.bounty.circle_r)
+	await _shot("b2_asked")
+	# Out to the hideout: scan, then spot them.
+	var hide := WorldLayout.bounty_hideout("kroll")
+	await _pose(me, WorldTerrain.at(hide.x + 90, hide.z + 40) + Vector3(0, 0.1, 0), 0.0, 0.0)
+	m.city.scan()
+	await _frames(10)
+	print("CITY WALK: scanned, search r %.0f" % m.city.bounty.circle_r)
+	await _shot("b3_search_area")
+	var t: SimPlayer = m.server.world.players.get(m.city.bounty.target_id)
+	var tp := t.state.position
+	var to := (tp - me.state.position)
+	await _pose(me, tp - Vector3(to.x, 0, to.z).normalized() * 14.0 + Vector3(0, 0.1, 0), atan2(-to.x, -to.z), 0.0)
+	await _frames(20)
+	print("CITY WALK: confirmed %s, hot %s" % [m.city.bounty.confirmed, m.city.bounty.hot])
+	await _shot("b4_spotted")
+	# Beaten: hold them up from close in.
+	t.state.health = 10.0
+	t.state.shield = 0.0
+	tp = t.state.position
+	to = (tp - me.state.position)
+	m.server.world.teleport(me, tp - Vector3(to.x, 0, to.z).normalized() * 2.0 + Vector3(0, 0.1, 0))
+	me.state.yaw = atan2(-to.x, -to.z)
+	m.input.look_yaw = me.state.yaw
+	t.state.health = 10.0
+	await _frames(3)
+	print("CITY WALK: near = %s" % m.city._near)
+	var wallet: int = c.d.wallet
+	m.input.press(PlayerCommand.Action.INTERACT)
+	await _frames(10)
+	print("CITY WALK: paid %d, bounty now %s" % [int(c.d.wallet) - wallet, c.d.bounty])
+	await _shot("b5_taken")
+
+
 func _estates_run(me: SimPlayer) -> void:
 	var c := Profile.career()
 	c.d.wallet = 150000

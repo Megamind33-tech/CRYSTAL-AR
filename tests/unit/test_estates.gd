@@ -121,3 +121,21 @@ func test_a_vtol_climbs_and_hovers() -> void:
 		world.step({1: input.cmd(world.tick, Vector2.ZERO, 0, [])})
 	assert_almost_eq(p.state.velocity.y, 0.0, 0.5, "and holds its height")
 	assert_gt(p.state.position.y, up - 3.0)
+
+
+func test_bounty_board_alive_or_dead() -> void:
+	var c := _rich()
+	var wallet: int = c.d.wallet
+	assert_true(c.take_bounty("kroll", NOW))
+	assert_false(c.take_bounty("orlov", NOW), "one bounty at a time")
+	assert_eq(c.claim_bounty(false, NOW), 0, "dead needs the proof")
+	c.receive("bounty_proof", 1)
+	var pay := c.claim_bounty(false, NOW)
+	assert_eq(pay, int(Career.BOUNTIES.kroll.reward))
+	assert_eq(int(c.d.wallet), wallet + pay)
+	assert_false(c.take_bounty("kroll", NOW + 10), "back on the board later")
+	assert_true(c.take_bounty("kroll", NOW + Career.BOUNTY_COOLDOWN + 1))
+	assert_eq(c.claim_bounty(true, NOW + Career.BOUNTY_COOLDOWN + 5), roundi(Career.BOUNTIES.kroll.reward * Career.BOUNTY_ALIVE),
+			"alive pays more")
+	for id: String in Career.BOUNTIES:
+		assert_true(WorldLayout.BOUNTY_HIDEOUTS.has(id), "%s has a hideout" % id)

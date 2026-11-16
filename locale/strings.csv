@@ -910,3 +910,47 @@ TOUCH_DIVE,Descend
 WORLD_INTERIOR,INSIDE
 WORLD_INTERIOR_SUB,A HOME HIGH OVER THE VALLEY
 WORLD_INTERIOR_RULE,Pressurised · the door takes you back out
+BOUNTY_BOARD,Marshals' Bounty Board
+BOUNTY_BOARD_SIGN,BOUNTY BOARD
+VISA_OFFICE_SIGN,IMMIGRATION
+AERO_SIGN,KASEI AERO
+GANG_SIGN,THE BACK ROOM
+BOUNTY_BOARD_LINE,Wanted in Kasei Valley. Take one: you get their face and where they were last seen. Alive pays more.
+BOUNTY_CURRENT,"%s
+%s
+Dead: $%d (bring the proof) · Alive: $%d (hold them up)"
+BOUNTY_TURN_IN,Turn in the proof: $%d
+BOUNTY_GIVE_UP,Give up this bounty
+BOUNTY_OFFER,%s · $%d · %s
+BOUNTY_LATER,%s · back on the board in %d min
+BOUNTY_KIND_GUNMAN,alone
+BOUNTY_KIND_GUARDED,two guards
+BOUNTY_KIND_CREW,a crew of three
+BOUNTY_TAKEN,Bounty taken: %s. Find the red area on your map
+BOUNTY_PAID,Bounty paid: $%d
+BOUNTY_TAKEN_ALIVE,%s taken alive: the Marshals pay $%d
+BOUNTY_DOWN,%s is down: take the proof from the body
+BOUNTY_SPOTTED,That's them: %s
+BOUNTY_SPOTTED_BINO,Spotted through the glasses: %s
+BOUNTY_SCANNED,Scanner: their suit's beacon is close
+BOUNTY_TAG,WANTED · %s
+BOUNTY_WANTED,WANTED
+BOUNTY_REWARD,Dead $%d · Alive $%d
+BOUNTY_STATUS_SEARCH,"Search area: %d m · ask around, scan"
+BOUNTY_STATUS_SEEN,Spotted · take them alive or dead
+BOUNTY_STATUS_DOWN,Down · proof to the board
+BOUNTY_MAP,BOUNTY
+BOUNTY_PROMPT_BOARD,Bounty Board
+BOUNTY_PROMPT_ASK,Ask if they've seen your target
+BOUNTY_SEEN_NEAR,"Saw someone like that just %s of here!|They went %s, not long ago.|Try %s. Quickly."
+BOUNTY_SEEN_FAR,"Heard they're hiding out %s, far off.|Way off to the %s, so they say.|Somewhere %s. Out past the roads."
+BOUNTY_NO_IDEA,"Never seen them.|Don't know, don't want to.|Ask someone else."
+BOUNTY_ASKED_AGAIN,I told you already.|That's all I know.
+DIR_N,north
+DIR_NE,north-east
+DIR_E,east
+DIR_SE,south-east
+DIR_S,south
+DIR_SW,south-west
+DIR_W,west
+DIR_NW,north-west

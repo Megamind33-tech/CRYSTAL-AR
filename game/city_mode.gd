@@ -65,6 +65,7 @@ var eat_button: Button
 var drink_button: Button
 var _kit_seen := {}
 var estate: CityEstate   ## doors, property, visas, aircraft, the gang, trees
+var bounty: CityBounty   ## the Marshals' Bounty Board
 var draw_button: Button
 var torch_button: Button
 var drawn: bool = false          ## your gun out by choice (not a fight's)
@@ -299,6 +300,11 @@ func update() -> void:
 	if _near.is_empty() or (_near == "exit_rover" and estate_near.is_empty()):
 		if not estate_near.is_empty():
 			_near = estate_near
+	if bounty == null:
+		bounty = CityBounty.new(self)
+	var bounty_near := bounty.update(me, screen.visible or talk.visible or shelf.visible or garage.visible)
+	if _near.is_empty() and not bounty_near.is_empty():
+		_near = bounty_near
 	var c := Profile.career()
 	_hollow_sign.text = tr("WORLD_HOLLOW") + "\n" + (tr("WORLD_HOLLOW_SIGN_YOURS") if c.owns_hollow() else tr("WORLD_HOLLOW_SIGN_THARSIS"))
 	_hollow_sign.modulate = ComicUI.GREEN if c.owns_hollow() else ComicUI.CYAN
@@ -340,6 +346,10 @@ func update() -> void:
 			_use_goods(me)
 		elif _near.begins_with("estate:"):
 			estate.act(_near, me)
+		elif _near == "bounty:board":
+			bounty.open_board()
+		elif _near == "bounty:ask":
+			bounty.ask(me)
 		elif _near.begins_with("kiosk:"):
 			open_terminal(_near.substr(6))
 		elif _near == "showroom":
@@ -677,8 +687,13 @@ func crime(kind: String) -> void:
 
 ## Fights still going on keep weapons out and damage on; none, and the
 ## valley is peaceful again.
+## A fight on: a raid, guards after you, the Marshals, or a bounty gone hot.
+func in_fight() -> bool:
+	return _raid != null or _guards != null or _police != null or (bounty != null and bounty.hot)
+
+
 func _sync_combat() -> void:
-	var fighting := _raid != null or _guards != null or _police != null
+	var fighting := in_fight()
 	var world: SimWorld = match_node.server.world
 	world.teams_enabled = fighting
 	world.damage_enabled = fighting
@@ -700,7 +715,7 @@ func toggle_torch() -> void:
 ## flame and roar, people freezing when you point a gun at them.
 func _step_gear(me: SimPlayer, busy: bool) -> void:
 	var c := Profile.career()
-	var fighting := _raid != null or _guards != null or _police != null
+	var fighting := in_fight()
 	draw_button.visible = not busy and me.state.alive and me.state.vehicle < 0 and not fighting
 	draw_button.text = tr("CITY_HOLSTER") if drawn else tr("CITY_DRAW")
 	match_node.hud.show_crosshair = fighting or drawn
@@ -814,8 +829,8 @@ func on_event(e: Dictionary) -> void:
 		"fire":
 			if _people != null:
 				_people.threat(e.origin, 40.0)
-			var fighting := _raid != null or _guards != null or _police != null
-			if int(e.shooter) == me and not fighting and region in WorldLayout.LAWFUL:
+			var fighting := in_fight()
+			if int(e.shooter) == me and not fighting and region in WorldLayout.LAWFUL and not (bounty != null and bounty.hot):
 				crime("shots")
 			elif int(e.shooter) in _hostiles() and not _contacted.has(int(e.shooter)):
 				_contacted[int(e.shooter)] = true
@@ -1182,6 +1197,8 @@ func scan() -> void:
 	if me == null or _scan_cool > 0.0:
 		return
 	scan_marks = targets(me.state.position, SCAN_RANGE, false)
+	if bounty != null:
+		bounty.on_scan(me)
 	scan_t = SCAN_SHOW
 	_scan_cool = SCAN_COOLDOWN
 	match_node.audio.play_ui("countdown", -6.0)
@@ -1298,6 +1315,9 @@ func open_menu(title: String, line: String, options: Array) -> void:
 
 func _garage_act(what: String) -> void:
 	var c := Profile.career()
+	if what.begins_with("bounty:"):
+		bounty.menu_act(what.substr(7))
+		return
 	if what.begins_with("estate:"):
 		var em: SimPlayer = match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 		if em != null:
@@ -1557,6 +1577,8 @@ func _hostiles() -> Array[int]:
 		out.append_array(_raid.raiders)
 	if _guards != null:
 		out.append_array(_guards.raiders)
+	if bounty != null:
+		out.append_array(bounty.fighters())
 	return out
 
 
@@ -1612,7 +1634,8 @@ func _use_goods(me: SimPlayer) -> void:
 		var id := int(_near.substr(7))
 		var p: SimPlayer = world.players.get(id)
 		var who := p.display_name if p != null else ""
-		var gave := (_raid != null and _raid.surrender(id)) or (_guards != null and _guards.surrender(id))
+		var gave := (_raid != null and _raid.surrender(id)) or (_guards != null and _guards.surrender(id)) \
+				or (bounty != null and bounty.surrender(id))
 		if gave:
 			_flash_text(tr("CITY_HELD_UP") % who, ComicUI.YELLOW)
 			crime("holdup")
@@ -1697,6 +1720,10 @@ func prompt() -> String:
 			return tr("CITY_BREAKING_IN") % roundi(_breakin_t / _breakin_seconds() * 100.0)
 		else:
 			text = tr("CITY_PROMPT_BREAK_IN") % home[2]
+	elif _near == "bounty:board":
+		text = tr("BOUNTY_PROMPT_BOARD")
+	elif _near == "bounty:ask":
+		text = tr("BOUNTY_PROMPT_ASK")
 	elif _near.begins_with("estate:"):
 		var et := estate.prompt(_near)
 		if _near.begins_with("estate:tree:") and et.contains("%"):
@@ -1852,6 +1879,8 @@ class _CityHud extends Control:
 				ComicUI.GREEN, 2, roundi(7 * s))
 		_draw_wanted(s)
 		_draw_minimap(s)
+		if city.bounty != null:
+			city.bounty.draw_card(self, s)
 		var k: Dictionary = c.d.contract
 		ComicUI.draw_text(self, Vector2(size.x - 34 * s, 102 * s), (tr("CITY_ACTIVE") % k.title) if not k.is_empty()
 				else tr("CITY_HINT_BOARD"), UiStyle.font_hud_bold, roundi(22 * s), ComicUI.PAPER, 2, roundi(4 * s))
@@ -1972,9 +2001,13 @@ class _CityHud extends Control:
 			var cop := p.display_name.begins_with("Marshal·")
 			if not cop and not (id in city._hostiles()):
 				continue
+			if city.bounty != null and id in city.bounty.fighters() and not city.bounty.hot:
+				continue  # the outlaw's hiding: you find them
 			var q: Vector2 = to_map.call(Vector2(p.state.position.x, p.state.position.z))
 			if q.distance_to(c) < rad - 3 * s:
 				draw_circle(q, 4 * s, (ComicUI.CYAN if blink else ComicUI.RED) if cop else ComicUI.RED)
+		if city.bounty != null:
+			city.bounty.draw_on_map(self, to_map, c, rad, k, s)
 		var job: Dictionary = Profile.career().d.job
 		if not job.is_empty() and WorldLayout.job_sites().has(job.id):
 			var site: Vector3 = WorldLayout.job_sites()[job.id][0]

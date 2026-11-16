@@ -694,3 +694,23 @@ static func trees() -> Array:
 			var r := 7.0 + float((k * 37 + gi * 11) % 13)
 			out.append(["g%d_%d" % [gi, k], WorldTerrain.at(c.x + cos(a) * r, c.y + sin(a) * r), false])
 	return out
+
+
+# --- The Marshals' Bounty Board ---
+
+## The board, at the Marshals' post by Tharsis Gate's gate.
+static func bounty_board() -> Vector3:
+	return CityLayout.ORIGIN + Vector3(14, 0, 34)
+
+
+## Where each outlaw holes up (x, z): spread over the valley and outlands.
+const BOUNTY_HIDEOUTS := {
+	"kroll": Vector2(-282, 342), "orlov": Vector2(500, -360), "amos": Vector2(-392, -108),
+	"vance": Vector2(528, 384), "hex": Vector2(-640, 228), "marrow": Vector2(612, -38),
+	"brandt": Vector2(578, -398), "jonah": Vector2(232, -372),
+}
+
+
+static func bounty_hideout(id: String) -> Vector3:
+	var p: Vector2 = BOUNTY_HIDEOUTS[id]
+	return WorldTerrain.at(p.x, p.y)
