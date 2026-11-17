@@ -73,7 +73,8 @@ func test_assignments_and_grand_treasure() -> void:
 		assert_eq(mine.size(), HuntRules.ASSIGNMENTS_PER_HUNTER, "two personal assignments each")
 		assert_ne(mine[0].home, mine[1].home, "at different spots")
 		for t in mine:
-			assert_true(SPOTS.has(t.home), "placed on a treasure spot")
+			assert_true(SPOTS.any(func(sp: Vector3) -> bool: return HuntRules._flat(sp, t.home) < 0.5),
+					"placed at a treasure spot (on the ground under it)")
 	assert_eq(h.treasures.size(), 1 + 2 * HuntRules.ASSIGNMENTS_PER_HUNTER)
 	# A new match rolls everything again.
 	world.reset_match(99)

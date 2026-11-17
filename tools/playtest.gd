@@ -161,7 +161,7 @@ func _check_stuck(w: SimWorld, h: HuntRules, trail: Dictionary, r: Dictionary) -
 		var p: SimPlayer = w.players[id]
 		var t: Array = trail.get(id, [])
 		var brain: Variant = _server.bots.get(id)
-		var going := brain is BotBrain and (brain.goal in [BotBrain.Goal.OBJECTIVE, BotBrain.Goal.ROAM, BotBrain.Goal.CHASE]) \
+		var going: bool = brain is BotBrain and (brain.goal in [BotBrain.Goal.OBJECTIVE, BotBrain.Goal.ROAM, BotBrain.Goal.CHASE]) \
 				and not (brain._aim_target != Vector3.INF and p.state.position.distance_to(brain._aim_target) < 2.5)
 		if not p.state.alive or not going or int(h.extract_progress.get(id, 0)) > 0 or h.cache_of(id) != null or h.vault_unlocker == id:
 			trail[id] = []
