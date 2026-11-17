@@ -28,7 +28,7 @@ func _run() -> void:
 		Profile.career().d.stash = {"oxygen_canister": 1}
 	if Platform.user_args.has("--people"):
 		Profile.career().d["body"] = "female"  # play as a woman
-	if Platform.user_args.has("--block"):
+	if Platform.user_args.has("--block") or Platform.user_args.has("--head"):
 		Profile.career().choose_nation(0)
 	if Platform.user_args.has("--phase1") and dig:
 		Profile.career().choose_nation(0)  # a recruit of the Aurora Compact, on the first run
@@ -40,6 +40,16 @@ func _run() -> void:
 	m.hud._touch = true
 	var me: SimPlayer = m.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	print("CITY WALK: player at %s, phase %s" % [me.state.position, m.server.phase])
+	if Platform.user_args.has("--head"):
+		await _pose(me, CityLayout.ORIGIN + Vector3(0, 0.05, 10), 0.0, -0.05)
+		m.view.third_person = true
+		await _shot("h0_ahead")
+		for turn: float in [0.9, -0.9]:
+			m.input.look_yaw = turn
+			await _frames(25)
+			await _shot("h_turn_%s" % ("left" if turn > 0 else "right"))
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--block"):
 		await _block_tour(me)
 		get_tree().quit(0)

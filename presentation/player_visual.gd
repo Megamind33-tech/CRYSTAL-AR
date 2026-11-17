@@ -56,7 +56,11 @@ const OUTLINE_WIDTH := 0.011
 var _body_yaw: float = NAN
 var _combat_t: float = 0.0
 const COMBAT_SECONDS := 2.5
-const TURN_RATE := 11.0
+const TURN_RATE := 9.0
+const TURN_SPEED_STILL := 9.0   ## rad/s, turning on the spot
+const TURN_SPEED_RUN := 5.0     ## rad/s, curving while running
+const TURN_SPEED_FIGHT := 14.0  ## rad/s, snapping to aim in a fight
+const HEAD_TURN := 1.1          ## rad, how far the head turns before the body
 
 const SHIELD_SHADER := preload("res://presentation/shield.gdshader")
 ## Past this nameplates fade out: unreadable on a phone anyway.
@@ -157,7 +161,14 @@ func _face(cur: PlayerSimState, look_yaw: float, delta: float) -> void:
 		target = look_yaw
 	elif flat.length() > 0.8:
 		target = atan2(-flat.x, -flat.y)
-	_body_yaw = lerp_angle(_body_yaw, target, minf(delta * TURN_RATE, 1.0))
+	# A person turns at a limited rate, quicker standing than running, easing
+	# in and out: a half turn takes about half a second, not a snap.
+	var diff := wrapf(target - _body_yaw, -PI, PI)
+	var max_turn := (TURN_SPEED_FIGHT if fighting else lerpf(TURN_SPEED_STILL, TURN_SPEED_RUN, clampf(flat.length() / 6.0, 0.0, 1.0))) * delta
+	_body_yaw = wrapf(_body_yaw + clampf(diff * minf(delta * TURN_RATE, 1.0), -max_turn, max_turn), -PI, PI)
+	# The head looks where the eyes do (the camera, another's aim), up to
+	# HEAD_TURN either side, before the body follows.
+	rig.head_yaw = clampf(wrapf(look_yaw - _body_yaw, -PI, PI), -HEAD_TURN, HEAD_TURN)
 	rotation.y = _body_yaw
 	rig.body_yaw = _body_yaw
 	rig.relaxed = not fighting

@@ -119,6 +119,7 @@ var _flash: float = 0.0
 var _state_name: String = ""
 var _emotes: Array = []  ## the EMOTES this body's library has
 var _look_pitch: float = 0.0
+var _head_yaw: float = 0.0
 ## The held weapon's transform in this rig's space, set by _hold_weapon.
 var _weapon_local := Transform3D()
 ## The aim blend's upper end: 1 uses the aim-up clip fully.
@@ -527,6 +528,7 @@ func animate(state: PlayerSimState, delta: float, _height: float) -> void:
 	var pitch := RELAXED_PITCH if relaxed else state.pitch
 	_tree.set("parameters/aim/blend_position", clampf(pitch / 1.2, -1.0, _aim_up))
 	_look_pitch = lerpf(_look_pitch, pitch, minf(delta * 18.0, 1.0))
+	_head_yaw = lerp_angle(_head_yaw, head_yaw, minf(delta * 8.0, 1.0))
 	var twist := 0.0
 	if speed > 0.6:
 		twist = clampf(atan2(-local.x, absf(local.z) + 0.001) * (-1.0 if backwards else 1.0), -MAX_LEG_TWIST, MAX_LEG_TWIST)
@@ -546,7 +548,7 @@ func _level_head() -> void:
 	if _b_head < 0 or _b_head_parent < 0 or not _tree.active:
 		return
 	# The skeleton faces +Z (the model is turned to face -Z), so its right is -X.
-	var upright := Basis(Vector3.LEFT, _look_pitch * HEAD_PITCH) * _head_rest
+	var upright := Basis(Vector3.UP, _head_yaw) * Basis(Vector3.LEFT, _look_pitch * HEAD_PITCH) * _head_rest
 	var local := _skeleton.get_bone_global_pose(_b_head_parent).basis.orthonormalized().inverse() * upright
 	_skeleton.set_bone_pose_rotation(_b_head, local.get_rotation_quaternion())
 

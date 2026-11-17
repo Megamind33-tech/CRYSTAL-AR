@@ -68,6 +68,9 @@ static func _create(style: String, variant: int) -> CharacterRig:
 
 ## Open-world facing (PlayerVisual.face_movement): the yaw the body faces
 ## (NAN: the look yaw) and whether the weapon is lowered (not fighting).
+## Where the head turns relative to the body (rad, + left); rigs with a
+## head bone follow it (ArmoredRig), others ignore it.
+var head_yaw: float = 0.0
 var body_yaw: float = NAN
 var relaxed: bool = false
 ## An emote to play standing still (ArmoredRig.EMOTES; "" for none).
