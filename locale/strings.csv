@@ -1165,3 +1165,5 @@ REG_NAME,Your name
 REG_BODY,Choose your body
 REG_NEXT,CONTINUE
 REG_BAD_NAME,A name needs 3 to 16 letters.
+# rubies
+SHELF_BUY_RUBIES,Buy · %d rubies

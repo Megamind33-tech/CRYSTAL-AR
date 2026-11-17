@@ -22,7 +22,7 @@ const FACTIONS := {
 const ITEMS := {
 	"cargo_case": {"name": "Sealed cargo case", "base": 140},
 	"stolen_cargo": {"name": "Stolen cargo (hot)", "base": 95},
-	"vault_relic": {"name": "Vault relic", "base": 520},
+	"vault_relic": {"name": "Vault relic", "base": 520, "ruby_value": 2},
 	"bounty_proof": {"name": "Bounty proof", "base": 160},
 	"helium3": {"name": "Helium-3 canister", "base": 180},
 	"rare_ore": {"name": "Rare ore sample", "base": 150},
@@ -53,6 +53,8 @@ const ITEMS := {
 	"water_ration": {"name": "Water ration", "base": 45},
 	"algae_culture": {"name": "O2 algae culture (stolen)", "base": 150},
 	"cred_chip": {"name": "Credit chips", "base": 40},
+	# Rubies, the second currency: a raw ruby is cut (cut_rubies) into 1 ruby.
+	"raw_ruby": {"name": "Raw ruby", "base": 0, "no_sale": true},
 	# Guns (Loadouts.PRIMARIES index): carried in the pack, one equipped.
 	# The Pulse rifle is standard issue, always yours.
 	"burst_rifle": {"name": "Burst rifle", "base": 380, "weapon": 1},
@@ -103,6 +105,7 @@ const SHOPS := {
 	"exchange": {"name": "Kasei Exchange", "keeper": "Mbeki", "friend": "trader",
 			"sells": {"supply_crate": 60, "water_ration": 70, "oxygen_canister": 85, "stim_cola": 18, "scanner": 220,
 					"vat_meat": 40},
+			"rubies": {"scanner": 3, "jetpack": 12},
 			"buys": "all"},
 	"arms": {"name": "Varga's Arms", "keeper": "Varga", "friend": "armourer", "gear": true,
 			"sells": {"burst_rifle": 520, "scatter_gun": 460, "flux_smg": 420, "frag_grenade": 60, "armour_plate": 110},
@@ -143,6 +146,9 @@ const SHOPS := {
 	"noodle": {"name": "Red Planet Noodles", "keeper": "Mei", "hours": "bar",
 			"sells": {"meal_pack": 16, "grill_plate": 42, "red_ale": 12, "stim_cola": 12}, "buys": ""},
 }
+## Rubies (the second currency): licences, land and upgrades priced in them.
+const RUBY_PRICES := {"licence:trader": 5, "licence:pilot": 8, "land:plot": 10, "upgrade:lock": 4, "upgrade:plating": 6}
+const RUBY_FIND_CHANCE := 0.04  ## a dig or a search turns up a raw ruby
 const WEAPON_RESALE := 0.5  ## a used gun sells for half its list value
 ## Your residence (a hab in Tharsis Gate): a locker for what you don't
 ## carry, and its lock. While you're away, thieves try it every
@@ -232,7 +238,7 @@ const CONTRACTS := [
 			"title": "Recover the Concern's cargo", "brief": "Find your assigned cargo case in Rustwood Yard and extract it."},
 	{"id": "recover_two", "faction": "tharsis", "need": "cargo_case", "count": 2, "pay": 560,
 			"title": "Full manifest", "brief": "Extract both of your assigned cargo cases."},
-	{"id": "crack_vault", "faction": "kasei", "need": "vault_relic", "count": 1, "pay": 780,
+	{"id": "crack_vault", "faction": "kasei", "need": "vault_relic", "count": 1, "pay": 780, "rubies": 2,
 			"title": "Crack the Rustwood vault", "brief": "Unlock the vault, take the relic and get it to a pad."},
 	{"id": "lift_rival", "faction": "ledger", "need": "stolen_cargo", "count": 1, "pay": 340,
 			"title": "Lift a rival's cargo", "brief": "Take another hunter's cargo by force and extract it."},
@@ -268,7 +274,8 @@ static func fresh() -> Dictionary:
 			"heist": {}, "heists_done": {},
 			"feed": [], "fame": 0, "partner": {},
 			"cosmetics": ["emote_dance", "emote_talk"], "equipped": {}, "season": {"xp": 0, "claimed": []},
-			"nation": "", "reg": {"done": false, "name": "", "body": 0}, "path": "", "arrived": false, "nation_standing": 0, "squad": {}, "last_turned_run": -100, "guide": 0, "caches": []}
+			"nation": "", "reg": {"done": false, "name": "", "body": 0}, "path": "", "arrived": false, "nation_standing": 0, "squad": {}, "last_turned_run": -100, "guide": 0, "caches": [],
+			"rubies": 0, "memory": {}, "land": {}}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -283,6 +290,11 @@ func normalize() -> void:
 		if not d.has(k):
 			d[k] = f[k]
 	d.wallet = int(d.wallet)
+	d.rubies = int(d.get("rubies", 0))
+	if not d.memory is Dictionary:
+		d.memory = {}
+	if not d.land is Dictionary:
+		d.land = {}
 	# The jet is retired: its owners get the rotorcraft and the difference back.
 	if int(d.get("aircraft", -1)) >= VehicleSim.MODELS.size():
 		var hopper := VehicleSim.MODELS.size() - 1
@@ -448,6 +460,8 @@ func settle(run_id: String, haul: Array) -> Dictionary:
 			var pay := roundi(int(c.pay) * (1.0 + (FRIEND_PAY_BONUS if is_friend("broker") else 0.0)))
 			d.wallet += pay
 			d.earned += pay
+			add_rubies(int(c.get("rubies", 0)))
+			out["rubies"] = int(c.get("rubies", 0))
 			_standing(c.faction, DONE_STANDING)
 			for who: String in PEOPLE:
 				if PEOPLE[who].faction == c.faction:
@@ -699,6 +713,80 @@ func primary_index() -> int:
 func receive(item: String, n: int) -> void:
 	if ITEMS.has(item) and n > 0:
 		d.stash[item] = int(d.stash.get(item, 0)) + n
+
+
+## Pickups into the pack (a world pickup; unknown items are ignored).
+func receive_pickup(item: String, n: int) -> void:
+	receive(item, n)
+
+
+# --- Rubies (the second currency) ---
+
+func add_rubies(n: int) -> void:
+	if n > 0:
+		d.rubies = int(d.rubies) + n
+
+
+func rubies() -> int:
+	return int(d.rubies)
+
+
+## Spends `n` rubies if you have them.
+func pay_rubies(n: int) -> bool:
+	if n < 0 or int(d.rubies) < n:
+		return false
+	d.rubies = int(d.rubies) - n
+	return true
+
+
+## Price in rubies of a RUBY_PRICES key ("licence:pilot", "land:plot", ...)
+## or an item (an item's own "ruby" price); -1: not sold for rubies.
+func price_rubies(key: String) -> int:
+	if RUBY_PRICES.has(key):
+		return int(RUBY_PRICES[key])
+	if ITEMS.has(key):
+		return int(ITEMS[key].get("ruby", -1))
+	return -1
+
+
+## What `shop` asks in rubies for `item` (-1: not for rubies there).
+func shop_price_rubies(shop: String, item: String) -> int:
+	return int(SHOPS[shop].get("rubies", {}).get(item, -1))
+
+
+func buy_at_rubies(shop: String, item: String) -> bool:
+	var cost := shop_price_rubies(shop, item)
+	if cost < 0 or not pay_rubies(cost):
+		return false
+	receive(item, 1)
+	return true
+
+
+## Cuts every raw ruby in the pack into rubies; returns how many.
+func cut_rubies() -> int:
+	var n := int(d.stash.get("raw_ruby", 0))
+	if n > 0:
+		d.stash.erase("raw_ruby")
+		add_rubies(n)
+	return n
+
+
+## Sells one special good (ruby_value) for rubies; returns the rubies.
+func sell_special(item: String) -> int:
+	var v := int(ITEMS.get(item, {}).get("ruby_value", 0))
+	if v <= 0 or int(d.stash.get(item, 0)) <= 0:
+		return 0
+	_set_count(item, int(d.stash[item]) - 1)
+	add_rubies(v)
+	return v
+
+
+## A rare ruby from a dig (`roll` 0..1); returns whether one was found.
+func dig_ruby(roll: float) -> bool:
+	if roll >= RUBY_FIND_CHANCE:
+		return false
+	add_rubies(1)
+	return true
 
 
 ## The rover's hold <-> the pack, one stack's worth at a time.
@@ -1907,6 +1995,10 @@ func scavenge(id: String, table: Array, roll: float, now: int, cooldown: int) ->
 	var total := 0.0
 	for row: Array in table:
 		total += float(row[2])
+	if roll < RUBY_FIND_CHANCE:  # rare: a raw ruby among the finds
+		receive("raw_ruby", 1)
+		return {"raw_ruby": 1}
+	roll = (roll - RUBY_FIND_CHANCE) / (1.0 - RUBY_FIND_CHANCE)
 	var pick := roll * total
 	for row: Array in table:
 		pick -= float(row[2])
