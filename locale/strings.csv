@@ -1139,3 +1139,7 @@ TITAN_AIR_FILLED,Air canister filled (%d of %d)
 TITAN_AIR_FULL,You can't carry more canisters
 TITAN_AIR_BROKE,Not enough money: a canister is $%d
 NPC_BARK_RUN_DOWN,Ow! Watch where you're driving!|Hey! Are you blind?|My leg!|Maniac!
+HUNT_STOWED,%s stowed in the hold: out of sight. Drive onto a pad to extract it
+HUNT_SEARCHING,Searching the hold…
+HUNT_UNSTOWED,took %s from the hold
+HUNT_HOLD_ROBBED,searched your vehicle and took %s

@@ -1474,6 +1474,20 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 	t.owner = e.get("owner", 0)
 	var what := _treasure_name(t, me)
 	match e.action:
+		"stow":
+			if e.player == me:
+				hud.show_caption(tr("HUNT_STOWED") % what)
+			return
+		"search":
+			if e.player == me:
+				hud.show_caption(tr("HUNT_SEARCHING"))
+			return
+		"unstow":
+			if e.player == me:
+				_kill_feed.add_note("", tr("HUNT_UNSTOWED") % what, color, true)
+			elif int(e.get("from", 0)) == me:
+				_kill_feed.add_note(who, tr("HUNT_HOLD_ROBBED") % what, UiStyle.WARN, true)
+			return
 		"take":
 			_kill_feed.add_note(who, tr("HUNT_FEED_TAKE") % what, color, e.player == me)
 			if e.player == me:

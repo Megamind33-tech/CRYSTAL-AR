@@ -240,6 +240,8 @@ func _step_vehicles(ids: Array, interacting: Dictionary) -> void:
 			_leave_vehicle(p)
 			interacting.erase(id)  # the press was for the rover, not the hunt
 			continue
+		if hunt != null and hunt.at_a_hold_with_business(self, p):
+			continue  # at the hatch: stowing or taking cargo, not boarding
 		var best := -1
 		var best_d := VehicleSim.BOARD_RANGE
 		for i in vehicles.size():

@@ -60,7 +60,8 @@ func sync(hunt: HuntRules, tick: int, local_id: int, carrier_pos: Callable) -> v
 			node = _make_case(color, t.kind == HuntRules.Kind.GRAND)
 			add_child(node)
 			_cases[t.id] = node
-		var hidden := t.banked or (t.kind == HuntRules.Kind.GRAND and tick < t.available_tick)
+		# Stowed in a vehicle's hold: out of sight (no case, no beam) for everyone.
+		var hidden := t.banked or t.vehicle >= 0 or (t.kind == HuntRules.Kind.GRAND and tick < t.available_tick)
 		node.visible = not hidden
 		var pos := t.position
 		if t.carrier != 0:

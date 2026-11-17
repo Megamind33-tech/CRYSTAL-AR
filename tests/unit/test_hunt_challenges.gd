@@ -861,3 +861,42 @@ func test_a_squadmate_the_run_forbids_never_turns() -> void:
 	h.grudges[2] = true
 	brain._keep_or_break(world.tick, pl[1])
 	assert_false(h.social.allied(1, 2), "but a grudge is settled")
+
+
+# --- Vehicle holds: a compartment of its own ---
+
+func test_stow_hide_search_and_drive_out() -> void:
+	var pl := _hunters(2)
+	world.add_vehicle(AWAY_A + Vector3(0, 0, -4), 0.0)  # its hatch behind it (+Z): near AWAY_A
+	var v: SimVehicle = world.vehicles[0]
+	var hatch := v.position - Vector3(-sin(v.yaw), 0.0, -cos(v.yaw)) * VehicleSim.HOLD_BACK
+	var cargo := h.assignments_of(1)[0]
+	cargo.carrier = 1
+	SimHarness.place(pl[0], hatch, 0.0)
+	_step(10)
+	_step(1, {1: [PlayerCommand.Action.INTERACT]})
+	assert_eq(cargo.vehicle, 0, "stowed in the hold, not dropped")
+	assert_eq(cargo.carrier, 0)
+	assert_false(cargo.on_ground(), "nobody can pick it off the ground: it's not there")
+	assert_eq(pl[0].state.vehicle, -1, "and the press didn't board the vehicle")
+	# A rival at the hatch: searching takes SEARCH_TICKS.
+	SimHarness.place(pl[0], AWAY_C, 0.0)
+	SimHarness.place(pl[1], hatch, 0.0)
+	_step(10)
+	assert_eq(cargo.vehicle, 0, "standing at the hatch isn't searching")
+	_step(1, {2: [PlayerCommand.Action.INTERACT]})
+	_step(HuntRules.SEARCH_TICKS - 10)
+	assert_eq(cargo.vehicle, 0, "still searching")
+	_step(20)
+	assert_eq(cargo.carrier, 2, "found it and took it")
+	# Back in a hold, driven onto a pad: banked for the driver.
+	cargo.carrier = 2
+	_step(1, {2: [PlayerCommand.Action.INTERACT]})
+	assert_eq(cargo.vehicle, 0)
+	var zone: Vector3 = h.zones[0]
+	v.driver = 2
+	pl[1].state.vehicle = 0
+	v.position = zone
+	SimHarness.place(pl[1], zone, 0.0)
+	_step(HuntRules.EXTRACT_TICKS + 2)
+	assert_true(cargo.banked, "driven onto a pad: extracted")

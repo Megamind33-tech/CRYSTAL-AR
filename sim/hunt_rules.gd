@@ -100,11 +100,13 @@ class Treasure:
 	var resource: String = ""  ## RESOURCE: its HuntResources type
 	var locked: bool = false  ## GRAND: must be unlocked before it can be taken
 	var stolen_from: int = 0  ## Recovery Contract: who it was stolen from (0 = not stolen)
+	var vehicle: int = -1  ## stowed in this vehicle's hold (hidden), -1 = not
+	var stowed_by: int = 0  ## who put it there (takes it back at once)
 	var recovery_paid: bool = false  ## the recovery bonus is paid once per item
 	var next_clue_tick: int = 0
 
 	func on_ground() -> bool:
-		return carrier == 0 and not banked
+		return carrier == 0 and not banked and vehicle < 0
 
 
 var spots: Array[Vector3] = []
@@ -179,6 +181,7 @@ func reset(world: SimWorld) -> void:
 	caches.clear()
 	vault_unlocker = 0
 	vault_progress = 0
+	_searching.clear()
 	economy.reset()
 	end_tick = 0
 	final_zone = -1
@@ -352,7 +355,12 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 			continue
 		t.position = c.state.position
 		if interacting.has(c.net_id):
-			_drop(world, c)
+			var hold := _hold_at(world, c.state.position)
+			if hold >= 0 and stowed_in(hold).size() < HOLD_CAPACITY:
+				_stow(world, c, t, hold)  # into the vehicle: out of sight
+				interacting.erase(c.net_id)  # the press is spent
+			else:
+				_drop(world, c)
 			continue
 		if _in_zone(c.state.position, tick):
 			var ticks: int = extract_progress.get(c.net_id, 0) + 1
@@ -389,6 +397,7 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 			_emit(world, t, "take", best.net_id)
 			if t.stolen_from == best.net_id:
 				_recover(world, t, best.net_id)
+	_step_holds(world, ids, interacting)
 	_step_caches(world, ids, interacting)
 	_step_vault(world, ids, interacting)
 	social.step(world, ids)
@@ -886,6 +895,110 @@ func _drop(world: SimWorld, p: SimPlayer) -> void:
 	t.blocked_until = world.tick + REPICK_TICKS
 	extract_progress.erase(p.net_id)
 	_emit(world, t, "drop", p.net_id)
+
+
+# --- Vehicle holds (two compartments: what you carry, what your vehicle
+# holds; robbing you never touches the vehicle, and its hold is searched
+# separately, at its hatch) ---
+
+## Treasures in vehicle `v`'s hold.
+const HOLD_CAPACITY := 3
+## Someone else's hold takes this long to search (interact held at the
+## hatch); the one who stowed it takes it back at once.
+const SEARCH_TICKS := 180
+var _searching: Dictionary = {}  ## hunter id -> [vehicle, ticks searched]
+
+
+func stowed_in(v: int) -> Array[Treasure]:
+	var out: Array[Treasure] = []
+	for t in treasures:
+		if t.vehicle == v and not t.banked:
+			out.append(t)
+	return out
+
+
+## Whether `p` stands at a vehicle's hatch with cargo to stow or to take
+## (then interact is for the hold, not for boarding).
+func at_a_hold_with_business(world: SimWorld, p: SimPlayer) -> bool:
+	var hold := _hold_at(world, p.state.position)
+	if hold < 0:
+		return false
+	return carried_by(p.net_id) != null or not stowed_in(hold).is_empty()
+
+
+## The vehicle whose hatch `at` stands at (-1: none).
+func _hold_at(world: SimWorld, at: Vector3) -> int:
+	for i in world.vehicles.size():
+		if VehicleSim.at_hold(world.vehicles[i], at):
+			return i
+	return -1
+
+
+func _stow(world: SimWorld, c: SimPlayer, t: Treasure, v: int) -> void:
+	t.carrier = 0
+	t.vehicle = v
+	t.stowed_by = c.net_id
+	t.position = world.vehicles[v].position
+	extract_progress.erase(c.net_id)
+	_emit(world, t, "stow", c.net_id, {"vehicle": v})
+
+
+## Holds: their cargo rides with the vehicle; a driver on a pad banks it
+## all (whoever drives it there: a stolen vehicle pays its thief); a free
+## hunter at a hatch takes one (searching someone else's takes a while).
+func _step_holds(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
+	for t in treasures:
+		if t.vehicle >= 0 and t.vehicle < world.vehicles.size():
+			t.position = world.vehicles[t.vehicle].position
+	for i in world.vehicles.size():
+		var v: SimVehicle = world.vehicles[i]
+		var cargo := stowed_in(i)
+		if v.driver == 0 or cargo.is_empty():
+			continue
+		var d: SimPlayer = world.players.get(v.driver)
+		if d == null or carried_by(v.driver) != null:
+			continue  # (a carrier extracts by the usual count)
+		if _in_zone(v.position, world.tick):
+			var ticks: int = extract_progress.get(v.driver, 0) + 1
+			extract_progress[v.driver] = ticks
+			if ticks >= EXTRACT_TICKS:
+				for t in cargo:
+					t.vehicle = -1
+					_bank(world, d, t)
+		else:
+			extract_progress.erase(v.driver)
+	for id in ids:
+		var p: SimPlayer = world.players[id]
+		var hold := _hold_at(world, p.state.position) if p.state.alive and p.state.vehicle < 0 else -1
+		if hold < 0 or carried_by(id) != null or economy.is_merc(id) or stowed_in(hold).is_empty():
+			_searching.erase(id)
+			continue
+		var t: Treasure = stowed_in(hold)[0]
+		var mine: bool = t.stowed_by == id
+		if mine and interacting.has(id):
+			_unstow(world, p, t)
+			continue
+		if mine:
+			continue
+		# Someone else's: hold interact at the hatch for SEARCH_TICKS.
+		var s: Array = _searching.get(id, [hold, 0])
+		if interacting.has(id) or int(s[1]) > 0:
+			if s[0] != hold:
+				s = [hold, 0]
+			s[1] = int(s[1]) + 1
+			_searching[id] = s
+			if int(s[1]) == 1:
+				_emit(world, t, "search", id, {"vehicle": hold})
+			if int(s[1]) >= SEARCH_TICKS:
+				_searching.erase(id)
+				_unstow(world, p, t)
+
+
+func _unstow(world: SimWorld, p: SimPlayer, t: Treasure) -> void:
+	t.vehicle = -1
+	t.carrier = p.net_id
+	t.position = p.state.position
+	_emit(world, t, "unstow", p.net_id, {"from": t.stowed_by})
 
 
 func _bank(world: SimWorld, p: SimPlayer, t: Treasure) -> void:
