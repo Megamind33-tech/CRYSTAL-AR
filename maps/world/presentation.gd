@@ -11,12 +11,11 @@ const TERRAIN_SHADER := preload("res://presentation/comic/comic_terrain.gdshader
 
 
 func _ready() -> void:
-	var terrain_scene: Node = (load("res://art/environment/world/terrain.glb") as PackedScene).instantiate()
 	var mat := ShaderMaterial.new()
 	mat.shader = TERRAIN_SHADER
 	mat.set_shader_parameter("sand_tex", load(TEX % ["red_sand", "diff"]))
 	mat.set_shader_parameter("rock_tex", load(TEX % ["terrain_red_01", "diff"]))
-	_merge_terrain(terrain_scene, mat)
+	_terrain(mat)
 	batches = StaticBatches.new()
 	batches.name = "Batches"
 	add_child(batches)
@@ -62,14 +61,12 @@ func _ready() -> void:
 	_monorail()
 	_estates()
 	batches.build()
-	MarsLighting.add(self)
-	MarsLighting.add_moons(self)
+	TitanLighting.add(self)
+	TitanLighting.add_moons(self)
 	var weather := DustStorms.new()
 	weather.name = "Weather"
 	add_child(weather)
-	var devils := DustDevils.new()
-	devils.name = "Wind"
-	add_child(devils)
+	_lakes()
 	var settlement := TitanSettlement.new()
 	settlement.name = "Settlement"
 	add_child(settlement)
@@ -388,17 +385,20 @@ func _deploy_pad(at: Vector3) -> void:
 	add_child(beam)
 
 
-## The valley's roads (WorldLayout.roads): a paved strip 9 m wide laid on
-## the ground, white edge lines and a dashed yellow centre line; one mesh.
+## The valley's roads (WorldLayout.roads): packed ice gravel 9 m wide laid
+## on the ground, inked at the edges like the comic's outlines, two darker
+## wheel ruts down the middle.
 const ROAD_HALF := 4.5
+## Packed pale ice gravel: lighter than the dunes, so the roads read from afar.
+const ROAD_SURFACE := Color(0.66, 0.6, 0.5)
 
 
 func _roads() -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var tarmac := Color(0.2, 0.17, 0.16).srgb_to_linear()
-	var white := Color(0.85, 0.82, 0.76).srgb_to_linear()
-	var yellow := Color(0.95, 0.72, 0.12).srgb_to_linear()
+	var tarmac := ROAD_SURFACE.srgb_to_linear()
+	var ink := ComicUI.INK.srgb_to_linear()
+	var rut := ROAD_SURFACE.darkened(0.22).srgb_to_linear()
 	for road: Array in WorldLayout.roads():
 		var pts := WorldLayout.road_samples(road, 1.5)
 		for i in pts.size() - 1:
@@ -412,13 +412,11 @@ func _roads() -> void:
 			var db: Vector2 = pts[i + 1][1]
 			var na := Vector2(-da.y, da.x)
 			var nb := Vector2(-db.y, db.x)
-			for k in 3:  # three lanes' worth across, each following the ground under it
-				_strip(st, a, b, na, nb, -ROAD_HALF + k * ROAD_HALF * 2.0 / 3.0, -ROAD_HALF + (k + 1) * ROAD_HALF * 2.0 / 3.0, 0.06, tarmac)
+			_strip(st, a, b, na, nb, -ROAD_HALF, ROAD_HALF, 0.06, tarmac)
 			for side in [-1.0, 1.0]:
-				_strip(st, a, b, na, nb, side * (ROAD_HALF - 0.6) - 0.12, side * (ROAD_HALF - 0.6) + 0.12, 0.08, white)  # edge lines
-				_skirt(st, a, b, na, nb, side * ROAD_HALF, tarmac)  # no gap under the edge, from any angle
-			if i % 4 < 2:  # the dashed centre line
-				_strip(st, a, b, na, nb, -0.12, 0.12, 0.08, yellow)
+				_strip(st, a, b, na, nb, side * ROAD_HALF - 0.35 * side, side * ROAD_HALF, 0.08, ink)  # the inked edge
+				_strip(st, a, b, na, nb, side * 1.6 - 0.45, side * 1.6 + 0.45, 0.07, rut)  # a wheel rut
+				_skirt(st, a, b, na, nb, side * ROAD_HALF, ink)  # no gap under the edge, from any angle
 		_road_section(st, pts[pts.size() - 1][0])
 		st = SurfaceTool.new()
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -444,15 +442,41 @@ func _skirt(st: SurfaceTool, a: Vector2, b: Vector2, na: Vector2, nb: Vector2, o
 		st.add_vertex(v[idx])
 
 
-## A quad from a to b, between offsets `l` and `r` across, `lift` above the ground.
+## A quad from a to b, between offsets `l` and `r` across, `lift` above the
+## ground, laid exactly on it: cut along the ground's grid (its cells and
+## their diagonals, as WorldTerrain.surface and the physics split them), so
+## each piece lies in one flat triangle of the ground you walk on. (A quad
+## laid corner to corner cuts across the ground's creases: feet sink into
+## the tarmac on one side of a crease, the ground shows through on the other.)
 func _strip(st: SurfaceTool, a: Vector2, b: Vector2, na: Vector2, nb: Vector2, l: float, r: float, lift: float, col: Color) -> void:
-	var p := [a + na * l, a + na * r, b + nb * r, b + nb * l]
-	var v: Array[Vector3] = []
-	for q: Vector2 in p:
-		v.append(WorldTerrain.at(q.x, q.y) + Vector3(0, lift, 0))
+	var quad := PackedVector2Array([a + na * l, a + na * r, b + nb * r, b + nb * l])
+	var lo := Vector2(INF, INF)
+	var hi := -lo
+	for q: Vector2 in quad:
+		lo = lo.min(q)
+		hi = hi.max(q)
+	var step := WorldTerrain.STEP
+	var half := WorldTerrain.SIZE * 0.5
 	st.set_color(col)
-	for idx in [0, 2, 1, 0, 3, 2]:
-		st.add_vertex(v[idx])
+	for j in range(floori((lo.y + half) / step), floori((hi.y + half) / step) + 1):
+		for i in range(floori((lo.x + half) / step), floori((hi.x + half) / step) + 1):
+			var x0 := -half + i * step
+			var z0 := -half + j * step
+			var c00 := Vector2(x0, z0)
+			var c10 := Vector2(x0 + step, z0)
+			var c01 := Vector2(x0, z0 + step)
+			var c11 := Vector2(x0 + step, z0 + step)
+			for tri: PackedVector2Array in [PackedVector2Array([c00, c10, c01]), PackedVector2Array([c10, c11, c01])]:
+				for piece: PackedVector2Array in Geometry2D.intersect_polygons(quad, tri):
+					var v: Array[Vector3] = []
+					for q: Vector2 in piece:
+						v.append(WorldTerrain.at(q.x, q.y) + Vector3(0, lift, 0))
+					for k in range(1, v.size() - 1):
+						# Face up (+Y), whichever way round the piece came.
+						var up := (v[k] - v[0]).cross(v[k + 1] - v[0]).y < 0.0
+						st.add_vertex(v[0])
+						st.add_vertex(v[k] if up else v[k + 1])
+						st.add_vertex(v[k + 1] if up else v[k])
 
 
 ## Buildings on the valley's slopes stand on a concrete footing sunk into
@@ -476,30 +500,43 @@ func _footing(at: Vector3, size: Vector2, yaw_deg: float) -> void:
 	batches.add_mesh(CityMode._tinted(box, Color(0.36, 0.32, 0.3)), Transform3D(b, at + Vector3(0, -depth * 0.5 + 0.06, 0)), 380.0)
 
 
-## The terrain's 160 m tiles merged into TERRAIN_TILE squares (fewer
-## draws), each with its own detail levels.
+## The ground (TerrainMesh) in TERRAIN_TILE squares, each with its own
+## detail levels.
 const TERRAIN_TILE := 320.0
 ## Coarser detail levels sooner: smooth dunes lose little, and the ground was
 ## a third of a frame's triangles.
 const TERRAIN_LOD_BIAS := 0.35
 
 
-func _merge_terrain(terrain_scene: Node, mat: Material) -> void:
-	var groups := {}
-	for mi: MeshInstance3D in terrain_scene.find_children("*", "MeshInstance3D", true, false):
-		var c := Comic._transform_to(terrain_scene, mi) * mi.mesh.get_aabb().get_center()
-		var key := Vector2i(floori((c.x + WorldTerrain.SIZE * 0.5) / TERRAIN_TILE), floori((c.z + WorldTerrain.SIZE * 0.5) / TERRAIN_TILE))
-		var list: Array = groups.get(key, [])
-		list.append(mi)
-		groups[key] = list
-	for key: Vector2i in groups:
-		var st := SurfaceTool.new()
-		for mi: MeshInstance3D in groups[key]:
-			st.append_from(mi.mesh, 0, Comic._transform_to(terrain_scene, mi))
+func _terrain(mat: Material) -> void:
+	for t: Array in TerrainMesh.build(TERRAIN_TILE):
 		var out := MeshInstance3D.new()
-		out.name = "Terrain_%d_%d" % [key.x, key.y]
-		out.mesh = Comic.compact_mesh(st.commit_to_arrays(), true)
+		out.name = t[0]
+		out.mesh = Comic.compact_mesh(t[1], true)
 		out.lod_bias = TERRAIN_LOD_BIAS
 		out.material_override = mat
 		add_child(out)
-	terrain_scene.free()
+
+
+## Sinlap crater's methane lake: dark, still, a little sheen, filling the
+## crater's floor (shallow: you wade in it).
+func _lakes() -> void:
+	var cr: Array = WorldTerrain.CRATER2
+	var c := Vector2(cr[0], cr[1])
+	var floor_y := WorldTerrain.height(c.x, c.y)
+	var lake := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = float(cr[2]) * 0.62
+	disc.bottom_radius = disc.top_radius
+	disc.height = 0.1
+	disc.radial_segments = 48
+	disc.rings = 1
+	lake.mesh = disc
+	lake.position = Vector3(c.x, floor_y + 1.4, c.y)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.09, 0.075, 0.06)
+	mat.roughness = 0.12
+	mat.metallic_specular = 0.7
+	lake.material_override = mat
+	lake.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(lake)

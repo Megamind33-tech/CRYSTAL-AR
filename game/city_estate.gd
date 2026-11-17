@@ -13,7 +13,7 @@ const DOOR_REACH := 2.6
 const CUT_SECONDS := 3.5
 const HELIOS_WARN := 20.0       ## seconds in Helios without a visa before a warning
 const HELIOS_CALL := 45.0       ## ... before the Marshals are called
-const GANG_NAMES := ["Red Dust Kings", "Phobos Cartel", "Tharsis Wolves", "Olympus Syndicate", "Valles Vipers"]
+const GANG_NAMES := ["Tholin Kings", "Kraken Cartel", "Huygens Wolves", "Ontario Syndicate", "Shangri-La Vipers"]
 
 var city: CityMode
 var inside: Array = []          ## [property id, interior kind, the door to go back out to] or []

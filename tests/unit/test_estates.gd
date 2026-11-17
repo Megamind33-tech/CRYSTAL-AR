@@ -79,7 +79,7 @@ func test_gang_ranks_and_crew() -> void:
 	var c := _rich()
 	assert_false(c.in_gang())
 	assert_eq(c.recruit(), "", "no gang, no crew")
-	assert_true(c.form_gang("Phobos Cartel"))
+	assert_true(c.form_gang("Kraken Cartel"))
 	assert_eq(c.gang_slots(), 2)
 	assert_ne(c.recruit(), "")
 	assert_ne(c.recruit(), "")
@@ -171,7 +171,7 @@ func test_red_dust_trade_chain_orders_and_dealers() -> void:
 	c.won_turf()
 	assert_eq(c.chain_step(), 4)
 	assert_eq((c.trade().clients as Dictionary).size(), Career.CLIENTS.size(), "everyone knows you now")
-	c.form_gang("Phobos Cartel")
+	c.form_gang("Kraken Cartel")
 	var who := c.recruit()
 	assert_true(c.set_dealer("galleria", who, NOW))
 	assert_gt(c.supply_dealer("galleria", "red_dust", 20), 0)
@@ -261,3 +261,17 @@ func test_cosmetics_and_season() -> void:
 	# Nothing cosmetic gives an edge: every cosmetic is a look.
 	for id: String in Career.COSMETICS:
 		assert_true(Career.COSMETICS[id].kind in ["suit", "flame", "paint", "title", "emote"])
+
+
+## The jet is retired: a save that owned one gets the rotorcraft and the
+## difference in price back; the rotorcraft is the only aircraft for sale.
+func test_retired_jet_becomes_the_rotorcraft() -> void:
+	var fliers := range(VehicleSim.MODELS.size()).filter(func(i: int) -> bool: return VehicleSim.flies(i))
+	assert_eq(fliers.size(), 1, "one aircraft: the rotorcraft")
+	var c := Career.new()
+	var d: Dictionary = c.d.duplicate(true)
+	d["aircraft"] = VehicleSim.MODELS.size()  # the jet's old slot
+	d["wallet"] = 100
+	var old := Career.new(d)
+	assert_eq(int(old.d.aircraft), fliers[0])
+	assert_eq(int(old.d.wallet), 100 + VehicleSim.RETIRED_JET_PRICE - int(VehicleSim.MODELS[fliers[0]].price))

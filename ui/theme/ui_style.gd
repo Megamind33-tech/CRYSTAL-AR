@@ -9,7 +9,7 @@ extends Node
 ## "HudPanel".
 
 # --- Palette ---
-# THE HUNT (Mars outpost): amber and rust on scorched brown. The shield bar
+# THE HUNT (Titan outpost): amber and rust on scorched brown. The shield bar
 # keeps IONFALL's cyan: it must read at a glance in combat.
 const BG := Color("120a07")
 const PANEL := Color(0.09, 0.05, 0.035, 0.92)

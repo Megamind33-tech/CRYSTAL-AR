@@ -19,6 +19,7 @@ Every version here is pinned (PLAN §3.18). Change one only on a branch, then re
 | SCons | 4.x | `pip install scons` (CI: Ubuntu's `scons`), only for `native/build.sh` |
 | mingw-w64 | Ubuntu 24.04's, posix threads | Cross-compiles the Windows native library (`native/build.sh windows`) |
 | Python | 3.10+ | Build tooling in `tools/` |
+| Blender | 4.x (tested 4.5 LTS) | `tools/blender/*.py` build the kit, districts, items and vehicles (`blender -b -P <script> -- <out_dir>`). The `bpy` wheel from PyPI (Python 3.11) also runs them headless. The ground is not a Blender asset: Godot builds it (`maps/world/terrain_mesh.gd`) |
 
 ## Local install layout (Linux dev machine)
 

@@ -1,5 +1,5 @@
 extends Node3D
-## Main-menu backdrop: THE HUNT's Mars outpost (Rustwood Yard) under a
+## Main-menu backdrop: THE HUNT's Titan outpost (Rustwood Yard) under a
 ## slow orbiting camera, with a few hunters running laps round the vault.
 ## Presentation only.
 

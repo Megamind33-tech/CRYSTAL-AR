@@ -1,17 +1,22 @@
 extends GutTest
-## Kasei Valley: the game's height function matches the one Blender built
-## the visible terrain from (tools/blender/world_terrain.py), and the
-## places sit where the layout says.
+## Kasei Valley: the ground keeps its shape, the places sit where the
+## layout says, and the layout holds together (roads clear of buildings,
+## buildings level and apart).
 
-## [x, z, height] computed by tools/blender/world_terrain.py.
-const PYTHON_SAMPLES := [[0, 0, 3.6027], [-220, 20, 14.0], [60, -60, 2.0], [238, 161.83249824996986, -21.1647],
-		[150, -240, -11.2001], [-60, -230, 31.8974], [390, -390, 10.2049], [123.4, -56.7, 2.1644], [-300, 150, -0.6022],
-		[-150, 80, 12.8548], [-290, -60, 9.2059], [-520, -470, 18.0], [470, 430, 6.0], [-330, 400, -16.8883],
-		[760, -760, 56.2079], [640, -60, 43.6121], [-450, 300, -3.2202], [300, 520, -2.5724]]
+## [x, z, height]: the ground at the places that matter (the districts'
+## flats, the yards, the canyon floor, the craters, the Anvil, the rim,
+## road beds). A
+## change here moves the ground under everything placed on it: re-check
+## the layout tests and the map (tools/plot_world_map.py) when you update it.
+const PINNED := [[0, 0, 1.8866], [-220, 20, 14.0000], [60, -60, 2.0000], [238, 161.83249824997, -21.1615],
+		[150, -240, -11.2001], [-60, -230, 31.8974], [390, -390, 15.4081], [123.4, -56.7, 2.2431], [-300, 150, -0.6022],
+		[-150, 80, 9.5896], [-290, -60, 9.2059], [-400, -250, 18.0000], [-170, 330, 6.0000], [-460, 330, -18.3174],
+		[580, -580, 76.3311], [420, -300, 44.7178], [-450, 300, -19.0679], [300, 520, 15.5758], [-180, -250, 37.9730],
+		[-95, 28, 3.0000]]
 
 
-func test_terrain_matches_blender() -> void:
-	for p: Array in PYTHON_SAMPLES:
+func test_terrain_keeps_its_shape() -> void:
+	for p: Array in PINNED:
 		assert_almost_eq(WorldTerrain.height(p[0], p[1]), float(p[2]), 0.001, "height at %s, %s" % [p[0], p[1]])
 
 
@@ -94,3 +99,173 @@ func test_dig_run_layout() -> void:
 	var c := MatchConfig.for_place(GameMode.HUNT, "You")
 	assert_eq(c.map, GameMode.CITY_MAP, "a run happens in Kasei Valley")
 	assert_eq(c.bots, GameMode.HUNT_BOTS)
+
+
+## A kit piece's footprint on the ground: its model's bounds, scaled and
+## turned, as the four corners (x, z). Cached per piece.
+var _bounds := {}
+
+
+func _footprint(piece: String, x: float, z: float, yaw: float, sc: float, col: Vector3) -> PackedVector2Array:
+	var box: AABB
+	if piece.is_empty() or col != Vector3.ZERO:
+		box = AABB(Vector3(-col.x * 0.5, 0, -col.z * 0.5), col)
+	else:
+		if not _bounds.has(piece):
+			var path := ("res://art/environment/%s.glb" % piece) if piece.contains("/") else "res://art/environment/kit/%s.glb" % piece
+			var scene: Node3D = (load(path) as PackedScene).instantiate()
+			var b := AABB()
+			var first := true
+			for mi: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+				var xf := Transform3D.IDENTITY
+				var n: Node = mi
+				while n != null and n != scene:
+					xf = (n as Node3D).transform * xf
+					n = n.get_parent()
+				var mb := xf * mi.mesh.get_aabb()
+				b = mb if first else b.merge(mb)
+				first = false
+			scene.free()
+			_bounds[piece] = b
+		box = _bounds[piece]
+		box = AABB(box.position * sc, box.size * sc)
+	var r := Transform2D(-deg_to_rad(yaw), Vector2(x, z))
+	var out := PackedVector2Array()
+	for c: Vector2 in [Vector2(box.position.x, box.position.z), Vector2(box.end.x, box.position.z),
+			Vector2(box.end.x, box.end.z), Vector2(box.position.x, box.end.z)]:
+		out.append(r * c)
+	return out
+
+
+## Street furniture the roads may pass close to (it stands on the kerb).
+const KERBSIDE := ["districts/lamp_neo", "districts/solar_tree", "districts/holo_sign", "districts/planter", "street_lamp",
+		"kiosk", "districts/landing_pad"]
+const ROAD_HALF := 4.5
+
+
+## The roads run clear of every building: traffic drives them, and a road
+## that runs into a wall is a road nobody can use.
+func test_roads_clear_of_buildings() -> void:
+	var feet := []
+	for p: Array in WorldLayout.pieces():
+		if p[0] in KERBSIDE:
+			continue
+		feet.append([p[0], _footprint(p[0], p[1], p[2], p[3], p[4], p[5])])
+	for p: Array in CityLayout.pieces():
+		# The gatehouse is the gate: the road runs through its airlock.
+		if p[0] in KERBSIDE or p[0] in ["wall_segment", "titan/gatehouse"]:
+			continue
+		var at: Vector3 = p[1]
+		feet.append([p[0], _footprint(p[0], at.x, at.z, p[2], p[3], p[4])])
+	var hits := []
+	for road: Array in WorldLayout.roads():
+		for s: Array in WorldLayout.road_samples(road, 2.0):
+			var q: Vector2 = s[0]
+			for f: Array in feet:
+				var poly: PackedVector2Array = f[1]
+				if Geometry2D.is_point_in_polygon(q, poly) or _poly_distance(q, poly) < ROAD_HALF:
+					hits.append("%s at %s" % [f[0], q.round()])
+					break
+	assert_true(hits.is_empty(), "roads run into buildings:\n" + "\n".join(hits))
+
+
+func _poly_distance(q: Vector2, poly: PackedVector2Array) -> float:
+	var d := INF
+	for i in poly.size():
+		d = minf(d, q.distance_to(Geometry2D.get_closest_point_to_segment(q, poly[i], poly[(i + 1) % poly.size()])))
+	return d
+
+
+## Every building stands on level ground (the districts' flats), so none
+## floats over a slope or sinks into one.
+func test_buildings_on_level_ground() -> void:
+	var tilted := []
+	for p: Array in WorldLayout.pieces():
+		if str(p[0]).is_empty() or p[0] in KERBSIDE or p[0] in ["world/freighter_wreck", "crate_stack", "comms_tower", "hab_dome"]:
+			# (the wreck lies where it crashed; the dome sits on the Anvil's top)
+			continue
+		var hs := []
+		for c: Vector2 in _footprint(p[0], p[1], p[2], p[3], p[4], p[5]):
+			hs.append(WorldTerrain.height(c.x, c.y))
+		hs.append(WorldTerrain.height(p[1], p[2]))
+		if hs.max() - hs.min() > 2.25:  # what a kit piece bedded in the dust hides
+			tilted.append("%s at (%d, %d): %.1f m" % [p[0], p[1], p[2], hs.max() - hs.min()])
+	assert_true(tilted.is_empty(), "buildings on slopes:\n" + "\n".join(tilted))
+
+
+## Buildings don't stand in one another.
+func test_buildings_apart() -> void:
+	var feet := []
+	for p: Array in WorldLayout.pieces():
+		if str(p[0]).is_empty() or p[0] in KERBSIDE or p[0] == "crate_stack":
+			continue
+		feet.append(["%s (%d, %d)" % [p[0], p[1], p[2]], _footprint(p[0], p[1], p[2], p[3], p[4], p[5])])
+	var clashes := []
+	for i in feet.size():
+		for j in range(i + 1, feet.size()):
+			if not Geometry2D.intersect_polygons(feet[i][1], feet[j][1]).is_empty():
+				clashes.append("%s / %s" % [feet[i][0], feet[j][0]])
+	assert_true(clashes.is_empty(), "buildings overlap:\n" + "\n".join(clashes))
+
+
+## The world's gameplay scene builds: the ground, the buildings, the bounds.
+func test_gameplay_scene_builds() -> void:
+	var scene: Node3D = (load("res://maps/world/gameplay.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var ground: CollisionShape3D = null
+	for cs: CollisionShape3D in scene.find_children("*", "CollisionShape3D", true, false):
+		if cs.shape is HeightMapShape3D:
+			ground = cs
+	assert_not_null(ground, "the ground is there")
+	assert_eq((ground.shape as HeightMapShape3D).map_width, WorldTerrain.cells() + 1)
+
+
+## The roads are drivable: no stretch steeper than MAX_GRADE, no sudden
+## change of grade (a bump) beyond MAX_BUMP per 4 m, and level across.
+const MAX_GRADE := 0.16
+const MAX_BUMP := 0.14
+
+
+func test_roads_drivable() -> void:
+	var bad := []
+	var roads := WorldLayout.roads()
+	for ri in roads.size():
+		var smp := WorldLayout.road_samples(roads[ri], 4.0)
+		var prev := NAN
+		for i in smp.size() - 1:
+			var a: Vector2 = smp[i][0]
+			var b: Vector2 = smp[i + 1][0]
+			var signed := (WorldTerrain.surface(b.x, b.y) - WorldTerrain.surface(a.x, a.y)) / maxf(a.distance_to(b), 0.5)
+			var grade := absf(signed)
+			if grade > MAX_GRADE:
+				bad.append("road %d at %s: %d%% grade" % [ri, a.round(), roundi(grade * 100)])
+			if not is_nan(prev) and absf(signed - prev) > MAX_BUMP:
+				bad.append("road %d at %s: a bump (%d%% to %d%%)" % [ri, a.round(), roundi(prev * 100), roundi(signed * 100)])
+			prev = signed
+			var across := Vector2(-(smp[i][1] as Vector2).y, (smp[i][1] as Vector2).x) * 4.0
+			var tilt := absf(WorldTerrain.surface(a.x + across.x, a.y + across.y) - WorldTerrain.surface(a.x - across.x, a.y - across.y))
+			if tilt > 1.5:
+				bad.append("road %d at %s: %.1f m across" % [ri, a.round(), tilt])
+	assert_true(bad.is_empty(), "roads not drivable:\n" + "\n".join(bad))
+
+
+## The tarmac lies on the ground you walk on (no sinking into it, no ground
+## showing through it): every piece of the road's surface, all along every
+## road, is within a centimetre of WorldTerrain.surface plus its lift.
+func test_tarmac_on_the_walked_ground() -> void:
+	var pres: Node = autofree(load("res://maps/world/presentation.gd").new())
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for road: Array in WorldLayout.roads():
+		var pts := WorldLayout.road_samples(road, 1.5)
+		for i in range(0, pts.size() - 1, 3):
+			var na := Vector2(-(pts[i][1] as Vector2).y, (pts[i][1] as Vector2).x)
+			var nb := Vector2(-(pts[i + 1][1] as Vector2).y, (pts[i + 1][1] as Vector2).x)
+			pres._strip(st, pts[i][0], pts[i + 1][0], na, nb, -4.5, 4.5, 0.06, Color.WHITE)
+	var v: PackedVector3Array = st.commit_to_arrays()[Mesh.ARRAY_VERTEX]
+	var worst := 0.0
+	for k in range(0, v.size(), 3):
+		var c := (v[k] + v[k + 1] + v[k + 2]) / 3.0
+		worst = maxf(worst, absf(c.y - 0.06 - WorldTerrain.surface(c.x, c.z)))
+	assert_gt(v.size(), 1000)
+	assert_lt(worst, 0.01, "the tarmac is off the walked ground by %.2f m" % worst)

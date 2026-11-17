@@ -1835,7 +1835,7 @@ func _visual_for(id: int, display_name: String, is_bot: bool, character: int, co
 		# who come along (RaidDirector, HuntEconomy.names).
 		if display_name.begins_with(CityMode.POLICE):
 			style = "marshal"  # the Kasei Marshals: Mars' police
-		elif display_name.begins_with("Concern·") or display_name.begins_with("Kasei·"):
+		elif display_name.begins_with("Concern·") or display_name.begins_with("Xanadu·"):
 			style = "concern"
 		elif display_name.begins_with("Hollow·") or display_name.begins_with("Varga") or _is_friend_name(display_name):
 			style = "militia"

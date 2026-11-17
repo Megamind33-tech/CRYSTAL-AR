@@ -536,12 +536,17 @@ var _traffic: Array = []  ## [mesh, road points, distance along, direction, spee
 
 func _step_traffic(me: SimPlayer, dt: float) -> void:
 	if _traffic.is_empty():
-		var roads := WorldLayout.roads()
+		var sky := SkyTraffic.new()  # the rotorcraft in the sky
+		sky.name = "SkyTraffic"
+		match_node.add_child(sky)
+		# Traffic keeps to the long roads (a short street has no room to turn back).
+		var roads := WorldLayout.roads().filter(func(r: Array) -> bool: return WorldLayout.road_samples(r, 2.0).size() > 80)
 		for k in TRAFFIC:
 			var pts: Array = []
 			for sample: Array in WorldLayout.road_samples(roads[k % roads.size()], 2.0):
 				pts.append(sample[0])
-			var kit: String = VehicleSim.MODELS[k % VehicleSim.MODELS.size()].kit
+			var ground_models := range(VehicleSim.MODELS.size()).filter(func(i: int) -> bool: return not VehicleSim.flies(i))
+			var kit: String = VehicleSim.MODELS[ground_models[k % ground_models.size()]].kit  # no aircraft on the roads
 			var mi := Comic.kit_instance(kit, Vector3.ZERO, 0.0)
 			mi.visibility_range_end = 220.0  # traffic: not drawn across the valley
 			match_node.add_child(mi)

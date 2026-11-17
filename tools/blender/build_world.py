@@ -1,146 +1,16 @@
 # THE HUNT: Kasei Valley, built in Blender from code.
 #   blender -b -P tools/blender/build_world.py -- <out_dir>
-# terrain.glb: the 800 x 800 m valley (4 m grid) from world_terrain.py with
-# vertex colours: dust on the flats, layered rock strata on the slopes,
-# ice in the crater, packed dirt on the roads. freighter_wreck.glb: the
-# crashed hauler landmark. Godot shades both (cel bands, outlines on the
-# wreck) and builds the terrain collision from the same height function.
-import bpy, bmesh, math, sys, os
+# freighter_wreck.glb: the crashed hauler landmark; the rovers, buggy and
+# hauler; the factions' gear. (The ground itself is built in Godot at load
+# from WorldTerrain: maps/world/terrain_mesh.gd.)
+import bpy, math, sys, os
 sys.path.insert(0, os.path.dirname(__file__))
-import world_terrain as W  # noqa: E402
 from build_outpost_kit import reset, box, cyl, finish  # noqa: E402
 import build_outpost_kit as K  # noqa: E402
 
 OUT = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "/tmp/world"
 os.makedirs(OUT, exist_ok=True)
 K.OUT = OUT
-
-# Roads: polylines (x, z) between the places.
-ROADS = [
-    [(-220, 84), (-170, 92), (-110, 70), (-40, 20), (20, -30), (60, -60)],
-    [(60, -60), (110, -10), (160, 60), (205, W.canyon_center(205)), (240, W.canyon_center(240))],
-    [(60, -60), (110, -150), (140, -190)],
-    [(-110, 70), (-160, -60), (-240, -146)],
-    [(-220, 84), (-300, 140), (-420, 190), (-482, 200)],
-    [(-240, -146), (-330, -290), (-420, -390), (-455, -430)],
-    [(-170, 92), (-160, 200), (-100, 300), (150, 385), (370, 425)],
-    [(60, -60), (250, -150), (400, -300), (460, -385)],
-    [(240, W.canyon_center(240)), (300, W.canyon_center(300)), (370, W.canyon_center(370)), (420, 300), (440, 345)],
-    [(-560, 120), (-590, -60), (-570, -250), (-540, -350)],
-]
-
-
-def seg_dist(px, pz, a, b):
-    ax, az = a
-    bx, bz = b
-    dx, dz = bx - ax, bz - az
-    t = max(0.0, min(1.0, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)))
-    return math.hypot(px - (ax + t * dx), pz - (az + t * dz))
-
-
-def road_dist(x, z):
-    return min(seg_dist(x, z, r[i], r[i + 1]) for r in ROADS for i in range(len(r) - 1))
-
-
-def lerp3(a, b, t):
-    return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
-
-
-def color_at(x, z, h, slope):
-    n = math.sin(x * 0.13) * math.cos(z * 0.11) * 0.5 + math.sin(x * 0.031 + z * 0.027) * 0.5
-    dust = lerp3((0.62, 0.31, 0.17), (0.72, 0.42, 0.24), n * 0.5 + 0.5)
-    # Strata on the slopes: bands by height.
-    band = int(math.floor(h / 3.2)) % 3
-    rock = [(0.42, 0.18, 0.11), (0.58, 0.29, 0.16), (0.33, 0.15, 0.1)][band]
-    c = lerp3(dust, rock, W.smoothstep(0.12, 0.35, slope))
-    for cx, cz, cr in (W.CRATER, W.CRATER2):
-      if math.hypot(x - cx, z - cz) < cr * 0.42 and slope < 0.2:
-        c = lerp3(c, (0.82, 0.86, 0.9), 0.75 * (0.5 + 0.5 * math.sin(x * 0.4) * math.sin(z * 0.37)))
-    rd = road_dist(x, z)
-    if rd < 5.0:
-        c = lerp3(c, (0.36, 0.19, 0.12), W.smoothstep(5.0, 2.5, rd))
-    return c
-
-
-TILES = 10  # per side: tiles are culled off-screen and get the importer's LODs
-
-
-def terrain():
-    """The valley floor and walls, as TILES x TILES tiles (one object each,
-    so the renderer skips tiles out of view and draws far ones at a lower
-    detail level). Normals come from the height function, so tile edges
-    don't show."""
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    n = int(W.SIZE / W.STEP) + 1
-    half = W.SIZE / 2
-    cells = n - 1
-    per = int(math.ceil(cells / TILES))
-    m = bpy.data.materials.new("terrain")
-    m.use_nodes = True
-    attr = m.node_tree.nodes.new("ShaderNodeVertexColor")
-    attr.layer_name = "Col"
-    m.node_tree.links.new(attr.outputs["Color"], m.node_tree.nodes["Principled BSDF"].inputs["Base Color"])
-    total = 0
-    for ty in range(TILES):
-        for tx in range(TILES):
-            i0, j0 = tx * per, ty * per
-            i1, j1 = min(i0 + per, cells), min(j0 + per, cells)
-            if i0 >= i1 or j0 >= j1:
-                continue
-            bm = bmesh.new()
-            col = bm.loops.layers.color.new("Col")
-            grid = {}
-            normals = []
-            for j in range(j0, j1 + 1):
-                z = -half + j * W.STEP
-                for i in range(i0, i1 + 1):
-                    x = -half + i * W.STEP
-                    h = W.height(x, z)
-                    # Blender is Z-up, Y forward: Godot (x, y, z) = Blender (x, z, -y).
-                    grid[(i, j)] = bm.verts.new((x, -z, h))
-                    gx = (W.height(x + 1, z) - W.height(x - 1, z)) / 2.0
-                    gz = (W.height(x, z + 1) - W.height(x, z - 1)) / 2.0
-                    l = math.sqrt(gx * gx + gz * gz + 1.0)
-                    normals.append((-gx / l, gz / l, 1.0 / l))
-            bm.verts.ensure_lookup_table()
-            for j in range(j0, j1):
-                for i in range(i0, i1):
-                    # Two triangles split on the (i+1, j)-(i, j+1) diagonal: the
-                    # same split as the game's physics height map (Jolt), so
-                    # what you see is exactly what you stand on.
-                    a, b = grid[(i, j)], grid[(i + 1, j)]
-                    c, d = grid[(i + 1, j + 1)], grid[(i, j + 1)]
-                    for f in (bm.faces.new([a, b, d]), bm.faces.new([b, c, d])):
-                      for loop in f.loops:
-                        v = loop.vert
-                        x, z, h = v.co.x, -v.co.y, v.co.z
-                        gx = (W.height(x + 2, z) - W.height(x - 2, z)) / 4.0
-                        gz = (W.height(x, z + 2) - W.height(x, z - 2)) / 4.0
-                        cr, cg, cb = color_at(x, z, h, math.hypot(gx, gz))
-                        loop[col] = (cr, cg, cb, 1.0)
-            bm.faces.ensure_lookup_table()
-            bm.normal_update()
-            if bm.faces[0].normal.z < 0:  # normals up after the axis flip
-                bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
-            name = "terrain_%d_%d" % (tx, ty)
-            me = bpy.data.meshes.new(name)
-            bm.to_mesh(me)
-            bm.free()
-            for p in me.polygons:
-                p.use_smooth = True
-            me.use_auto_smooth = True
-            me.normals_split_custom_set_from_vertices(normals)
-            ob = bpy.data.objects.new(name, me)
-            bpy.context.scene.collection.objects.link(ob)
-            me.color_attributes.active_color = me.color_attributes["Col"]
-            me.color_attributes.render_color_index = 0
-            me.materials.append(m)
-            total += (i1 - i0) * (j1 - j0) * 2
-    path = os.path.join(OUT, "terrain.glb")
-    bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", export_yup=True, export_normals=True,
-                              export_colors=True, export_materials="EXPORT")
-    print("WORLD terrain: %d tris in %d tiles -> %s" % (total, TILES * TILES, path))
-
 
 def freighter_wreck():
     reset()
@@ -438,7 +308,6 @@ def marshal_gear():
     finish("marshal_vest")
 
 
-terrain()
 freighter_wreck()
 def split_vehicle(build, name):
     """The body without its wheels, then one wheel of each side: hub at the

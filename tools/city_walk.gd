@@ -28,7 +28,8 @@ func _run() -> void:
 		Profile.career().d.stash = {"oxygen_canister": 1}
 	if Platform.user_args.has("--people"):
 		Profile.career().d["body"] = "female"  # play as a woman
-	if Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin") or Platform.user_args.has("--frisk"):
+	if Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin") or Platform.user_args.has("--frisk") \
+			or Platform.user_args.has("--districts"):
 		Profile.career().choose_nation(0)
 	if Platform.user_args.has("--phase1") and dig:
 		Profile.career().choose_nation(0)  # a recruit of the Aurora Compact, on the first run
@@ -40,6 +41,10 @@ func _run() -> void:
 	m.hud._touch = true
 	var me: SimPlayer = m.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	print("CITY WALK: player at %s, phase %s" % [me.state.position, m.server.phase])
+	if Platform.user_args.has("--ground-probe"):
+		await _ground_probe(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--frisk"):
 		await _frisk_run(me)
 		get_tree().quit(0)
@@ -390,8 +395,8 @@ func _run() -> void:
 	var rim := WorldTerrain.at(200, 112)
 	await _pose(me, rim + Vector3(0, 0.1, 0), PI + 1.0, -0.2)
 	await _shot("w3_canyon_dig")
-	var wreck := WorldTerrain.at(-100, -80)
-	await _pose(me, wreck + Vector3(0, 0.1, 0), 0.75, -0.05)
+	var wreck := WorldTerrain.at(WorldLayout.WRECK.x + 30, WorldLayout.WRECK.y + 40)
+	await _pose(me, wreck + Vector3(0, 0.1, 0), 0.65, -0.05)
 	await _shot("w4_wreck")
 	var crater := WorldTerrain.at(150, -175)
 	await _pose(me, crater + Vector3(0, 0.1, 0), 0.0, -0.15)
@@ -1067,15 +1072,16 @@ func _districts_run(me: SimPlayer) -> void:
 	var t := WorldLayout.TERRACE
 	var p := WorldLayout.SKYPORT
 	var shots := [
-		["d1_helios", h + Vector2(5, 78), h + Vector2(-10, -20), 0.4],
-		["d10_helios_spire", h + Vector2(-10, 10), h + Vector2(-62, -58), 0.5],
+		["d1_helios", h + Vector2(110, 4), h + Vector2(-20, 0), 0.25],  # down the avenue from the road
+		["d10_helios_spire", h + Vector2(-30, 8), h + Vector2(-62, -50), 0.5],
+		["d13_helios_south", h + Vector2(4, 118), h + Vector2(0, -60), 0.2],
 		["d11_pod", t + Vector2(-20, 6), t + Vector2(-42 * cos(0.2 + TAU / 10.0 * 4.0) * 0.0 - 30, 30), 0.12],
 		["d3_galleria", g + Vector2(78, 26), g + Vector2(20, 0), 0.12],
 		["d4_galleria_in", g + Vector2(-34, 0), g + Vector2(40, 0), 0.05],
 		["d5_terrace", t + Vector2(-104, -8), t, 0.06],
-		["d6_skyport", p + Vector2(-64, 58), p + Vector2(10, -30), 0.08],
-		["d7_monorail", Vector2(-360, 90), Vector2(-400, 40), 0.25],
-		["d8_outlands", Vector2(-300, 60), Vector2(-560, -100), 0.06],
+		["d6_skyport", p + Vector2(-105, 25), p + Vector2(60, 20), 0.08],  # along the street
+		["d7_monorail", Vector2(-340, 90), Vector2(-370, 20), 0.25],
+		["d8_outlands", Vector2(-300, 110), Vector2(-440, 60), 0.06],
 	]
 	for sh: Array in shots:
 		var from: Vector2 = sh[1]
@@ -1092,6 +1098,36 @@ func _districts_run(me: SimPlayer) -> void:
 	await _shot("d2_helios_night")
 	await _pose(me, WorldTerrain.at(t.x - 104, t.y - 8) + Vector3(0, 0.1, 0), look.call(t + Vector2(-104, -8), t), 0.06)
 	await _shot("d9_terrace_night")
+	# From the air: the hub, then each district.
+	to_hour.call(10.5)
+	await _frames(30)
+	var city := Vector2(CityLayout.ORIGIN.x, CityLayout.ORIGIN.z)
+	await _aerial("a0_hub", city + Vector2(60, -40), Vector3(0, 640, 420))
+	for a: Array in [["a1_helios", h], ["a2_galleria", g], ["a3_terrace", t], ["a4_skyport", p], ["a5_city", city],
+			["a6_hollow", Vector2(WorldLayout.HOLLOW.x + 4, WorldLayout.HOLLOW.z)]]:
+		await _aerial(a[0], a[1], Vector3(0, 150, 130))
+	# The roads where they cut and climb: the canyon's mouth, the lift yard, the gate.
+	for a: Array in [["r1_canyon_mouth", WorldLayout.CANYON_GATE + Vector2(30, 0)], ["r2_lift_road", WorldLayout.LIFT_ROAD],
+			["r3_gate_roads", Vector2(-220, 120)]]:
+		await _aerial(a[0], a[1], Vector3(-60, 70, 90))
+
+
+## A shot from a camera `offset` from the ground at `target`, looking at it.
+func _aerial(shot: String, target: Vector2, offset: Vector3) -> void:
+	var cam := Camera3D.new()
+	add_child(cam)
+	var at := WorldTerrain.at(target.x, target.y)
+	cam.position = at + offset
+	cam.look_at(at)
+	cam.fov = 60.0
+	cam.far = 2400.0
+	cam.current = true
+	m.hud.visible = false
+	await _frames(30)
+	await _shot(shot)
+	cam.current = false
+	cam.queue_free()
+	m.hud.visible = true
 
 
 func _gear_run(me: SimPlayer) -> void:
@@ -1627,3 +1663,37 @@ func _tex_mb(t: Texture2D) -> float:
 	if img == null:
 		return 0.0
 	return img.get_data_size() / 1048576.0
+
+
+## Drops the player at spots all over the valley (on roads, their banks and
+## junctions, the districts, the yards), lets them settle, and prints how
+## far their feet are from the ground as drawn (WorldTerrain.surface).
+func _ground_probe(me: SimPlayer) -> void:
+	var spots: Array[Vector2] = []
+	for road: Array in WorldLayout.roads():
+		var smp := WorldLayout.road_samples(road, 37.0)
+		for sm: Array in smp:
+			var q: Vector2 = sm[0]
+			var n := Vector2(-(sm[1] as Vector2).y, (sm[1] as Vector2).x)
+			for off in [0.0, 8.0, 14.0]:
+				spots.append(q + n * off)
+	for c: Vector2 in [WorldLayout.HELIOS, WorldLayout.GALLERIA + Vector2(70, 0), WorldLayout.TERRACE + Vector2(0, -50),
+			WorldLayout.SKYPORT + Vector2(0, 25), Vector2(WorldLayout.HOLLOW.x, WorldLayout.HOLLOW.z), WorldLayout.FACTORY + Vector2(0, 30),
+			WorldLayout.GARAGE, Vector2(WorldLayout.LIFT.x, WorldLayout.LIFT.z) + Vector2(-8, 0)]:
+		spots.append(c)
+	var worst := 0.0
+	var bad := 0
+	var stand := -1.0  # where the player stands above the ground, from the first open spot
+	for q in spots:
+		m.server.world.teleport(me, WorldTerrain.at(q.x, q.y) + Vector3(0, 1.5, 0))
+		await _frames(20)
+		var feet := me.state.position
+		var d := feet.y - WorldTerrain.surface(feet.x, feet.z)
+		if stand < 0.0:
+			stand = d
+		d -= stand
+		worst = maxf(worst, absf(d))
+		if absf(d) > 0.15:
+			bad += 1
+			print("GROUND PROBE: off by %.2f m at %s (asked %s)" % [d, feet.snapped(Vector3.ONE * 0.1), q.round()])
+	print("GROUND PROBE: %d spots, %d off, worst %.2f m" % [spots.size(), bad, worst])
