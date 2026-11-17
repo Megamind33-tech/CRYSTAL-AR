@@ -205,3 +205,15 @@ func test_buildings_apart() -> void:
 			if not Geometry2D.intersect_polygons(feet[i][1], feet[j][1]).is_empty():
 				clashes.append("%s / %s" % [feet[i][0], feet[j][0]])
 	assert_true(clashes.is_empty(), "buildings overlap:\n" + "\n".join(clashes))
+
+
+## The world's gameplay scene builds: the ground, the buildings, the bounds.
+func test_gameplay_scene_builds() -> void:
+	var scene: Node3D = (load("res://maps/world/gameplay.tscn") as PackedScene).instantiate()
+	add_child_autofree(scene)
+	var ground: CollisionShape3D = null
+	for cs: CollisionShape3D in scene.find_children("*", "CollisionShape3D", true, false):
+		if cs.shape is HeightMapShape3D:
+			ground = cs
+	assert_not_null(ground, "the ground is there")
+	assert_eq((ground.shape as HeightMapShape3D).map_width, WorldTerrain.cells() + 1)

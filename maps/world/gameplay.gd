@@ -11,6 +11,7 @@ func _ready() -> void:
 	body.collision_mask = 0
 	add_child(body)
 	var n := WorldTerrain.cells() + 1
+	var half := WorldTerrain.SIZE * 0.5
 	var data := WorldTerrain.grid()
 	var hm := HeightMapShape3D.new()
 	hm.map_width = n
