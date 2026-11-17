@@ -6,7 +6,9 @@ extends Node3D
 ## is interpolated from snapshots. Input, HUD and effects are shared.
 
 const MOVEMENT := preload("res://data/movement_config.tres")
-## THE HUNT: grounded, heavier movement (no double jump or slide, little air control).
+## THE HUNT (the dig and the settlements): grounded, human movement (no
+## double jump or slide, little air control), speeds matched to the walk,
+## jog and run clips so feet don't slide.
 const HUNT_MOVEMENT := preload("res://data/hunt_movement.tres")
 const HUD_SCENE := preload("res://ui/hud/hud.tscn")
 const MAIN_MENU := "res://ui/main_menu/main_menu.tscn"
@@ -1651,7 +1653,7 @@ func _settle_career(result_id: String, me: int) -> void:
 
 
 func _movement() -> MovementConfig:
-	return HUNT_MOVEMENT if config != null and config.game_mode == GameMode.HUNT else MOVEMENT
+	return HUNT_MOVEMENT if config != null and (config.game_mode == GameMode.HUNT or config.game_mode == GameMode.CITY) else MOVEMENT
 
 
 ## THE HUNT: the suit's state goes back to the career when leaving a place.

@@ -5,10 +5,10 @@
 [resource]
 script = ExtResource("1")
 walk_speed = 5.0
-sprint_speed = 8.4
-crouch_speed = 2.2
+sprint_speed = 7.2
+crouch_speed = 2.0
 air_wish_speed_cap = 0.5
-ground_accel = 11.0
+ground_accel = 9.0
 air_accel = 3.0
 friction = 9.0
 stop_speed = 2.5
@@ -17,3 +17,4 @@ jump_velocity = 3.4
 double_jump_velocity = 0.0
 air_jumps = 0
 slide_min_speed = 99.0
+step_height = 0.4

@@ -184,3 +184,28 @@ func test_jetpack_lifts_burns_and_refills() -> void:
 	_run(400)
 	assert_eq(p.state.move_state, Move.GROUND)
 	assert_eq(p.state.jet_fuel, 100.0, "it refills on the ground")
+
+
+## THE HUNT's grounded movement walks up doorsteps, kerbs and stairs (no
+## jump), but a ledge taller than step_height still stops you.
+func test_steps_up_a_doorstep_not_a_wall() -> void:
+	var cfg: MovementConfig = load("res://data/hunt_movement.tres")
+	p.config = cfg
+	var body := StaticBody3D.new()
+	add_child_autofree(body)
+	for spec: Array in [[Vector3(-6, 0.15, 13), Vector3(3, 0.3, 2)], [Vector3(6, 0.5, 13), Vector3(3, 1.0, 2)]]:
+		var cs := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = spec[1]
+		cs.shape = box
+		cs.position = spec[0]
+		body.add_child(cs)
+	await wait_physics_frames(2)
+	_place_open(Vector3(-6, 0.05, 16.5), 0.0)  # facing -Z, the 30 cm step ahead
+	_run(90, Vector2(0, 1))
+	assert_almost_eq(p.state.position.y, 0.3, 0.06, "up the 30 cm step without jumping")
+	assert_lt(p.state.position.z, 13.5, "and across it")
+	_place_open(Vector3(6, 0.05, 16.5), 0.0)  # the 1 m wall ahead
+	_run(90, Vector2(0, 1))
+	assert_almost_eq(p.state.position.y, 0.0, 0.06, "a 1 m ledge still stops you")
+	assert_gt(p.state.position.z, 14.0)

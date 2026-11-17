@@ -172,6 +172,37 @@ static func _accelerate(s: PlayerSimState, dir: Vector3, wish_speed: float, acce
 	s.velocity += dir * minf(accel * dt * wish_speed, add)
 
 
+## Walking into a ledge no higher than step_height: up, across, down onto
+## it. Undone (false) if there's no room above or no floor beyond. Only
+## built steps: a near-vertical face (the caller) with flat floor on top
+## (STEP_FLAT), so nobody climbs rough, steep ground in hops.
+const STEP_FLAT := 0.97
+
+
+## The terrain itself (a heightmap) is never a step: only built things are.
+static func _is_ground(col: KinematicCollision3D) -> bool:
+	var cs := col.get_collider_shape() as CollisionShape3D
+	return cs != null and cs.shape is HeightMapShape3D
+
+
+static func _step_up(p: SimPlayer, remainder: Vector3) -> bool:
+	var across := Vector3(remainder.x, 0.0, remainder.z)
+	if across.length_squared() < 1e-8:
+		return false
+	var start := p.global_transform
+	p.move_and_collide(Vector3.UP * p.config.step_height)
+	var risen := p.global_position.y - start.origin.y
+	var before := p.global_position
+	p.move_and_collide(across)
+	var moved := Vector2(p.global_position.x - before.x, p.global_position.z - before.z).length()
+	if risen > 0.01 and moved > across.length() * 0.5:
+		var down := p.move_and_collide(Vector3.DOWN * (risen + 0.05))
+		if down != null and down.get_normal().y >= STEP_FLAT and p.global_position.y > start.origin.y + 0.02:
+			return true
+	p.global_transform = start
+	return false
+
+
 static func _move_and_collide(p: SimPlayer) -> void:
 	var s := p.state
 	var cfg := p.config
@@ -194,6 +225,12 @@ static func _move_and_collide(p: SimPlayer) -> void:
 		if grounded_move and n.y >= floor_cos:
 			motion = _along_floor(col.get_remainder(), n)  # onto (another) walkable slope
 			continue
+		# People step; the AI keep to the navigation mesh (it has no steps
+		# off it, and stepping let them hop into places it can't route out of).
+		if grounded_move and cfg.step_height > 0.0 and not p.is_bot and absf(n.y) < 0.12 and not _is_ground(col) \
+				and _step_up(p, col.get_remainder()):
+			motion = Vector3.ZERO  # up a doorstep, kerb or stair, without a jump
+			break
 		motion = col.get_remainder().slide(n)
 		if s.velocity.dot(n) < 0.0:
 			s.velocity = s.velocity.slide(n)

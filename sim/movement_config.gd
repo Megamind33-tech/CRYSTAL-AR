@@ -34,6 +34,11 @@ extends Resource
 @export var slide_ticks: int = 60
 @export var slide_end_speed: float = 4.0
 
+@export_group("Steps")
+## Ledges up to this high (doorsteps, kerbs, stairs) are walked up without
+## a jump; 0 turns stepping off (the arena maps).
+@export var step_height: float = 0.0
+
 @export_group("Mantle")
 @export var mantle_min_height: float = 0.5
 @export var mantle_max_height: float = 1.8

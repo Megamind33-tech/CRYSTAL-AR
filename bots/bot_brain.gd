@@ -964,9 +964,15 @@ func _stuck_recovery(tick: int, p: SimPlayer, move: Vector3) -> Vector3:
 				if spot.distance_to(p.state.position) < 1.5 and _world.hunt != null:
 					# On the navmesh already, and still no way on: the place it
 					# heads for can't be reached from here. Give up on it for a
-					# while (a carrier picks another pad) rather than loop.
+					# while (a carrier picks another pad) rather than loop, and
+					# step out of the pocket to open ground a few metres off.
 					_blocked_zones[_zone_near(_path_goal)] = tick + BLOCKED_TICKS
 					_last_repath = -100000
+					var a := float(tick % 360) * 0.0174533 * 37.0
+					var out := _nav.closest_point(p.state.position + Vector3(cos(a), 0.0, sin(a)) * 4.0 + Vector3.UP)
+					if out.distance_to(p.state.position) > 1.5:
+						_world.teleport(p, out + Vector3(0.0, 0.1, 0.0))
+						stuck_teleports += 1
 				else:
 					_world.teleport(p, spot + Vector3(0.0, 0.1, 0.0))
 					stuck_teleports += 1
