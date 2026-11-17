@@ -28,7 +28,7 @@ func _run() -> void:
 		Profile.career().d.stash = {"oxygen_canister": 1}
 	if Platform.user_args.has("--people"):
 		Profile.career().d["body"] = "female"  # play as a woman
-	if Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin"):
+	if Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin") or Platform.user_args.has("--frisk"):
 		Profile.career().choose_nation(0)
 	if Platform.user_args.has("--phase1") and dig:
 		Profile.career().choose_nation(0)  # a recruit of the Aurora Compact, on the first run
@@ -40,6 +40,10 @@ func _run() -> void:
 	m.hud._touch = true
 	var me: SimPlayer = m.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	print("CITY WALK: player at %s, phase %s" % [me.state.position, m.server.phase])
+	if Platform.user_args.has("--frisk"):
+		await _frisk_run(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--walkin"):
 		await _walkin_test(me)
 		return
@@ -1234,6 +1238,37 @@ func _dig_run(me: SimPlayer) -> void:
 	await _pose(me, WorldTerrain.at(200.0, 135.0) + Vector3(0, 0.3, 0), 0.0, -0.15)
 	await _shot("d5_rim_extraction")
 	get_tree().quit(0)
+
+
+## --frisk: someone gives up to you (a raider with a pack and a loaded
+## vehicle): the search screen shows each compartment on its own; then a
+## scan names what each holds.
+func _frisk_run(me: SimPlayer) -> void:
+	var at := CityLayout.ORIGIN + Vector3(0, 0.05, 20)
+	await _pose(me, at, 0.0, -0.1)
+	var raider := m.server.add_bot("Concern·Rook", TargetDummyDriver.new(1))
+	m.server.world.teleport(raider, at + Vector3(0, 0, -3))
+	m.server.world.packs[raider.net_id] = {"red_dust": 2, "rare_ore": 3, "medkit": 1}
+	var rv := m.server.world.add_vehicle(at + Vector3(6, 0.3, -3), 0.0)
+	rv.owner = raider.net_id
+	rv.cargo = {"refined_ingot": 2, "stolen_cargo": 1}
+	await _frames(20)
+	var comps: Array = m.city.victim_compartments(raider.net_id)
+	for comp: Array in comps:
+		print("FRISK compartment %s: %s" % [comp[0], comp[1]])
+	m.city._open_shelf({"mode": "loot", "title": comps[0][0], "right": comps[0][1], "compartments": comps})
+	await _frames(10)
+	await _shot("f1_search_pack")
+	m.city.shelf._compartment = 1
+	m.city.shelf.title = comps[1][0]
+	m.city.shelf.right = comps[1][1]
+	m.city.shelf.refresh()
+	await _frames(10)
+	await _shot("f2_search_hold")
+	m.city.shelf.close()
+	for mk: Array in m.city.targets(me.state.position, 30.0, true):
+		print("FRISK scan: %s" % mk[1])
+	print("FRISK: %s" % ("PASS" if comps.size() >= 2 and not (comps[1][1] as Dictionary).is_empty() else "FAIL"))
 
 
 ## --walkin: the settlement block's acceptance test, by walking (real

@@ -1152,3 +1152,7 @@ SHELF_HIDE_HERE,Hide goods here
 SHELF_CACHE_TITLE,YOUR STASH
 CITY_PROMPT_CACHE,Your stash
 CITY_CACHES_FULL,You already have %d stashes: empty one first
+SEARCH_PACK,Pack: %s
+SEARCH_HOLD,Vehicle hold: %s
+SEARCH_HOME,Home locker: %s
+SCAN_LINE,%s · %d

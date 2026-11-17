@@ -1406,7 +1406,10 @@ func targets(pos: Vector3, reach: float, all: bool) -> Array:
 		var loaded := not v.cargo.is_empty() and v.owner != ServerSession.LOCAL_PLAYER_ID
 		if all or loaded:
 			var who := tr("CITY_CONVOY") if v.owner < 0 else (tr("CITY_YOUR_ROVER") if v.owner == ServerSession.LOCAL_PLAYER_ID else tr("CITY_ROVER_FREE"))
-			out.append([v.position + Vector3(0, 2.2, 0), "%s%s" % [who, tr("CITY_MARK_LOADED") if loaded else ""],
+			var held := 0
+			for it: String in v.cargo:
+				held += int(v.cargo[it])
+			out.append([v.position + Vector3(0, 2.2, 0), "%s%s" % [who, (tr("CITY_MARK_LOADED") + " · %d" % held) if loaded else ""],
 					ComicUI.YELLOW if loaded else ComicUI.PAPER])
 	for home: Array in WorldLayout.residences():
 		if str(home[2]).is_empty() or (home[1] as Vector3).distance_to(pos) > reach:
@@ -1425,8 +1428,14 @@ func targets(pos: Vector3, reach: float, all: bool) -> Array:
 		var cop := p.display_name.begins_with(CityMode.POLICE)
 		var hostile := id in _hostiles()
 		if all or cop or hostile:
-			var pack: Dictionary = world.packs.get(id, {})
-			var extra := tr("CITY_MARK_CARRYING") % pack.size() if not pack.is_empty() and all else ""
+			# Each compartment on its own line: on them, in their vehicle, at home.
+			var extra := ""
+			for comp: Array in victim_compartments(id):
+				var n := 0
+				for it: String in comp[1]:
+					n += int(comp[1][it])
+				if n > 0:
+					extra += "  ·  " + tr("SCAN_LINE") % [str(comp[0]).get_slice(":", 0), n]
 			out.append([p.state.position + Vector3(0, 2.3, 0), p.display_name + extra, ComicUI.CYAN if cop else ComicUI.RED])
 	if not all:
 		for spot: Array in WorldLayout.loot_spots():
@@ -1840,9 +1849,32 @@ func _use_goods(me: SimPlayer) -> void:
 		if gave:
 			_flash_text(tr("CITY_HELD_UP") % who, ComicUI.YELLOW)
 			crime("holdup")
+			# Search them: each of their compartments, one at a time.
 			var dr: Dictionary = world.drops.back() if not world.drops.is_empty() else {}
-			if not dr.is_empty():
-				_open_shelf({"mode": "loot", "title": tr("SHELF_PACK_OF") % dr.name, "right": dr.items})
+			var comps := victim_compartments(id, dr.items if not dr.is_empty() else {})
+			_open_shelf({"mode": "loot", "title": comps[0][0], "right": comps[0][1], "compartments": comps})
+
+
+## Someone's compartments, separately: what's on them (their pack, or the
+## pack they gave up), the hold of the vehicle they drive or own close by,
+## their home's locker if they live here. [[title, Dictionary], ...].
+func victim_compartments(id: int, pack: Dictionary = {}) -> Array:
+	var world: SimWorld = match_node.server.world
+	var p: SimPlayer = world.players.get(id)
+	var who := p.display_name if p != null else "?"
+	var out := [[tr("SEARCH_PACK") % who, pack if not pack.is_empty() else world.packs.get(id, {})]]
+	var at := p.state.position if p != null else Vector3.INF
+	for i in world.vehicles.size():
+		var v: SimVehicle = world.vehicles[i]
+		if (v.driver == id or v.owner == id) and v.position.distance_to(at) < 30.0:
+			out.append([tr("SEARCH_HOLD") % who, v.cargo])
+			break
+	for home: Array in WorldLayout.residences():
+		if str(home[2]) == who or who.ends_with("·" + str(home[2])):
+			var locker: Dictionary = Profile.career().d.get("their_lockers", {}).get(str(home[0]), {})
+			out.append([tr("SEARCH_HOME") % who, locker])
+			break
+	return out
 
 
 func open_pack() -> void:

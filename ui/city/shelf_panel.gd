@@ -46,6 +46,10 @@ const LOOK := {
 var mode: String = "pack"
 var cfg_cache: int = -1  ## "cache" mode: which of the career's stashes
 var hide_here: bool = false  ## "pack" mode: offer to make a stash where you stand
+## Searching someone: their compartments, each its own (pack, vehicle hold,
+## home locker): [[title, Dictionary], ...]; one shown at a time.
+var compartments: Array = []
+var _compartment: int = 0
 var title: String = ""
 var right: Dictionary = {}
 var shop: String = ""
@@ -81,6 +85,11 @@ func open(cfg: Dictionary) -> void:
 	right = cfg.get("right", {}) if mode != "shop" else {}
 	shop = cfg.get("shop", "")
 	vehicle = cfg.get("vehicle", null)
+	compartments = cfg.get("compartments", [])
+	_compartment = 0
+	if not compartments.is_empty():
+		title = compartments[0][0]
+		right = compartments[0][1]
 	_sel_side = -1
 	_sel_item = ""
 	_note = ""
@@ -123,6 +132,21 @@ func refresh() -> void:
 	_buttons.remove_theme_constant_override("separation")
 	_buttons.add_theme_constant_override("separation", 14)
 	var c := Profile.career()
+	# One compartment at a time: a tab for each, with what's in it.
+	if compartments.size() > 1:
+		for k in compartments.size():
+			var comp: Array = compartments[k]
+			var n := 0
+			for it: String in comp[1]:
+				n += int(comp[1][it])
+			_button("%s · %d" % [comp[0], n], k != _compartment, ComicUI.CYAN if k != _compartment else ComicUI.PAPER,
+					func() -> void:
+						_compartment = k
+						title = compartments[k][0]
+						right = compartments[k][1]
+						_sel_side = -1
+						_sel_item = ""
+						refresh())
 	var item := _sel_item
 	if item != "":
 		if _sel_side == 1 and mode == "shop":
