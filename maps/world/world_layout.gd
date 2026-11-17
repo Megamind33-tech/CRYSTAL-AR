@@ -334,10 +334,10 @@ static func _build_loot_spots() -> Array:
 		["hollow_crates_a", WorldTerrain.at(h.x + 8, h.z - 4), WATERY, "LOOT_CRATES"],
 		["hollow_crates_b", WorldTerrain.at(h.x + 12, h.z + 14), WATERY, "LOOT_CRATES"],
 		["hollow_lockers", WorldTerrain.at(h.x - 30, h.z + 10), [["water_ration", 1, 3.0], ["oxygen_canister", 1, 2.0]], "LOOT_LOCKERS"],
-		["kestrel_hold", WorldTerrain.at(-136, -118), [["water_ration", 3, 3.0], ["oxygen_canister", 2, 2.0], ["scrap", 3, 2.0]],
+		["kestrel_hold", WorldTerrain.at(WRECK.x - 6, WRECK.y - 8), [["water_ration", 3, 3.0], ["oxygen_canister", 2, 2.0], ["scrap", 3, 2.0]],
 				"LOOT_WRECK"],
 		["dig_camp", canyon(DIG_X - 6, 9.0), WATERY, "LOOT_CRATES"],
-		["anvil_hut", WorldTerrain.at(-296, -200), [["water_ration", 2, 3.0], ["water_ice", 2, 2.0]], "LOOT_LOCKERS"],
+		["anvil_hut", WorldTerrain.at(WorldTerrain.ANVIL[0] + 14.0, WorldTerrain.ANVIL[1] + 10.0), [["water_ration", 2, 3.0], ["water_ice", 2, 2.0]], "LOOT_LOCKERS"],
 	]
 
 
@@ -361,7 +361,7 @@ static func rig_spot(i: int) -> Vector3:
 ## Where a job's work is done: job -> [position, radius].
 static func job_sites() -> Dictionary:
 	return {
-		"salvage": [WorldTerrain.at(-130, -110), 16.0],
+		"salvage": [WorldTerrain.at(WRECK.x, WRECK.y), 16.0],  # at the wreck
 		"ice": [WorldTerrain.at(150, -240), 22.0],
 		"taxi": [WorldTerrain.at(HOLLOW.x, HOLLOW.z), 28.0],
 		"haul": [factory_at(Vector3(0, 0, 30)), 16.0],
@@ -716,8 +716,7 @@ static func district_pieces() -> Array:
 	var sp := SKYPORT
 	for x in [-60.0, 0.0, 60.0]:
 		at.call(sp, "districts/landing_pad", x, SKYPORT_APRON.y, 0.0, 1.0, Vector3.ZERO)
-	at.call(sp, "districts/shuttle", -60.0, SKYPORT_APRON.y, 90.0, 1.0, Vector3(8, 9, 24))
-	at.call(sp, "districts/shuttle", 60.0, SKYPORT_APRON.y, 90.0, 1.0, Vector3(8, 9, 24))
+	# The pads are for the rotorcraft (SkyTraffic lands and lifts them).
 	at.call(sp, "districts/control_tower", SKYPORT_TOWER.x, SKYPORT_TOWER.y, 0.0, 1.0, Vector3(5, 38, 5))
 	at.call(sp, "hangar", -55.0, 62.0, 90.0, 1.7, Vector3.ZERO)
 	at.call(sp, "hangar", 5.0, 62.0, 90.0, 1.7, Vector3.ZERO)

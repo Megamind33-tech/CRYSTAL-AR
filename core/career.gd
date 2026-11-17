@@ -283,6 +283,11 @@ func normalize() -> void:
 		if not d.has(k):
 			d[k] = f[k]
 	d.wallet = int(d.wallet)
+	# The jet is retired: its owners get the rotorcraft and the difference back.
+	if int(d.get("aircraft", -1)) >= VehicleSim.MODELS.size():
+		var hopper := VehicleSim.MODELS.size() - 1
+		d.wallet += VehicleSim.RETIRED_JET_PRICE - int(VehicleSim.MODELS[hopper].price)
+		d["aircraft"] = hopper
 	d.runs = int(d.runs)
 	d.earned = int(d.earned)
 	for k in d.stash:

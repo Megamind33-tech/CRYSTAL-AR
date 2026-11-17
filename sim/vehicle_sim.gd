@@ -21,13 +21,15 @@ const MODELS := [
 			"half": Vector2(1.0, 1.7), "kit": "world/buggy"},
 	{"name": "Hauler", "max": 19.0, "rev": 5.0, "accel": 6.5, "turn": 1.25, "slots": 30, "price": 2600,
 			"half": Vector2(1.35, 3.2), "kit": "world/hauler"},
-	# Aircraft (Kasei Aero at the Skyport; a flight licence to buy one).
-	# "fly": "vtol" hovers and lifts straight up; "jet" needs a run to fly.
-	{"name": "Skyhopper VTOL", "max": 48.0, "rev": 6.0, "accel": 11.0, "turn": 1.3, "slots": 6, "price": 9000,
+	# The one aircraft: a ducted-fan rotorcraft, for Titan's thick air (sold
+	# at the Skyport; a flight licence to buy one). It hovers and lifts
+	# straight up ("fly": "vtol").
+	{"name": "Skyhopper rotorcraft", "max": 48.0, "rev": 6.0, "accel": 11.0, "turn": 1.3, "slots": 6, "price": 9000,
 			"half": Vector2(2.6, 3.4), "kit": "world/skyhopper", "fly": "vtol"},
-	{"name": "Kestrel jet", "max": 105.0, "rev": 0.0, "accel": 17.0, "turn": 0.95, "slots": 2, "price": 24000,
-			"half": Vector2(4.2, 5.6), "kit": "world/kestrel", "fly": "jet"},
 ]
+## The jet that was sold before the rotorcraft became the only aircraft
+## (its price is refunded to anyone who owned one: Career.normalize).
+const RETIRED_JET_PRICE := 24000
 ## Flight (aircraft only): how fast it climbs and sinks, the speed a jet
 ## lifts off at, how high anything flies above the ground below it.
 const CLIMB := 11.0

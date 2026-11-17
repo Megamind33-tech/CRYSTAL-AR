@@ -3,7 +3,7 @@
 # apartment.glb: a tower apartment (living room, kitchen, bedroom, a glass
 # wall onto a skyline). office.glb: an office with a view. Both are walk-in
 # (with <piece>_col.glb) and sit deep under the valley; a building's door
-# takes you there. skyhopper.glb, kestrel.glb (+ their wheel-less bodies):
+# takes you there. skyhopper.glb (the rotorcraft, + its wheel-less body):
 # the Skyport's aircraft, a VTOL hopper and a jet. Conventions as in
 # build_districts.py (front -Y in Blender = +Z in Godot).
 import bpy, math, sys, os
@@ -137,40 +137,7 @@ def skyhopper():
     finish("skyhopper")
 
 
-def kestrel():
-    """A jet (~14 m): a long sleek fuselage, swept wings, a bubble canopy,
-    twin canted tails, an engine glow and its landing gear."""
-    D.reset()
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=18, ring_count=10, radius=1.0, location=(0, 0, 2.0))
-    o = bpy.context.object
-    o.name = "fuselage"
-    o.scale = (1.3, 7.0, 1.1)
-    bpy.ops.object.transform_apply(scale=True)
-    D.m(o, "white")
-    bpy.ops.mesh.primitive_cone_add(vertices=14, radius1=1.0, radius2=0.05, depth=2.4, location=(0, 7.6, 2.0),
-                                    rotation=(-math.pi / 2, 0, 0))
-    o = bpy.context.object
-    o.name = "nose"
-    D.m(o, "white")
-    rbox("canopy", (1.1, 2.6, 0.9), (0, 3.2, 2.9), "glass_dark", bevel=0.4)
-    for s in (-1, 1):
-        prism("wing%d" % s, [(0, 2.5), (s * 6.5, -2.0), (s * 6.5, -3.4), (0, -3.0)] if s < 0 else
-              [(0, 2.5), (0, -3.0), (s * 6.5, -3.4), (s * 6.5, -2.0)], 1.7, 0.25, "white")
-        rbox("d_wing_stripe%d" % s, (0.5, 4.0, 0.27), (s * 3.2, -0.6, 1.83), "magenta", bevel=0.0, rot=(0, 0, s * 0.75))
-        rbox("tail%d" % s, (0.18, 2.2, 2.2), (s * 0.9, -5.6, 3.1), "white", bevel=0.05, rot=(0, s * 0.35, 0))
-        rbox("d_tail_tip%d" % s, (0.2, 0.6, 0.3), (s * 1.3, -6.0, 4.1), "neon_pink", bevel=0.0)
-        rbox("d_intake%d" % s, (0.6, 1.6, 0.7), (s * 1.2, 1.0, 1.7), "dark", bevel=0.15)
-        rbox("d_gear%d" % s, (0.15, 0.15, 1.4), (s * 1.6, -1.0, 0.7), "steel", bevel=0.0)
-        cyl("d_tyre%d" % s, 0.35, 0.25, (s * 1.6, -1.0, 0.35), "dark", verts=10, rot=(0, math.pi / 2, 0))
-    rbox("d_nose_gear", (0.15, 0.15, 1.3), (0, 5.0, 0.65), "steel", bevel=0.0)
-    cyl("d_nose_tyre", 0.3, 0.22, (0, 5.0, 0.3), "dark", verts=10, rot=(0, math.pi / 2, 0))
-    cyl("d_nozzle", 0.75, 0.9, (0, -7.0, 2.0), "steel", verts=14, rot=(math.pi / 2, 0, 0))
-    cyl("d_glow", 0.6, 0.1, (0, -7.45, 2.0), "light_warm", verts=14, rot=(math.pi / 2, 0, 0))
-    finish("kestrel")
-
-
 if __name__ == "__main__":
     apartment()
     office()
     skyhopper()
-    kestrel()
