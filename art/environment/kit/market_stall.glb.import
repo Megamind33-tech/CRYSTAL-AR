@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://brxt0x68ai6t"
-valid=false
+path="res://.godot/imported/market_stall.glb-f7b95c8b02e1e086f3c5977a5c852878.scn"
 
 [deps]
 
 source_file="res://art/environment/kit/market_stall.glb"
+dest_files=["res://.godot/imported/market_stall.glb-f7b95c8b02e1e086f3c5977a5c852878.scn"]
 
 [params]
 

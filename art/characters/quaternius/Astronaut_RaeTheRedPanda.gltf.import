@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dh55875di1wf8"
-valid=false
+path="res://.godot/imported/Astronaut_RaeTheRedPanda.gltf-fbb3cd439b22dda25afb35afbf4f7d1f.scn"
 
 [deps]
 
 source_file="res://art/characters/quaternius/Astronaut_RaeTheRedPanda.gltf"
+dest_files=["res://.godot/imported/Astronaut_RaeTheRedPanda.gltf-fbb3cd439b22dda25afb35afbf4f7d1f.scn"]
 
 [params]
 

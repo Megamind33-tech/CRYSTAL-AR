@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://deq0itoxlv4xj"
-valid=false
+path="res://.godot/imported/mag_pistol.glb-2d8e58ceb26fa59a66d63470bf816d77.scn"
 
 [deps]
 
 source_file="res://art/weapons/ionfall/mag_pistol.glb"
+dest_files=["res://.godot/imported/mag_pistol.glb-2d8e58ceb26fa59a66d63470bf816d77.scn"]
 
 [params]
 

@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ddlb1706thcek"
-valid=false
+path="res://.godot/imported/armour_plate.glb-8941fd5a32b6c3a741f97e8997ba9268.scn"
 
 [deps]
 
 source_file="res://art/items/armour_plate.glb"
+dest_files=["res://.godot/imported/armour_plate.glb-8941fd5a32b6c3a741f97e8997ba9268.scn"]
 
 [params]
 

@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cbru5gl1ssc4t"
-valid=false
+path="res://.godot/imported/stolen_cargo.glb-69e86d4cddb3fffa605dbb6cdd458cb5.scn"
 
 [deps]
 
 source_file="res://art/items/stolen_cargo.glb"
+dest_files=["res://.godot/imported/stolen_cargo.glb-69e86d4cddb3fffa605dbb6cdd458cb5.scn"]
 
 [params]
 

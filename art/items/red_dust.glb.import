@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cl2i6kiopjnf1"
-valid=false
+path="res://.godot/imported/red_dust.glb-802012290398350b6b52b588e68f770b.scn"
 
 [deps]
 
 source_file="res://art/items/red_dust.glb"
+dest_files=["res://.godot/imported/red_dust.glb-802012290398350b6b52b588e68f770b.scn"]
 
 [params]
 

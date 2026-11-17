@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://yontdoknrb4j"
-valid=false
+path="res://.godot/imported/bench.glb-836e42bea409b83e40121e7b434eba12.scn"
 
 [deps]
 
 source_file="res://art/environment/life/bench.glb"
+dest_files=["res://.godot/imported/bench.glb-836e42bea409b83e40121e7b434eba12.scn"]
 
 [params]
 

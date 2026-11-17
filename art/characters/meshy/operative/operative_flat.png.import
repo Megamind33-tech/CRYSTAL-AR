@@ -3,11 +3,17 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cnhp68lb84o18"
-valid=false
+path.s3tc="res://.godot/imported/operative_flat.png-e8df710a0600b01b7c6d19537e019811.s3tc.ctex"
+path.etc2="res://.godot/imported/operative_flat.png-e8df710a0600b01b7c6d19537e019811.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 
 [deps]
 
 source_file="res://art/characters/meshy/operative/operative_flat.png"
+dest_files=["res://.godot/imported/operative_flat.png-e8df710a0600b01b7c6d19537e019811.s3tc.ctex", "res://.godot/imported/operative_flat.png-e8df710a0600b01b7c6d19537e019811.etc2.ctex"]
 
 [params]
 

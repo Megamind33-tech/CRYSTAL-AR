@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c5ox73y0o3p0s"
-valid=false
+path="res://.godot/imported/hauler_wheel_r.glb-9008be78c4035e2a19a6f4ffdd9283c0.scn"
 
 [deps]
 
 source_file="res://art/environment/world/hauler_wheel_r.glb"
+dest_files=["res://.godot/imported/hauler_wheel_r.glb-9008be78c4035e2a19a6f4ffdd9283c0.scn"]
 
 [params]
 

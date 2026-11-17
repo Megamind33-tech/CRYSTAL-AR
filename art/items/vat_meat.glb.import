@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://de4x6i5fx56s8"
-valid=false
+path="res://.godot/imported/vat_meat.glb-d00a2599bc7dfb4955453c4e0c304727.scn"
 
 [deps]
 
 source_file="res://art/items/vat_meat.glb"
+dest_files=["res://.godot/imported/vat_meat.glb-d00a2599bc7dfb4955453c4e0c304727.scn"]
 
 [params]
 

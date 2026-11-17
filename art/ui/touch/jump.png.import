@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bcuiyl5auougf"
-valid=false
+path="res://.godot/imported/jump.png-39dc11f3751d58c9556bb70b44feeea2.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://art/ui/touch/jump.png"
+dest_files=["res://.godot/imported/jump.png-39dc11f3751d58c9556bb70b44feeea2.ctex"]
 
 [params]
 

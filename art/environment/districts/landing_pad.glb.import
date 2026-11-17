@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cwso2w45d7p3p"
-valid=false
+path="res://.godot/imported/landing_pad.glb-3161a3d188f29e8b1abb26eed5b2ce66.scn"
 
 [deps]
 
 source_file="res://art/environment/districts/landing_pad.glb"
+dest_files=["res://.godot/imported/landing_pad.glb-3161a3d188f29e8b1abb26eed5b2ce66.scn"]
 
 [params]
 

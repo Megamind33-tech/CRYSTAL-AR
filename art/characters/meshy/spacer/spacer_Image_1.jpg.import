@@ -3,7 +3,12 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://di0020gp8udm1"
-valid=false
+path.s3tc="res://.godot/imported/spacer_Image_1.jpg-6d57652239f27aea68013123d830af9b.s3tc.ctex"
+path.etc2="res://.godot/imported/spacer_Image_1.jpg-6d57652239f27aea68013123d830af9b.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 generator_parameters={
 "md5": "33cca6875696e4b09cf5e8a520e9f445"
 }
@@ -11,6 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/characters/meshy/spacer/spacer_Image_1.jpg"
+dest_files=["res://.godot/imported/spacer_Image_1.jpg-6d57652239f27aea68013123d830af9b.s3tc.ctex", "res://.godot/imported/spacer_Image_1.jpg-6d57652239f27aea68013123d830af9b.etc2.ctex"]
 
 [params]
 

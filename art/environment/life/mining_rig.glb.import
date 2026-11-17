@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://djrfho8s2c323"
-valid=false
+path="res://.godot/imported/mining_rig.glb-3dbe31110572f33119aa7d5b3c03eddf.scn"
 
 [deps]
 
 source_file="res://art/environment/life/mining_rig.glb"
+dest_files=["res://.godot/imported/mining_rig.glb-3dbe31110572f33119aa7d5b3c03eddf.scn"]
 
 [params]
 

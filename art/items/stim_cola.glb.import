@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://tbh5hr0qds7o"
-valid=false
+path="res://.godot/imported/stim_cola.glb-df85819da01d410c8c3d860c463e6f7d.scn"
 
 [deps]
 
 source_file="res://art/items/stim_cola.glb"
+dest_files=["res://.godot/imported/stim_cola.glb-df85819da01d410c8c3d860c463e6f7d.scn"]
 
 [params]
 

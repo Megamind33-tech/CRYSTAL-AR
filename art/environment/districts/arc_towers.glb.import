@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://donqck4jnyqs5"
-valid=false
+path="res://.godot/imported/arc_towers.glb-b4649a9a55361772e743bba089815a23.scn"
 
 [deps]
 
 source_file="res://art/environment/districts/arc_towers.glb"
+dest_files=["res://.godot/imported/arc_towers.glb-b4649a9a55361772e743bba089815a23.scn"]
 
 [params]
 

@@ -3,11 +3,17 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dr20vn3pdr78s"
-valid=false
+path.s3tc="res://.godot/imported/rusty_corrugated_iron_nor_gl_1k.jpg-8b6eef45c0d858a01ba5fb7c4280f16d.s3tc.ctex"
+path.etc2="res://.godot/imported/rusty_corrugated_iron_nor_gl_1k.jpg-8b6eef45c0d858a01ba5fb7c4280f16d.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 
 [deps]
 
 source_file="res://art/environment/mars/rusty_corrugated_iron_nor_gl_1k.jpg"
+dest_files=["res://.godot/imported/rusty_corrugated_iron_nor_gl_1k.jpg-8b6eef45c0d858a01ba5fb7c4280f16d.s3tc.ctex", "res://.godot/imported/rusty_corrugated_iron_nor_gl_1k.jpg-8b6eef45c0d858a01ba5fb7c4280f16d.etc2.ctex"]
 
 [params]
 

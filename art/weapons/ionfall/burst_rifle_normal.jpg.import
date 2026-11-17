@@ -3,7 +3,12 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bjamgso2sxxiv"
-valid=false
+path.s3tc="res://.godot/imported/burst_rifle_normal.jpg-7f7d98af4b7df0a8db0faf159972a4b1.s3tc.ctex"
+path.etc2="res://.godot/imported/burst_rifle_normal.jpg-7f7d98af4b7df0a8db0faf159972a4b1.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 generator_parameters={
 "md5": "4a572f97d660aa9da73b88f9327761b1"
 }
@@ -11,6 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/weapons/ionfall/burst_rifle_normal.jpg"
+dest_files=["res://.godot/imported/burst_rifle_normal.jpg-7f7d98af4b7df0a8db0faf159972a4b1.s3tc.ctex", "res://.godot/imported/burst_rifle_normal.jpg-7f7d98af4b7df0a8db0faf159972a4b1.etc2.ctex"]
 
 [params]
 

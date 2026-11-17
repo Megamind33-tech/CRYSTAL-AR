@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://d38463cq5toqg"
-valid=false
+path="res://.godot/imported/oxygen_canister.glb-e962b39d825c7dc363f18465ef4208f0.scn"
 
 [deps]
 
 source_file="res://art/items/oxygen_canister.glb"
+dest_files=["res://.godot/imported/oxygen_canister.glb-e962b39d825c7dc363f18465ef4208f0.scn"]
 
 [params]
 

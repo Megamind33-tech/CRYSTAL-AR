@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bambi3iva0pkr"
-valid=false
+path="res://.godot/imported/Astronaut_BarbaraTheBee.gltf-f156b7d26746655e4c6ed05cb8d03482.scn"
 
 [deps]
 
 source_file="res://art/characters/quaternius/Astronaut_BarbaraTheBee.gltf"
+dest_files=["res://.godot/imported/Astronaut_BarbaraTheBee.gltf-f156b7d26746655e4c6ed05cb8d03482.scn"]
 
 [params]
 

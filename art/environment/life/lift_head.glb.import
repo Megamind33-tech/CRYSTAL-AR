@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://drbqbpl3t32ej"
-valid=false
+path="res://.godot/imported/lift_head.glb-86d33d47a4d7a6cd71866f6b27e96240.scn"
 
 [deps]
 
 source_file="res://art/environment/life/lift_head.glb"
+dest_files=["res://.godot/imported/lift_head.glb-86d33d47a4d7a6cd71866f6b27e96240.scn"]
 
 [params]
 

@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c1o7bb2b6xuff"
-valid=false
+path="res://.godot/imported/Platform_Ramp_4.gltf-26e05935ecee61ed0de6f53be5675c58.scn"
 
 [deps]
 
 source_file="res://art/environment/scifi/Platform_Ramp_4.gltf"
+dest_files=["res://.godot/imported/Platform_Ramp_4.gltf-26e05935ecee61ed0de6f53be5675c58.scn"]
 
 [params]
 

@@ -3,7 +3,12 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bq5gjdyaqi382"
-valid=false
+path.s3tc="res://.godot/imported/pulse_rifle_normal.jpg-f3fa7c1ad6cc631edf68e88b027e2d4b.s3tc.ctex"
+path.etc2="res://.godot/imported/pulse_rifle_normal.jpg-f3fa7c1ad6cc631edf68e88b027e2d4b.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 generator_parameters={
 "md5": "55adab16cdd876b6034267dbf83e4578"
 }
@@ -11,6 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/weapons/ionfall/pulse_rifle_normal.jpg"
+dest_files=["res://.godot/imported/pulse_rifle_normal.jpg-f3fa7c1ad6cc631edf68e88b027e2d4b.s3tc.ctex", "res://.godot/imported/pulse_rifle_normal.jpg-f3fa7c1ad6cc631edf68e88b027e2d4b.etc2.ctex"]
 
 [params]
 

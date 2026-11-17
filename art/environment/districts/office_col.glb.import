@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://d2p7m44kwidvv"
-valid=false
+path="res://.godot/imported/office_col.glb-0d5a29b98d87737a50037b5f19fe6dca.scn"
 
 [deps]
 
 source_file="res://art/environment/districts/office_col.glb"
+dest_files=["res://.godot/imported/office_col.glb-0d5a29b98d87737a50037b5f19fe6dca.scn"]
 
 [params]
 

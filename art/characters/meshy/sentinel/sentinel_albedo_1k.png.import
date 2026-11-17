@@ -3,11 +3,17 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b42pvc71xtb2"
-valid=false
+path.s3tc="res://.godot/imported/sentinel_albedo_1k.png-f3374aae8ef93eda31cdd56589dec0a6.s3tc.ctex"
+path.etc2="res://.godot/imported/sentinel_albedo_1k.png-f3374aae8ef93eda31cdd56589dec0a6.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 
 [deps]
 
 source_file="res://art/characters/meshy/sentinel/sentinel_albedo_1k.png"
+dest_files=["res://.godot/imported/sentinel_albedo_1k.png-f3374aae8ef93eda31cdd56589dec0a6.s3tc.ctex", "res://.godot/imported/sentinel_albedo_1k.png-f3374aae8ef93eda31cdd56589dec0a6.etc2.ctex"]
 
 [params]
 

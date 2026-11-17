@@ -3,7 +3,12 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://db2ai772jxwtn"
-valid=false
+path.s3tc="res://.godot/imported/operative_normal.jpg-bd4834f857574925189b5f5d090536ae.s3tc.ctex"
+path.etc2="res://.godot/imported/operative_normal.jpg-bd4834f857574925189b5f5d090536ae.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 generator_parameters={
 "md5": "1b88fa05b50fd8dd05944bd3138cb3b1"
 }
@@ -11,6 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/characters/meshy/operative/operative_normal.jpg"
+dest_files=["res://.godot/imported/operative_normal.jpg-bd4834f857574925189b5f5d090536ae.s3tc.ctex", "res://.godot/imported/operative_normal.jpg-bd4834f857574925189b5f5d090536ae.etc2.ctex"]
 
 [params]
 

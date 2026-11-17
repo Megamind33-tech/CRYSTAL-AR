@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cbvvg0u4ragxo"
-valid=false
+path="res://.godot/imported/city_dome.glb-87ae5463bbf5c2c696a9d692c5941c35.scn"
 
 [deps]
 
 source_file="res://art/environment/life/city_dome.glb"
+dest_files=["res://.godot/imported/city_dome.glb-87ae5463bbf5c2c696a9d692c5941c35.scn"]
 
 [params]
 

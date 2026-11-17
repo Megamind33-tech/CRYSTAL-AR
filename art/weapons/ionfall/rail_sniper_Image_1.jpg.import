@@ -3,7 +3,12 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://btbfb5o7jfbam"
-valid=false
+path.s3tc="res://.godot/imported/rail_sniper_Image_1.jpg-7b026cfa0c4a8ff262580573b34c1f22.s3tc.ctex"
+path.etc2="res://.godot/imported/rail_sniper_Image_1.jpg-7b026cfa0c4a8ff262580573b34c1f22.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 generator_parameters={
 "md5": "d1074151f0a4f3b591347ce0bcd56773"
 }
@@ -11,6 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/weapons/ionfall/rail_sniper_Image_1.jpg"
+dest_files=["res://.godot/imported/rail_sniper_Image_1.jpg-7b026cfa0c4a8ff262580573b34c1f22.s3tc.ctex", "res://.godot/imported/rail_sniper_Image_1.jpg-7b026cfa0c4a8ff262580573b34c1f22.etc2.ctex"]
 
 [params]
 

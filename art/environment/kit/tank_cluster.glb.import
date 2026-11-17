@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ch4m0bsid4dpf"
-valid=false
+path="res://.godot/imported/tank_cluster.glb-91c26eda44d849150ee9b5b128746da6.scn"
 
 [deps]
 
 source_file="res://art/environment/kit/tank_cluster.glb"
+dest_files=["res://.godot/imported/tank_cluster.glb-91c26eda44d849150ee9b5b128746da6.scn"]
 
 [params]
 

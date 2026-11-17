@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bjjic1m8htljg"
-valid=false
+path="res://.godot/imported/hangar_col.glb-9963716b8b79caeb1b0cb751e2aa4179.scn"
 
 [deps]
 
 source_file="res://art/environment/kit/hangar_col.glb"
+dest_files=["res://.godot/imported/hangar_col.glb-9963716b8b79caeb1b0cb751e2aa4179.scn"]
 
 [params]
 

@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://db3gpaabxwg1c"
-valid=false
+path="res://.godot/imported/wall_segment.glb-aa27fd7b48b2cd8a8fd683947ac97405.scn"
 
 [deps]
 
 source_file="res://art/environment/kit/wall_segment.glb"
+dest_files=["res://.godot/imported/wall_segment.glb-aa27fd7b48b2cd8a8fd683947ac97405.scn"]
 
 [params]
 

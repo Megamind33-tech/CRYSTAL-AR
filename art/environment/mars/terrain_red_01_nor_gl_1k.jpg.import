@@ -3,11 +3,17 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b6gf4u8gaj7i5"
-valid=false
+path.s3tc="res://.godot/imported/terrain_red_01_nor_gl_1k.jpg-bb302919c8ecc0aaf3dc36fd7ea23cf4.s3tc.ctex"
+path.etc2="res://.godot/imported/terrain_red_01_nor_gl_1k.jpg-bb302919c8ecc0aaf3dc36fd7ea23cf4.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 
 [deps]
 
 source_file="res://art/environment/mars/terrain_red_01_nor_gl_1k.jpg"
+dest_files=["res://.godot/imported/terrain_red_01_nor_gl_1k.jpg-bb302919c8ecc0aaf3dc36fd7ea23cf4.s3tc.ctex", "res://.godot/imported/terrain_red_01_nor_gl_1k.jpg-bb302919c8ecc0aaf3dc36fd7ea23cf4.etc2.ctex"]
 
 [params]
 

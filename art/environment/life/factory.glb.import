@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bpe4wwxwnklda"
-valid=false
+path="res://.godot/imported/factory.glb-f6f7587dbcf2fd0c2c4d616a7fcb3990.scn"
 
 [deps]
 
 source_file="res://art/environment/life/factory.glb"
+dest_files=["res://.godot/imported/factory.glb-f6f7587dbcf2fd0c2c4d616a7fcb3990.scn"]
 
 [params]
 

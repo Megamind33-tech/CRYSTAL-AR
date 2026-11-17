@@ -3,7 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b3id7ml236v7m"
-valid=false
+path="res://.godot/imported/Astronaut_FernandoTheFlamingo_Atlas.png-894dceec216c8d1d63e370a209fa8131.ctex"
+metadata={
+"vram_texture": false
+}
 generator_parameters={
 "md5": "6f2058a605351bc4f584ba778175ce60"
 }
@@ -11,6 +14,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/characters/quaternius/Astronaut_FernandoTheFlamingo_Atlas.png"
+dest_files=["res://.godot/imported/Astronaut_FernandoTheFlamingo_Atlas.png-894dceec216c8d1d63e370a209fa8131.ctex"]
 
 [params]
 

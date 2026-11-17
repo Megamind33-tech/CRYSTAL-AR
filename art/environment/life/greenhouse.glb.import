@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://b3pw3ecgn4c6m"
-valid=false
+path="res://.godot/imported/greenhouse.glb-921f3a3fd9abe796e57d3a37ddac4d4a.scn"
 
 [deps]
 
 source_file="res://art/environment/life/greenhouse.glb"
+dest_files=["res://.godot/imported/greenhouse.glb-921f3a3fd9abe796e57d3a37ddac4d4a.scn"]
 
 [params]
 

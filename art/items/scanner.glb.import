@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://eh72bolw41yi"
-valid=false
+path="res://.godot/imported/scanner.glb-5d0ae487df0dc0336423a2cf42c009e2.scn"
 
 [deps]
 
 source_file="res://art/items/scanner.glb"
+dest_files=["res://.godot/imported/scanner.glb-5d0ae487df0dc0336423a2cf42c009e2.scn"]
 
 [params]
 

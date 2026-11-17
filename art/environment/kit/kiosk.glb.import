@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dfvuhk4eclgtt"
-valid=false
+path="res://.godot/imported/kiosk.glb-da2e3090ab834e447a9be593472466a4.scn"
 
 [deps]
 
 source_file="res://art/environment/kit/kiosk.glb"
+dest_files=["res://.godot/imported/kiosk.glb-da2e3090ab834e447a9be593472466a4.scn"]
 
 [params]
 

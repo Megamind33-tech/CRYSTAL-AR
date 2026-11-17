@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://n81ou8apb2wi"
-valid=false
+path="res://.godot/imported/flux_smg.glb-23ea5494d5cc09034f5a491077dc11aa.scn"
 
 [deps]
 
 source_file="res://art/weapons/ionfall/flux_smg.glb"
+dest_files=["res://.godot/imported/flux_smg.glb-23ea5494d5cc09034f5a491077dc11aa.scn"]
 
 [params]
 

@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bclu5mtcj6rg6"
-valid=false
+path="res://.godot/imported/refined_ingot.glb-101b97f5d75e8ca344feb38b6e7efb43.scn"
 
 [deps]
 
 source_file="res://art/items/refined_ingot.glb"
+dest_files=["res://.godot/imported/refined_ingot.glb-101b97f5d75e8ca344feb38b6e7efb43.scn"]
 
 [params]
 

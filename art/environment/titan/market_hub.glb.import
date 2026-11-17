@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ddy76ybggpjt6"
-valid=false
+path="res://.godot/imported/market_hub.glb-c79fbf60ecc8daa9d3fefe7b4c8d482a.scn"
 
 [deps]
 
 source_file="res://art/environment/titan/market_hub.glb"
+dest_files=["res://.godot/imported/market_hub.glb-c79fbf60ecc8daa9d3fefe7b4c8d482a.scn"]
 
 [params]
 

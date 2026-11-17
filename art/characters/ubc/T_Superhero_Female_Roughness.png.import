@@ -3,11 +3,17 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dki0e71w6fucy"
-valid=false
+path.s3tc="res://.godot/imported/T_Superhero_Female_Roughness.png-4f4d5b24723a67b8818873ff8535ddaf.s3tc.ctex"
+path.etc2="res://.godot/imported/T_Superhero_Female_Roughness.png-4f4d5b24723a67b8818873ff8535ddaf.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 
 [deps]
 
 source_file="res://art/characters/ubc/T_Superhero_Female_Roughness.png"
+dest_files=["res://.godot/imported/T_Superhero_Female_Roughness.png-4f4d5b24723a67b8818873ff8535ddaf.s3tc.ctex", "res://.godot/imported/T_Superhero_Female_Roughness.png-4f4d5b24723a67b8818873ff8535ddaf.etc2.ctex"]
 
 [params]
 

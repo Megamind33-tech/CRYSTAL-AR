@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bm1b3y4w1jp3d"
-valid=false
+path="res://.godot/imported/operative.glb-369dba6a96b7e775d6c069a71dc2ffe9.scn"
 
 [deps]
 
 source_file="res://art/characters/meshy/operative/operative.glb"
+dest_files=["res://.godot/imported/operative.glb-369dba6a96b7e775d6c069a71dc2ffe9.scn"]
 
 [params]
 

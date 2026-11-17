@@ -3,7 +3,12 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://4g4qsosbk0xb"
-valid=false
+path.s3tc="res://.godot/imported/vanguard_Image_1.jpg-c0b87f288e9fb1fae510c603c440dc64.s3tc.ctex"
+path.etc2="res://.godot/imported/vanguard_Image_1.jpg-c0b87f288e9fb1fae510c603c440dc64.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 generator_parameters={
 "md5": "07547790292925f9a5439c95fbf95125"
 }
@@ -11,6 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/characters/meshy/vanguard/vanguard_Image_1.jpg"
+dest_files=["res://.godot/imported/vanguard_Image_1.jpg-c0b87f288e9fb1fae510c603c440dc64.s3tc.ctex", "res://.godot/imported/vanguard_Image_1.jpg-c0b87f288e9fb1fae510c603c440dc64.etc2.ctex"]
 
 [params]
 

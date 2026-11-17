@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://b5s5oh3kwwvhm"
-valid=false
+path="res://.godot/imported/pod_a_col.glb-62c3ff4ae7e33008b45bef7e3d9f2e54.scn"
 
 [deps]
 
 source_file="res://art/environment/districts/pod_a_col.glb"
+dest_files=["res://.godot/imported/pod_a_col.glb-62c3ff4ae7e33008b45bef7e3d9f2e54.scn"]
 
 [params]
 

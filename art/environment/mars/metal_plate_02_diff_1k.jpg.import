@@ -3,11 +3,17 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bhxk1unisrumb"
-valid=false
+path.s3tc="res://.godot/imported/metal_plate_02_diff_1k.jpg-e4dff97dbde7c6f3e0f5f4aba05886ef.s3tc.ctex"
+path.etc2="res://.godot/imported/metal_plate_02_diff_1k.jpg-e4dff97dbde7c6f3e0f5f4aba05886ef.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 
 [deps]
 
 source_file="res://art/environment/mars/metal_plate_02_diff_1k.jpg"
+dest_files=["res://.godot/imported/metal_plate_02_diff_1k.jpg-e4dff97dbde7c6f3e0f5f4aba05886ef.s3tc.ctex", "res://.godot/imported/metal_plate_02_diff_1k.jpg-e4dff97dbde7c6f3e0f5f4aba05886ef.etc2.ctex"]
 
 [params]
 

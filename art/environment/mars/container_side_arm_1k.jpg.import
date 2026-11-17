@@ -3,11 +3,17 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dvbssrsnx0tb1"
-valid=false
+path.s3tc="res://.godot/imported/container_side_arm_1k.jpg-36e1b20d83515b8e335b17713cd1a062.s3tc.ctex"
+path.etc2="res://.godot/imported/container_side_arm_1k.jpg-36e1b20d83515b8e335b17713cd1a062.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 
 [deps]
 
 source_file="res://art/environment/mars/container_side_arm_1k.jpg"
+dest_files=["res://.godot/imported/container_side_arm_1k.jpg-36e1b20d83515b8e335b17713cd1a062.s3tc.ctex", "res://.godot/imported/container_side_arm_1k.jpg-36e1b20d83515b8e335b17713cd1a062.etc2.ctex"]
 
 [params]
 

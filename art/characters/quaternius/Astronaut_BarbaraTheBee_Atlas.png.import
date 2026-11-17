@@ -3,7 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bxd5fep4710pa"
-valid=false
+path="res://.godot/imported/Astronaut_BarbaraTheBee_Atlas.png-977c0244cad1a0adac3e83f91f5671f7.ctex"
+metadata={
+"vram_texture": false
+}
 generator_parameters={
 "md5": "6f2058a605351bc4f584ba778175ce60"
 }
@@ -11,6 +14,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/characters/quaternius/Astronaut_BarbaraTheBee_Atlas.png"
+dest_files=["res://.godot/imported/Astronaut_BarbaraTheBee_Atlas.png-977c0244cad1a0adac3e83f91f5671f7.ctex"]
 
 [params]
 

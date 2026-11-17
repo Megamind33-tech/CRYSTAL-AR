@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c5lkn8epkka5s"
-valid=false
+path="res://.godot/imported/rover.glb-e2e8594c350e1a05fea28b929b968fd3.scn"
 
 [deps]
 
 source_file="res://art/environment/world/rover.glb"
+dest_files=["res://.godot/imported/rover.glb-e2e8594c350e1a05fea28b929b968fd3.scn"]
 
 [params]
 

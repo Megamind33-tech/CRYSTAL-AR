@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://djdpvywifmfgg"
-valid=false
+path="res://.godot/imported/Astronaut_FernandoTheFlamingo.gltf-6de786e8a9f05122352410baaf7767e4.scn"
 
 [deps]
 
 source_file="res://art/characters/quaternius/Astronaut_FernandoTheFlamingo.gltf"
+dest_files=["res://.godot/imported/Astronaut_FernandoTheFlamingo.gltf-6de786e8a9f05122352410baaf7767e4.scn"]
 
 [params]
 

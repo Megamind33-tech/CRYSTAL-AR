@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c7akqf3ylx7u0"
-valid=false
+path="res://.godot/imported/capsule-modules.jpg-5c963f6bec1fedd74ab40275da9bec22.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://docs/art-reference/capsule-modules.jpg"
+dest_files=["res://.godot/imported/capsule-modules.jpg-5c963f6bec1fedd74ab40275da9bec22.ctex"]
 
 [params]
 

@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://87y7fqtw3im4"
-valid=false
+path="res://.godot/imported/algae_culture.glb-c05b09bde17396fb41fa64cae3902149.scn"
 
 [deps]
 
 source_file="res://art/items/algae_culture.glb"
+dest_files=["res://.godot/imported/algae_culture.glb-c05b09bde17396fb41fa64cae3902149.scn"]
 
 [params]
 

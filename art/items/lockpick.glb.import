@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bpaxecof1jfh7"
-valid=false
+path="res://.godot/imported/lockpick.glb-4db94e40d0d349d9eb6bc6d36411dc87.scn"
 
 [deps]
 
 source_file="res://art/items/lockpick.glb"
+dest_files=["res://.godot/imported/lockpick.glb-4db94e40d0d349d9eb6bc6d36411dc87.scn"]
 
 [params]
 

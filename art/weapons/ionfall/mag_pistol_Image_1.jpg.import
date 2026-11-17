@@ -3,7 +3,12 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cfiihexa30luu"
-valid=false
+path.s3tc="res://.godot/imported/mag_pistol_Image_1.jpg-44e0fcbabf4710bb41e2cae3a1c90b7d.s3tc.ctex"
+path.etc2="res://.godot/imported/mag_pistol_Image_1.jpg-44e0fcbabf4710bb41e2cae3a1c90b7d.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 generator_parameters={
 "md5": "aba90826c5bb3ab958a369dbbc564afd"
 }
@@ -11,6 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/weapons/ionfall/mag_pistol_Image_1.jpg"
+dest_files=["res://.godot/imported/mag_pistol_Image_1.jpg-44e0fcbabf4710bb41e2cae3a1c90b7d.s3tc.ctex", "res://.godot/imported/mag_pistol_Image_1.jpg-44e0fcbabf4710bb41e2cae3a1c90b7d.etc2.ctex"]
 
 [params]
 

@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dy6oe27b2uyjr"
-valid=false
+path="res://.godot/imported/WallAstra_Straight.gltf-7b06d1aa8a1a48a315ef13f17396cb57.scn"
 
 [deps]
 
 source_file="res://art/environment/scifi/WallAstra_Straight.gltf"
+dest_files=["res://.godot/imported/WallAstra_Straight.gltf-7b06d1aa8a1a48a315ef13f17396cb57.scn"]
 
 [params]
 

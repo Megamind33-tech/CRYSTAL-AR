@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dloqmp1aqf7ky"
-valid=false
+path="res://.godot/imported/solar_tree.glb-fb0a553afce83541fbd459b6b977ce6d.scn"
 
 [deps]
 
 source_file="res://art/environment/districts/solar_tree.glb"
+dest_files=["res://.godot/imported/solar_tree.glb-fb0a553afce83541fbd459b6b977ce6d.scn"]
 
 [params]
 

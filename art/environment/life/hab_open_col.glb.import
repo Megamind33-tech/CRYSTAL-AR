@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cfogrovxvsnoh"
-valid=false
+path="res://.godot/imported/hab_open_col.glb-0fef4923e182e9c2b11987a34d5d081b.scn"
 
 [deps]
 
 source_file="res://art/environment/life/hab_open_col.glb"
+dest_files=["res://.godot/imported/hab_open_col.glb-0fef4923e182e9c2b11987a34d5d081b.scn"]
 
 [params]
 

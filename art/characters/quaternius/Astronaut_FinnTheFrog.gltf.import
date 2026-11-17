@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ctunhq7l08oj"
-valid=false
+path="res://.godot/imported/Astronaut_FinnTheFrog.gltf-0225c7455cca941f573869e07b5bc46e.scn"
 
 [deps]
 
 source_file="res://art/characters/quaternius/Astronaut_FinnTheFrog.gltf"
+dest_files=["res://.godot/imported/Astronaut_FinnTheFrog.gltf-0225c7455cca941f573869e07b5bc46e.scn"]
 
 [params]
 

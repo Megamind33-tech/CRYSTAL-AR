@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bt54e2oj4jb12"
-valid=false
+path="res://.godot/imported/sentinel.glb-22257523f97d40035ea743bc5300116c.scn"
 
 [deps]
 
 source_file="res://art/characters/meshy/sentinel/sentinel.glb"
+dest_files=["res://.godot/imported/sentinel.glb-22257523f97d40035ea743bc5300116c.scn"]
 
 [params]
 

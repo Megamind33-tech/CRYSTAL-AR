@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://w8p2ikhgnjlx"
-valid=false
+path="res://.godot/imported/repair_kit.glb-1ade501568f172ee4c225aafd3a4fa09.scn"
 
 [deps]
 
 source_file="res://art/items/repair_kit.glb"
+dest_files=["res://.godot/imported/repair_kit.glb-1ade501568f172ee4c225aafd3a4fa09.scn"]
 
 [params]
 

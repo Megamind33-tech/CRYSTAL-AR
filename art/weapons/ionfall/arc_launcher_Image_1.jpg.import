@@ -3,7 +3,12 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dmf83tq2ju8xv"
-valid=false
+path.s3tc="res://.godot/imported/arc_launcher_Image_1.jpg-35005ca80902153ecfa9fdbde37fe43f.s3tc.ctex"
+path.etc2="res://.godot/imported/arc_launcher_Image_1.jpg-35005ca80902153ecfa9fdbde37fe43f.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
 generator_parameters={
 "md5": "286831c51d943d458110819f995c6752"
 }
@@ -11,6 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://art/weapons/ionfall/arc_launcher_Image_1.jpg"
+dest_files=["res://.godot/imported/arc_launcher_Image_1.jpg-35005ca80902153ecfa9fdbde37fe43f.s3tc.ctex", "res://.godot/imported/arc_launcher_Image_1.jpg-35005ca80902153ecfa9fdbde37fe43f.etc2.ctex"]
 
 [params]
 

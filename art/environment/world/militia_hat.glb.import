@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://d37ojnwlfjfxt"
-valid=false
+path="res://.godot/imported/militia_hat.glb-bc99f7395916af7978da82f498b04747.scn"
 
 [deps]
 
 source_file="res://art/environment/world/militia_hat.glb"
+dest_files=["res://.godot/imported/militia_hat.glb-bc99f7395916af7978da82f498b04747.scn"]
 
 [params]
 

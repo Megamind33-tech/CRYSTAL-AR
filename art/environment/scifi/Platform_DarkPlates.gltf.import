@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cbh6cbabuprhj"
-valid=false
+path="res://.godot/imported/Platform_DarkPlates.gltf-d2e0b565af4a2962170e5dfe07bcff0b.scn"
 
 [deps]
 
 source_file="res://art/environment/scifi/Platform_DarkPlates.gltf"
+dest_files=["res://.godot/imported/Platform_DarkPlates.gltf-d2e0b565af4a2962170e5dfe07bcff0b.scn"]
 
 [params]
 

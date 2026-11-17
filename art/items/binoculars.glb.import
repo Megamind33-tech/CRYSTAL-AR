@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://d1x526qbjril6"
-valid=false
+path="res://.godot/imported/binoculars.glb-cedeeaf2e049c6276c60a44e0fe27911.scn"
 
 [deps]
 
 source_file="res://art/items/binoculars.glb"
+dest_files=["res://.godot/imported/binoculars.glb-cedeeaf2e049c6276c60a44e0fe27911.scn"]
 
 [params]
 

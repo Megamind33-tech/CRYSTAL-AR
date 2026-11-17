@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://da52jrkm0ktv3"
-valid=false
+path="res://.godot/imported/buggy_wheel_l.glb-fe4f54e2003f0613144f7a4aaa87561b.scn"
 
 [deps]
 
 source_file="res://art/environment/world/buggy_wheel_l.glb"
+dest_files=["res://.godot/imported/buggy_wheel_l.glb-fe4f54e2003f0613144f7a4aaa87561b.scn"]
 
 [params]
 

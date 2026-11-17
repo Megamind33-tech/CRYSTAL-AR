@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://didum40ig3nwe"
-valid=false
+path="res://.godot/imported/vault_relic.glb-ff404b974e1d48ce0163c2435d2ed617.scn"
 
 [deps]
 
 source_file="res://art/items/vault_relic.glb"
+dest_files=["res://.godot/imported/vault_relic.glb-ff404b974e1d48ce0163c2435d2ed617.scn"]
 
 [params]
 

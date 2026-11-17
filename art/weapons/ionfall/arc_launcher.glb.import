@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dc7fgtla0ysom"
-valid=false
+path="res://.godot/imported/arc_launcher.glb-c003addefd33a3d260454354a92c03dd.scn"
 
 [deps]
 
 source_file="res://art/weapons/ionfall/arc_launcher.glb"
+dest_files=["res://.godot/imported/arc_launcher.glb-c003addefd33a3d260454354a92c03dd.scn"]
 
 [params]
 

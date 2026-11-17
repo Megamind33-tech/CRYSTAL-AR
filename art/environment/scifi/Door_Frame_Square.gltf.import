@@ -4,11 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c0vfy2v020m27"
-valid=false
+path="res://.godot/imported/Door_Frame_Square.gltf-0cc4462c1c6363b03836932678502bdb.scn"
 
 [deps]
 
 source_file="res://art/environment/scifi/Door_Frame_Square.gltf"
+dest_files=["res://.godot/imported/Door_Frame_Square.gltf-0cc4462c1c6363b03836932678502bdb.scn"]
 
 [params]
 
