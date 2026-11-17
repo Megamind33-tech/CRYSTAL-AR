@@ -240,6 +240,7 @@ func setup(layer: CanvasLayer) -> void:
 
 func update() -> void:
 	var _t_city := Time.get_ticks_usec()
+	_maybe_pick_nation()
 	_update()
 	Diagnostics.time_section("city", _t_city)
 
@@ -1990,6 +1991,30 @@ func open_terminal(tab: String) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
+## First arrival: choose your nation before anything else (Guide step 1).
+var _nation_pick: NationPick
+
+
+func _maybe_pick_nation() -> void:
+	if _nation_pick != null or Profile.career().nation() != Nations.NONE or match_node.server == null \
+			or match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID) == null:
+		return
+	_nation_pick = NationPick.new()
+	hud_layer.get_parent().add_child(_nation_pick)
+	match_node.input.enabled = false
+	match_node.touch.release_all()
+	_touch_was_visible = match_node.touch.visible
+	match_node.touch.visible = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_nation_pick.chosen.connect(func(i: int) -> void:
+		Profile.career().choose_nation(i)
+		Profile.save()
+		_flash_text(tr("NATION_WELCOME") % Nations.display_name(i), Nations.color(i))
+		_nation_pick.queue_free()
+		match_node.input.enabled = true
+		match_node.touch.visible = _touch_was_visible)
+
+
 ## Through the gate: a deployment to Rustwood Yard (the career's contract
 ## and gear go with it).
 func deploy() -> void:
@@ -2070,8 +2095,19 @@ class _CityHud extends Control:
 		if city.bounty != null:
 			city.bounty.draw_card(self, s)
 		var k: Dictionary = c.d.contract
-		ComicUI.draw_text(self, Vector2(size.x - 34 * s, 102 * s), (tr("CITY_ACTIVE") % k.title) if not k.is_empty()
-				else tr("CITY_HINT_BOARD"), UiStyle.font_hud_bold, roundi(22 * s), ComicUI.PAPER, 2, roundi(4 * s))
+		# The objective tracker (Guide): one thing to do, and how far it is.
+		var obj := Guide.city_objective(c)
+		var from := Vector3.INF
+		if city.match_node.server != null:
+			var tp: SimPlayer = city.match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
+			if tp != null:
+				from = tp.state.position
+		var line: String = (tr("GUIDE_STEP") % obj.step + "  " if int(obj.step) > 0 else "") + str(obj.text)
+		if from != Vector3.INF:
+			line += Guide.distance_text(from, obj.target)
+		ComicUI.draw_text(self, Vector2(size.x - 34 * s, 102 * s), line, UiStyle.font_hud_bold, roundi(24 * s),
+				ComicUI.YELLOW if int(obj.step) > 0 else ComicUI.PAPER, 2, roundi(4 * s))
+		_tracker_target = obj.target
 		ComicUI.draw_text(self, Vector2(size.x - 34 * s, 128 * s), tr("WORLD_DISCOVERED") % [c.d.get("discovered", []).size(),
 				WorldLayout.LANDMARKS.size()], UiStyle.font_hud_bold, roundi(20 * s), Color(ComicUI.PAPER, 0.8), 2, roundi(4 * s))
 		_draw_raid(s)
@@ -2122,6 +2158,8 @@ class _CityHud extends Control:
 	## The minimap (top left, turning with you): roads, the dome, places
 	## by letter, rovers, the Marshals, the job's waypoint at its edge.
 	const MAP_RANGE := 130.0
+
+	var _tracker_target := Vector3.INF  ## the tracker's place, marked on the minimap
 
 	func _draw_minimap(s: float) -> void:
 		if city.match_node.server == null:
@@ -2218,6 +2256,15 @@ class _CityHud extends Control:
 				q = c + (q - c).normalized() * (rad - 8 * s)  # off the map: at its edge, pointing the way
 			var d := 7.0 * s
 			_sb.colored_polygon(PackedVector2Array([q + Vector2(0, -d), q + Vector2(d, 0), q + Vector2(0, d), q + Vector2(-d, 0)]), ComicUI.YELLOW)
+		# The tracker's place: a magenta diamond, at the edge when it's off the map.
+		if _tracker_target != Vector3.INF:
+			var tq: Vector2 = to_map.call(Vector2(_tracker_target.x, _tracker_target.z))
+			if tq.distance_to(c) > rad - 8 * s:
+				tq = c + (tq - c).normalized() * (rad - 8 * s)
+			var td := 8.0 * s
+			_sb.colored_polygon(PackedVector2Array([tq + Vector2(0, -td), tq + Vector2(td, 0), tq + Vector2(0, td), tq + Vector2(-td, 0)]), ComicUI.INK)
+			td = 6.0 * s
+			_sb.colored_polygon(PackedVector2Array([tq + Vector2(0, -td), tq + Vector2(td, 0), tq + Vector2(0, td), tq + Vector2(-td, 0)]), ComicUI.MAGENTA)
 		# The districts: on the map, or named at its edge pointing the way.
 		for dist: Array in [[WorldLayout.HELIOS, "MAP_HELIOS"], [WorldLayout.GALLERIA, "MAP_GALLERIA"],
 				[WorldLayout.TERRACE, "MAP_TERRACE"], [WorldLayout.SKYPORT, "MAP_SKYPORT"],

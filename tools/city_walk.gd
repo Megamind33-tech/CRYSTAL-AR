@@ -28,6 +28,8 @@ func _run() -> void:
 		Profile.career().d.stash = {"oxygen_canister": 1}
 	if Platform.user_args.has("--people"):
 		Profile.career().d["body"] = "female"  # play as a woman
+	if Platform.user_args.has("--phase1") and dig:
+		Profile.career().choose_nation(0)  # a recruit of the Aurora Compact, on the first run
 	MatchConfig.pending = MatchConfig.for_place(GameMode.HUNT if dig else GameMode.CITY, "You")
 	m = MATCH.instantiate()
 	add_child(m)
@@ -36,6 +38,10 @@ func _run() -> void:
 	m.hud._touch = true
 	var me: SimPlayer = m.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	print("CITY WALK: player at %s, phase %s" % [me.state.position, m.server.phase])
+	if Platform.user_args.has("--phase1"):
+		await _phase1_run(me, dig)
+		get_tree().quit(0)
+		return
 	if dig:
 		await _dig_run(me)
 		return
@@ -1209,6 +1215,56 @@ func _dig_run(me: SimPlayer) -> void:
 	await _pose(me, WorldTerrain.at(200.0, 135.0) + Vector3(0, 0.3, 0), 0.0, -0.15)
 	await _shot("d5_rim_extraction")
 	get_tree().quit(0)
+
+
+## --phase1: the nation pick and the tracker in the city; in a run (with
+## --dig-only) the nations' colours, the squad and the guided objective.
+func _phase1_run(me: SimPlayer, dig: bool) -> void:
+	if not dig:
+		await _frames(20)
+		await _shot("p1_nation_pick")
+		var pick: NationPick = m.city._nation_pick
+		print("PHASE1: nation pick shown %s" % (pick != null))
+		pick.chosen.emit(0)
+		await _frames(30)
+		await _pose(me, CityLayout.ORIGIN + Vector3(0, 0.05, 20), 0.0, -0.05)
+		await _shot("p1_city_tracker")
+		print("PHASE1: tracker step %d, nation %s" % [Guide.step(Profile.career()), Nations.display_name(Profile.career().nation())])
+		return
+	while m.server.phase != MatchPhase.PLAYING:
+		await _frames(10)
+	await _frames(40)
+	m.server.world.damage_enabled = false
+	m.hunt_hud.touch = true
+	var h: HuntRules = m.server.world.hunt
+	var mate: int = h.social.allies.get(me.net_id, 0)
+	for id: int in h.nations:
+		var p: SimPlayer = m.server.world.players[id]
+		print("PHASE1: %-14s nation %-18s ally %-14s %s" % [p.display_name, Nations.display_name(h.nation_of(id)),
+				m._display_name(h.social.allies.get(id, 0)) if h.social.allies.has(id) else "-", h.personalities.get(id, "")])
+	print("PHASE1: squadmate %s (may turn %s), objective: %s" % [m._squadmate, h.may_turn.get(mate, "?"), m.hud._objective])
+	await _shot("p1_run_start")
+	# The squadmate and a rival nation's hunter, side by side in front of us.
+	var spot := WorldLayout.canyon(200.0) + Vector3(0, 0.3, 0)
+	await _pose(me, spot, 0.0, -0.06)
+	var rival := 0
+	for id: int in h.nations:
+		if h.nation_of(id) != h.nation_of(me.net_id) and not h.social.allies.has(id):
+			rival = id
+			break
+	for i in 12:
+		for pair: Array in [[mate, Vector3(-2.2, 0, -7)], [rival, Vector3(2.2, 0, -7)]]:
+			var bp: SimPlayer = m.server.world.players.get(pair[0])
+			if bp != null:
+				m.server.world.teleport(bp, spot + pair[1])
+				bp.state.yaw = PI
+		await _frames(2)
+	await _shot("p1_squad_and_rival")
+	# Behind a wall: the squadmate's name still shows.
+	var mp: SimPlayer = m.server.world.players.get(mate)
+	print("PHASE1: squad plate shown %s, rival plate nation %d" % [m._visuals[mate].nameplate_squad, m._visuals[rival].nameplate_nation])
+	if mp != null:
+		await _shot("p1_squad_far")
 
 
 ## --budget: the phone budget (86 draws, 100k triangles, 86 MB video

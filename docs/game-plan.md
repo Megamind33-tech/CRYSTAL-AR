@@ -191,16 +191,20 @@ session.
 
 Each phase ships on its own and is played on the phone before the next one.
 
-## 9. Decisions we need from you
+## 9. Decisions (agreed 17 Nov 2026)
 
-1. **Nations**: invented blocs (recommended) or real countries? How many?
-   Four is a good start.
-2. **Who are the other players right now?** The dig runs are against AI
-   today. Do we design for AI expeditions first and real players later
-   (recommended), or go online sooner?
-3. **Friendly fire**: on with penalties (as written above), or off inside
-   your squad only?
-4. **How hard should death be?** Today you lose what you carry. Should you
-   also lose some of your gear, or nothing more?
-5. **The existing city systems**: keep all of them and open them gradually
-   (recommended), or cut some to focus the game?
+1. **Nations**: four invented nations (section 2), no real countries.
+2. **AI first**: the other expeditions are AI. Every phase has to be proven
+   playable with AI alone (automated runs: it completes, nobody gets stuck,
+   the pacing numbers hold) and then judged for fun on the phone, before
+   online play is considered.
+3. **Turning on people**: anyone can shoot anyone. You can turn on your
+   squad and any member can turn on you. It must never become a pattern:
+   AI members turn only for a reason that fits who they are (their
+   personality and what you did to them before), betrayals are paced across
+   runs, and they take different forms.
+4. **Death**: you're robbed. You lose what you carry, your pack, your weapons
+   and your gear upgrades, and keep your clothes and helmet. Your nation
+   re-issues the basic sidearm. What's in your home locker, your wallet and
+   your rover stay yours.
+5. **The city's systems** stay and open gradually as you rank up.

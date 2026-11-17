@@ -14,6 +14,9 @@ const TEXT_METRES := 0.2
 const BAR_METRES := Vector2(0.6, 0.065)
 const SHAPE_METRES := 0.22
 const MIN_TEXT := 11
+## At least this share of the screen's height (readable on a phone held at
+## arm's length: 1080 px tall gives 18 px).
+const MIN_TEXT_SCREEN := 0.017
 const MAX_TEXT := 30
 const FADE_METRES := 4.0
 const SIGHT_SECONDS := 0.1
@@ -54,11 +57,13 @@ func _draw() -> void:
 			continue
 		var anchor := v.nameplate_anchor()
 		var d := eye.distance_to(anchor)
-		if d > PlayerVisual.NAMEPLATE_RANGE + FADE_METRES or camera.is_position_behind(anchor):
+		# Your squadmate's name shows through walls and from much further.
+		var reach := PlayerVisual.SQUAD_RANGE if v.nameplate_squad else PlayerVisual.NAMEPLATE_RANGE
+		if d > reach + FADE_METRES or camera.is_position_behind(anchor):
 			_fade(v, false)
 			continue
-		var alpha := _fade(v, _in_sight(v, camera, anchor, d))
-		alpha *= clampf((PlayerVisual.NAMEPLATE_RANGE + FADE_METRES - d) / FADE_METRES, 0.0, 1.0)
+		var alpha := _fade(v, v.nameplate_squad or _in_sight(v, camera, anchor, d))
+		alpha *= clampf((reach + FADE_METRES - d) / FADE_METRES, 0.0, 1.0)
 		if alpha > 0.01:
 			shown.append([d, v, anchor, alpha])
 	# Far first, so nearer plates draw over them.
@@ -68,7 +73,8 @@ func _draw() -> void:
 
 
 func _draw_plate(v: PlayerVisual, at: Vector2, scale: float, alpha: float) -> void:
-	var size := clampi(roundi(TEXT_METRES * scale), MIN_TEXT, MAX_TEXT)
+	var floor_px := maxi(MIN_TEXT, roundi(get_viewport_rect().size.y * MIN_TEXT_SCREEN))
+	var size := clampi(roundi(TEXT_METRES * scale), floor_px, maxi(MAX_TEXT, floor_px + 8))
 	var k := float(size) / (TEXT_METRES * scale)  ## the clamp's effect, applied to the rest too
 	var line := _line(v.nameplate_text, size)
 	var text_size := line.get_size()
@@ -90,6 +96,13 @@ func _draw_plate(v: PlayerVisual, at: Vector2, scale: float, alpha: float) -> vo
 		var side := SHAPE_METRES * scale * k
 		draw_texture_rect(_shapes[v.nameplate_team], Rect2(at - Vector2(side * 0.5, text_size.y + side + 2.0),
 				Vector2(side, side)), false, Color(v.nameplate_color, alpha))
+	# THE HUNT: the nation's shape before the name (never colour alone); over
+	# a squadmate HuntVisuals' SQUAD mark, so friend and foe never look alike.
+	if v.nameplate_nation >= 0:
+		var side := maxf(SHAPE_METRES * scale * k, float(size) * 0.9)
+		draw_texture_rect(Nations.shape_texture(v.nameplate_nation), Rect2(text_at - Vector2(side + 4.0, -text_size.y * 0.5 + side * 0.5 + 2.0),
+				Vector2(side, side)), false, Color(v.nameplate_color, alpha))
+
 
 
 ## The shaped text for `text` at `size`, shaped once.

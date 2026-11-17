@@ -456,7 +456,7 @@ HUNT_MENU_LEAVE,End the alliance with %s (5 s notice)
 HUNT_MENU_BETRAY,BETRAY %s (reputation and bounty)
 HUNT_FEED_LEAVING,is ending the alliance (5 s)
 HUNT_FEED_BETRAYED,BETRAYED %s
-HUNT_BETRAYED_YOU,%s betrayed you: protection is gone
+HUNT_BETRAYED_YOU,%s turned on you
 HUNT_ALLIED_WITH,Allied with %s: you can't hurt each other
 HUNT_ALLY_MARK,ALLY
 HUNT_MENU_INTEL_CACHE_CLUE,Intel: nearest resource cache (%d cr)
@@ -1100,3 +1100,37 @@ STYLE_EMOTE,%s
 STYLE_CLAIMED,Season reward: %s
 STYLE_BOUGHT,Yours: %s
 STYLE_TIER_UP,Season tier %d reached: claim it in Style
+NATION_AURORA,Aurora Compact
+NATION_AURORA_MOTTO,First light on a new world
+NATION_MERIDIAN,Meridian Union
+NATION_MERIDIAN_MOTTO,"Steady hands, fair shares"
+NATION_VESPER,Vesper Republic
+NATION_VESPER_MOTTO,Fortune favours the bold
+NATION_HALDEN,Halden Federation
+NATION_HALDEN_MOTTO,We hold what we build
+NATION_PICK_TITLE,CHOOSE YOUR NATION
+NATION_PICK_INTRO,Four nations came to Mars for its minerals. Who do you stand with?
+NATION_WELCOME,"Welcome to Mars, recruit of the %s"
+GUIDE_STEP,%d/5
+GUIDE_NATION,Choose your nation
+GUIDE_BOARD,Take a contract from the Broker
+GUIDE_DEPLOY,Deploy to the dig from the Broker's terminal
+GUIDE_SELL,Sell what you brought back to the Trader
+GUIDE_RUN_CARGO,Find your cargo (your marker)
+GUIDE_RUN_EXTRACT,Carry it to an extraction pad
+GUIDE_RUN_ANY,Take any cargo and get it out
+GUIDE_NEXT_DEPLOY,Contract: %s · deploy at the board
+GUIDE_NEXT_SELL,Sell your goods at the Trader
+GUIDE_NEXT_BOARD,Take a contract at the board
+SQUAD_TAG,SQUAD
+SQUAD_WITH,is your squadmate this run
+SQUAD_GRUDGE,"is your squadmate, and hasn't forgotten what you did"
+ROBBED_TITLE,ROBBED
+ROBBED_TEXT,"they took your pack (%d items), your guns and gear. Your nation issues you a Pulse"
+HUNT_TURNED_FIRE,%s opened fire on you
+HUNT_TURNED_GRUDGE,%s settles an old score
+HUNT_TURNED_PRIZE,%s wants your prize for themselves
+HUNT_TURNED_GRAND,%s takes the grand prize off you
+HUNT_YOU_TURNED,You turned on %s. Your nation will hear of it
+HUNT_FF_HOLD,Hold your fire! %s is your squadmate
+HUNT_FF_WATCH,%s: watch your fire!

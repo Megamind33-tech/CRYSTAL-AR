@@ -43,6 +43,12 @@ const BETRAYAL_BOUNTY := 100
 ## during an alliance at least this old (once per alliance).
 const COOPERATION_BONUS := 40
 const COOPERATION_MIN_TICKS := 1800
+## Friendly fire (anyone can turn on anyone, docs/game-plan.md): hits on an
+## ally warn it ("watch your fire") at most every FF_WARN_TICKS; this much
+## damage within FF_WINDOW_TICKS, or a kill, is turning on it: a betrayal.
+const FF_TURN_DAMAGE := 45.0
+const FF_WINDOW_TICKS := 480
+const FF_WARN_TICKS := 180
 
 var bounty: Dictionary = {}  ## net id -> posted bounty
 var last_known: Dictionary = {}  ## target id -> {"position": Vector3, "tick": int}
@@ -54,6 +60,9 @@ var dissolving: Dictionary = {}  ## net id -> tick its peaceful exit completes
 var proposals: Dictionary = {}  ## recipient id -> {"from": id, "expires": tick}
 var reputation: Dictionary = {}  ## net id -> 0..100 (missing: START_REPUTATION)
 var _bonus_paid: Dictionary = {}  ## alliance key -> true
+var squads: Dictionary = {}  ## net id -> true: allied as a nation's squad (not a pact)
+var _ff: Dictionary = {}  ## attacker id -> [[damage, tick], ...] on its ally
+var _ff_warned: Dictionary = {}  ## attacker id -> tick of the last warning
 var _next_public_ping: Dictionary = {}  ## target -> tick
 var _next_contract_ping: Dictionary = {}  ## target -> tick
 var _rng := RandomNumberGenerator.new()
@@ -71,6 +80,9 @@ func reset(seed_value: int) -> void:
 	proposals.clear()
 	reputation.clear()
 	_bonus_paid.clear()
+	squads.clear()
+	_ff.clear()
+	_ff_warned.clear()
 	_next_public_ping.clear()
 	_next_contract_ping.clear()
 
@@ -176,6 +188,48 @@ func respond(world: SimWorld, to: int, accept: bool) -> bool:
 	return true
 
 
+## A nation's squad: allied from the start, no proposal.
+func form(world: SimWorld, a: int, b: int) -> bool:
+	if a == b or allies.has(a) or allies.has(b):
+		return false
+	allies[a] = b
+	allies[b] = a
+	alliance_since[a] = world.tick
+	alliance_since[b] = world.tick
+	squads[a] = true
+	squads[b] = true
+	_emit(world, "squad_formed", a, {"target": b})
+	return true
+
+
+func is_squad(id: int) -> bool:
+	return squads.has(id) and allies.has(id)
+
+
+## Damage between hunters: on an ally it's friendly fire. A kill, or
+## FF_TURN_DAMAGE within FF_WINDOW_TICKS, is turning on them (a betrayal by
+## the shooter); less is a warning.
+func friendly_fire(world: SimWorld, attacker: int, target: int, amount: float, killed: bool) -> void:
+	if not allied(attacker, target):
+		return
+	var hits: Array = _ff.get(attacker, [])
+	hits = hits.filter(func(e: Array) -> bool: return world.tick - int(e[1]) <= FF_WINDOW_TICKS)
+	hits.append([amount, world.tick])
+	_ff[attacker] = hits
+	var total := 0.0
+	for e: Array in hits:
+		total += float(e[0])
+	# The AI turn only for a reason (BotBrain._turn_reason), never by a
+	# crossfire that added up; a person's sustained fire is a choice.
+	var ai: bool = world.players.has(attacker) and (world.players[attacker] as SimPlayer).is_bot
+	if (killed or total >= FF_TURN_DAMAGE) and not ai:
+		_ff.erase(attacker)
+		betray(world, attacker, "fire")
+	elif world.tick - int(_ff_warned.get(attacker, -100000)) >= FF_WARN_TICKS:
+		_ff_warned[attacker] = world.tick
+		_emit(world, "friendly_fire", attacker, {"target": target})
+
+
 ## Leaving peacefully: protection holds a few seconds, no penalty.
 func leave(world: SimWorld, id: int) -> bool:
 	if not allies.has(id) or dissolving.has(id):
@@ -189,13 +243,14 @@ func leave(world: SimWorld, id: int) -> bool:
 
 ## Betrayal: protection ends now; reputation and a bounty for the betrayer;
 ## the betrayed is alerted (the event names the betrayer).
-func betray(world: SimWorld, id: int) -> bool:
+func betray(world: SimWorld, id: int, reason: String = "") -> bool:
 	if not allies.has(id):
 		return false
 	var partner: int = allies[id]
+	var squad := squads.has(id)
 	_end_alliance(id)
 	reputation[id] = maxi(rep_of(id) - BETRAYAL_REPUTATION, 0)
-	_emit(world, "alliance_betrayed", id, {"target": partner, "reputation": reputation[id]})
+	_emit(world, "alliance_betrayed", id, {"target": partner, "reputation": reputation[id], "reason": reason, "squad": squad})
 	add_bounty(world, id, BETRAYAL_BOUNTY, "betrayal")
 	return true
 
@@ -235,6 +290,8 @@ func _end_alliance(id: int) -> void:
 	alliance_since.erase(partner)
 	dissolving.erase(id)
 	dissolving.erase(partner)
+	squads.erase(id)
+	squads.erase(partner)
 
 
 func _emit(world: SimWorld, action: String, player: int, extra: Dictionary) -> void:

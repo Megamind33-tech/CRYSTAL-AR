@@ -123,6 +123,19 @@ var haul: Dictionary = {}
 var gear: Dictionary = {}
 ## Bounties and Wanted status (Most Wanted); later alliances and reputation.
 var social := HuntSocial.new()
+## Nations (docs/game-plan.md): net id -> Nations index, seated at reset.
+## The hunters of one nation start the run allied (a squad).
+var nations: Dictionary = {}
+## The humans' own nations (net id -> Nations index), set before the run.
+var home_nations: Dictionary = {}
+## AI squadmates who may turn on their partner this run (net id -> bool;
+## missing: may, as AI squads always could). The career paces it for the
+## human's squadmate so it never becomes a pattern (Match).
+var may_turn: Dictionary = {}
+## AI who hold a grudge against their partner (it turned on them before).
+var grudges: Dictionary = {}
+## Each AI's character (Nations.PERSONALITIES), by net id.
+var personalities: Dictionary = {}
 ## Operational credits and mercenary contracts.
 var economy := HuntEconomy.new()
 ## Recovery Contract: victim id -> {"treasure", "position" (fuzzed), "tick"}.
@@ -185,6 +198,43 @@ func reset(world: SimWorld) -> void:
 		if not economy.pending_dismissals.has(id):
 			economy.add_hunter(id)
 			_assign(world, id)
+	_seat_nations(world, ids)
+
+
+## Seats every hunter in a nation and allies each nation's first two (one
+## alliance per hunter: a squad of two).
+func _seat_nations(world: SimWorld, ids: Array) -> void:
+	nations.clear()
+	if home_nations.is_empty():
+		return  # a run without nations (tests, old saves): as before
+	var hunters := ids.filter(func(id: int) -> bool: return not economy.is_merc(id) and not economy.pending_dismissals.has(id))
+	nations = Nations.seat(hunters, home_nations, world.match_seed)
+	var by_nation := {}
+	for id: int in hunters:
+		var n: int = nations[id]
+		var list: Array = by_nation.get(n, [])
+		list.append(id)
+		by_nation[n] = list
+	for n: int in by_nation:
+		var list: Array = by_nation[n]
+		if list.size() >= 2:
+			social.form(world, list[0], list[1])
+
+
+func nation_of(id: int) -> int:
+	return nations.get(id, Nations.NONE)
+
+
+## Hunters who don't fight each other unprovoked (bots don't target them):
+## an employer and its mercenary, and allies. Allies CAN be hurt (friendly
+## fire is on: anyone can turn on anyone), see protects().
+func friendly(a: int, b: int) -> bool:
+	return economy.protects(a, b) or social.allied(a, b)
+
+
+## A hit between hunters: fire on an ally is friendly fire (HuntSocial).
+func on_damage(world: SimWorld, attacker: int, target: int, amount: float, killed: bool) -> void:
+	social.friendly_fire(world, attacker, target, amount, killed)
 
 
 func add_player(world: SimWorld, p: SimPlayer) -> void:
@@ -641,7 +691,7 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 		"leave_alliance":
 			return social.leave(world, hunter)
 		"betray_alliance":
-			return social.betray(world, hunter)
+			return social.betray(world, hunter, str(args.get("reason", "")))
 		"buy_intel":
 			return buy_intel(world, hunter, str(args.get("kind", "")))
 	return false
@@ -727,9 +777,10 @@ func _fuzz(at: Vector3, radius: float) -> Vector3:
 
 
 ## Players who can't hurt each other (SimWorld._can_hurt): an employer and
-## its mercenary, and allies (also during a peaceful exit's grace).
+## its mercenary. Allies can: turning on your squad is always possible
+## (docs/game-plan.md, decision 3), and HuntSocial makes it a betrayal.
 func protects(a: int, b: int) -> bool:
-	return economy.protects(a, b) or social.allied(a, b)
+	return economy.protects(a, b)
 
 
 # --- Internals ---
@@ -792,7 +843,7 @@ func _assign(world: SimWorld, net_id: int) -> void:
 	for s in spots:
 		var used := false
 		for t in treasures:
-			if t.home.distance_to(s) < 0.5 and not t.banked:
+			if _flat(t.home, s) < 0.5 and not t.banked:  # on the ground under the spot
 				used = true
 				break
 		if not used:
@@ -802,7 +853,9 @@ func _assign(world: SimWorld, net_id: int) -> void:
 	for i in ASSIGNMENTS_PER_HUNTER:
 		var at: Vector3 = free[_rng.randi_range(0, free.size() - 1)]
 		free.erase(at)
-		_new_treasure(Kind.PERSONAL, net_id, at)
+		# On the real ground (a spot from the terrain's formula can float
+		# over a dip or sit in rock: out of reach for anyone on foot).
+		_new_treasure(Kind.PERSONAL, net_id, _floor_at(world, at + Vector3.UP * 1.5))
 		if free.is_empty():
 			free = spots.duplicate()
 	world._emit("hs:%d:%d" % [net_id, world.tick], "hunt", {"action": "assigned", "player": net_id,

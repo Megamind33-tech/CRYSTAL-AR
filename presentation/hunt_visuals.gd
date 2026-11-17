@@ -144,10 +144,12 @@ func _sync_ally(hunt: HuntRules, local_id: int, carrier_pos: Callable) -> void:
 		_ally_mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		_ally_mark.no_depth_test = true
 		add_child(_ally_mark)
+	# Your nation's squadmate is marked SQUAD; a pact's ally, ALLY.
+	_ally_mark.text = tr("SQUAD_TAG") if hunt.social.is_squad(local_id) else tr("HUNT_ALLY_MARK")
 	var at: Vector3 = carrier_pos.call(ally)
 	_ally_mark.visible = at != Vector3.INF
 	if at != Vector3.INF:
-		_ally_mark.position = at + Vector3(0, 2.6, 0)
+		_ally_mark.position = at + Vector3(0, 3.2, 0)  # above the name
 
 
 ## Resource Dispute: each cache is a stack of ore crates under an amber

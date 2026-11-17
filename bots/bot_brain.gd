@@ -79,6 +79,10 @@ var _noise_phase := Vector4.ZERO
 var _progress_pos := Vector3.ZERO
 var _progress_tick: int = 0
 var _stuck_stage: int = 0
+## THE HUNT: extraction pads this bot found it can't reach (zone index ->
+## until tick), so it carries to another (_stuck_recovery).
+var _blocked_zones: Dictionary = {}
+const BLOCKED_TICKS := 1800
 var _sidestep_until: int = 0
 var _traversal: int = T.NONE
 var _traversal_jumps: int = 0
@@ -250,8 +254,8 @@ func _perceive(tick: int, p: SimPlayer) -> void:
 		var o: SimPlayer = _world.players[id]
 		if not o.state.alive or (_world.teams_enabled and o.team == p.team):
 			continue
-		if _world.hunt != null and _world.hunt.protects(_id, id):
-			continue  # THE HUNT: our employer, our mercenary (later: allies)
+		if _world.hunt != null and _world.hunt.friendly(_id, id):
+			continue  # THE HUNT: our employer, our mercenary, our ally
 		var chest := o.state.position + Vector3(0.0, 1.2, 0.0)
 		var to := chest - eye
 		var d := to.length()
@@ -371,7 +375,7 @@ func _set_objective(at: Vector3) -> void:
 func _objective(p: SimPlayer) -> Vector3:
 	var s := p.state
 	if _world.hunt != null:
-		return _hunt_objective(p)
+		return _patient(p, _hunt_objective(p))
 	if hunt:
 		var best := Vector3.INF
 		var best_d := INF
@@ -407,7 +411,7 @@ func _hunt_objective(p: SimPlayer) -> Vector3:
 	var at := p.state.position
 	var tick := _world.tick
 	if h.carried_by(_id) != null:
-		return h.nearest_zone(at, tick)  # Last Extraction: only pads still open
+		return _reachable_zone(h, at, tick)  # Last Extraction: only pads still open
 	# Last Extraction: in the final phase, no new chases; only treasure we
 	# can still bank in time; otherwise contest the last pad, and leave it
 	# in the closing seconds instead of camping.
@@ -547,11 +551,18 @@ func _hunt_diplomacy(tick: int, p: SimPlayer) -> void:
 		h.request(_world, _id, "propose_alliance", {"target": target_id})
 
 
-## Double-Cross: a bot honours its alliance unless one defined reason
-## holds. Betray: the ally carries the grand treasure (or 100+ points) and
-## is badly hurt, we're healthy and close, and either time is short or we
-## trail it on points. Leave peacefully: the ally has been far away for a
-## while (the alliance no longer helps). Nothing random.
+## Double-Cross: a bot honours its alliance unless a reason that fits who
+## it is holds (HuntRules.personalities, docs/game-plan.md decision 3). It
+## never turns when the run says it may not (HuntRules.may_turn: the career
+## paces turns on you so they never become a pattern). Nothing random.
+##   grudge (its partner turned on it before): it settles the score when the
+##     partner is cashing in (extracting) or down to half strength, close by.
+##   ambitious: takes the grand treasure or a 100+ prize off a badly hurt
+##     partner when time is short or it trails on points.
+##   steady: only the grand treasure, only late, only off a beaten partner.
+##   loyal: never turns first.
+## Pacts (not squads) also end peacefully when the partner has been far
+## away for a while: the alliance no longer helps.
 func _keep_or_break(tick: int, p: SimPlayer) -> void:
 	var h := _world.hunt
 	var partner_id: int = h.social.allies[_id]
@@ -559,14 +570,13 @@ func _keep_or_break(tick: int, p: SimPlayer) -> void:
 	if partner == null or h.social.dissolving.has(_id):
 		return
 	var d := partner.state.position.distance_to(p.state.position)
-	var cargo := h.carried_by(partner_id)
-	if cargo != null and (cargo.kind == HuntRules.Kind.GRAND or HuntRules.value_for(cargo, _id) >= 100) \
-			and partner.state.shield + partner.state.health < HUNT_BETRAY_WEAK \
-			and p.state.shield + p.state.health >= HUNT_BOUNTY_MIN_HEALTH and d < 15.0 \
-			and (h.ticks_left(tick) < HUNT_BETRAY_LATE_TICKS or _world.scores.get(_id, 0) < _world.scores.get(partner_id, 0)):
-		h.request(_world, _id, "betray_alliance")
+	var reason := _turn_reason(tick, p, partner, d) if bool(h.may_turn.get(_id, true)) else ""
+	if reason != "":
+		h.request(_world, _id, "betray_alliance", {"reason": reason})
 		target_id = partner_id  # and go for the cargo (steal by melee)
 		return
+	if h.social.is_squad(_id):
+		return  # a squad splits up and meets again; it doesn't dissolve
 	if d > HUNT_ALLY_FAR:
 		if _ally_far_since < 0:
 			_ally_far_since = tick
@@ -577,6 +587,33 @@ func _keep_or_break(tick: int, p: SimPlayer) -> void:
 		_ally_far_since = -1
 
 
+## Why this bot would turn on `partner` now ("" for no reason): the forms
+## differ by character, so a turn is never the same scene twice.
+func _turn_reason(tick: int, p: SimPlayer, partner: SimPlayer, d: float) -> String:
+	var h := _world.hunt
+	var mine := p.state.shield + p.state.health
+	var theirs := partner.state.shield + partner.state.health
+	if mine < HUNT_BOUNTY_MIN_HEALTH or d > 15.0:
+		return ""
+	var cargo := h.carried_by(partner.net_id)
+	if bool(h.grudges.get(_id, false)):
+		if cargo != null and (int(h.extract_progress.get(partner.net_id, 0)) > 0 or theirs < HUNT_BETRAY_WEAK * 1.5):
+			return "grudge"
+		return ""
+	if cargo == null:
+		return ""
+	var late := h.ticks_left(tick) < HUNT_BETRAY_LATE_TICKS
+	match str(h.personalities.get(_id, "ambitious")):
+		"ambitious":
+			if (cargo.kind == HuntRules.Kind.GRAND or HuntRules.value_for(cargo, _id) >= 100) and theirs < HUNT_BETRAY_WEAK \
+					and (late or _world.scores.get(_id, 0) < _world.scores.get(partner.net_id, 0)):
+				return "prize"
+		"steady":
+			if cargo.kind == HuntRules.Kind.GRAND and theirs < HUNT_BETRAY_WEAK * 0.6 and late:
+				return "grand"
+	return ""
+
+
 func _visible_rivals(p: SimPlayer) -> int:
 	var n := 0
 	var eye := p.eye_position()
@@ -585,7 +622,7 @@ func _visible_rivals(p: SimPlayer) -> int:
 		var o: SimPlayer = _world.players[id]
 		if id == _id or not o.state.alive or o.state.position.distance_to(p.state.position) > 30.0:
 			continue
-		if _world.hunt.protects(_id, id):
+		if _world.hunt.friendly(_id, id):
 			continue
 		if space.intersect_ray(PhysicsRayQueryParameters3D.create(eye, o.state.position + Vector3(0, 1.2, 0), Sim.LAYER_WORLD)).is_empty():
 			n += 1
@@ -838,6 +875,67 @@ func _traversal_inputs(p: SimPlayer, move: Vector3) -> int:
 
 ## No progress for 90 ticks → jump, then sidestep, then re-path, then
 ## teleport to the nearest navmesh point (last resort, logged).
+## Progress toward the objective: a target the bot gets no closer to in
+## PATIENCE_TICKS is out of reach from where it is (a ledge the navmesh
+## thinks is a ramp). A pad is given up for BLOCKED_TICKS (a carrier takes
+## another); anything else for a while, roaming somewhere else meanwhile.
+const PATIENCE_TICKS := 900
+var _aim_target := Vector3.INF
+var _aim_best := INF
+var _aim_since: int = 0
+var _avoid_target := Vector3.INF
+var _avoid_until: int = 0
+
+
+func _patient(p: SimPlayer, target: Vector3) -> Vector3:
+	var tick := _world.tick
+	if target == Vector3.INF:
+		_aim_target = Vector3.INF
+		return target
+	if _avoid_target != Vector3.INF and tick < _avoid_until and target.distance_to(_avoid_target) < 4.0:
+		return Vector3.INF  # roam elsewhere first
+	if _aim_target == Vector3.INF or target.distance_to(_aim_target) > 4.0:
+		_aim_target = target
+		_aim_best = INF
+		_aim_since = tick
+	var d := p.state.position.distance_to(target)
+	if d < _aim_best - 2.0:
+		_aim_best = d
+		_aim_since = tick
+	elif tick - _aim_since > PATIENCE_TICKS and d > 2.5:
+		var zone := _zone_near(target)
+		if zone >= 0 and _world.hunt.carried_by(_id) != null:
+			_blocked_zones[zone] = tick + BLOCKED_TICKS
+		else:
+			_avoid_target = target
+			_avoid_until = tick + PATIENCE_TICKS * 2
+		_aim_target = Vector3.INF
+		_last_repath = -100000
+		return _patient(p, _hunt_objective(p))
+	return target
+
+
+## The nearest open pad this bot hasn't found unreachable (INF if all of
+## them are: it moves elsewhere and tries again once the block expires).
+func _reachable_zone(h: HuntRules, at: Vector3, tick: int) -> Vector3:
+	var best := Vector3.INF
+	for i in h.zones.size():
+		if not h.zone_open(i, tick) or int(_blocked_zones.get(i, -1)) > tick:
+			continue
+		if best == Vector3.INF or at.distance_squared_to(h.zones[i]) < at.distance_squared_to(best):
+			best = h.zones[i]
+	return best  # INF when every open pad is out of reach from here: roam, then try again
+
+
+## The index of the pad nearest `where` (-1 if none within 20 m).
+func _zone_near(where: Vector3) -> int:
+	var h := _world.hunt
+	for i in h.zones.size():
+		if HuntRules._flat(h.zones[i], where) < 20.0:
+			return i
+	return -1
+
+
 func _stuck_recovery(tick: int, p: SimPlayer, move: Vector3) -> Vector3:
 	if tick < _sidestep_until:
 		return Vector3(-move.z, 0.0, move.x) if move.length_squared() > 0.01 else Vector3.RIGHT
@@ -863,9 +961,16 @@ func _stuck_recovery(tick: int, p: SimPlayer, move: Vector3) -> Vector3:
 				_last_repath = -100000
 			_:
 				var spot := _nav.closest_point(p.state.position + Vector3(0.0, 1.0, 0.0))
-				_world.teleport(p, spot + Vector3(0.0, 0.1, 0.0))
-				stuck_teleports += 1
-				print("BOT %d stuck at %s: teleported to %s" % [_id, p.state.position, spot])
+				if spot.distance_to(p.state.position) < 1.5 and _world.hunt != null:
+					# On the navmesh already, and still no way on: the place it
+					# heads for can't be reached from here. Give up on it for a
+					# while (a carrier picks another pad) rather than loop.
+					_blocked_zones[_zone_near(_path_goal)] = tick + BLOCKED_TICKS
+					_last_repath = -100000
+				else:
+					_world.teleport(p, spot + Vector3(0.0, 0.1, 0.0))
+					stuck_teleports += 1
+					print("BOT %d stuck at %s: teleported to %s" % [_id, p.state.position, spot])
 				_stuck_stage = 0
 				_path = []
 	_progress_pos = p.state.position

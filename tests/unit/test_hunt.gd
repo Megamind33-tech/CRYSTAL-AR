@@ -308,8 +308,15 @@ func test_match_scene_runs_the_hunt() -> void:
 	assert_eq(m.server.time_limit_ticks, GameMode.HUNT_MINUTES * 60 * Sim.TICK_RATE)
 	assert_true(WeaponSim.limited_ammo)
 	assert_eq(m.hunt_visuals._cases.size(), 1 + 2 * (GameMode.HUNT_BOTS + 1), "a case per treasure")
+	var runs: int = Profile.career().d.runs
+	Profile.career().d.runs = 0
+	m._update_objective()
+	assert_string_contains(m.hud._objective, tr("GUIDE_RUN_CARGO"), "a first run is guided, one step at a time")
+	assert_string_contains(m.hud._objective, " m", "with the distance")
+	Profile.career().d.runs = 3
 	m._update_objective()
 	assert_string_contains(m.hud._objective, tr("HUNT_OBJ_FIND") % 2, "the objective line counts our treasures")
+	Profile.career().d.runs = runs
 	# The contracts menu: its rows call HuntRules.request(), like the bots.
 	assert_not_null(m.hunt_menu, "the contracts menu is there")
 	assert_gte(m.hunt_menu._rows.size(), 7, "hire, four orders, dismiss, bounty")

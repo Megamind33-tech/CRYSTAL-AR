@@ -699,6 +699,8 @@ func _damage(target: SimPlayer, attacker_id: int, amount: float, headshot: bool,
 		"attacker": attacker_id, "target": target.net_id, "amount": r.shield_damage + r.health_damage,
 		"headshot": headshot, "shield_broken": r.shield_broken, "killed": r.killed,
 	})
+	if hunt != null and attacker_id != target.net_id and attacker_id != 0:
+		hunt.on_damage(self, attacker_id, target.net_id, r.shield_damage + r.health_damage, r.killed)
 	if attacker_id != target.net_id:
 		var dmg_log: Array = _damage_log.get(target.net_id, [])
 		dmg_log.append([attacker_id, r.shield_damage + r.health_damage, tick])

@@ -267,7 +267,8 @@ static func fresh() -> Dictionary:
 			"trade": {"chain": 0, "sold": 0, "learned": [], "clients": {}, "orders": [], "dealers": {}, "order_at": 0},
 			"heist": {}, "heists_done": {},
 			"feed": [], "fame": 0, "partner": {},
-			"cosmetics": ["emote_dance", "emote_talk"], "equipped": {}, "season": {"xp": 0, "claimed": []}}
+			"cosmetics": ["emote_dance", "emote_talk"], "equipped": {}, "season": {"xp": 0, "claimed": []},
+			"nation": "", "nation_standing": 0, "squad": {}, "last_turned_run": -100, "guide": 0}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -310,6 +311,12 @@ func normalize() -> void:
 	d.oxygen = float(d.oxygen)
 	d.fatigue = float(d.fatigue)
 	d.water = float(d.get("water", 100.0))
+	d.nation_standing = int(d.nation_standing)
+	d.last_turned_run = int(d.last_turned_run)
+	d.guide = int(d.guide)
+	for who in d.squad:
+		for k in ["runs", "turned_on_me", "i_turned"]:
+			d.squad[who][k] = int(d.squad[who].get(k, 0))
 	d["food"] = float(d.get("food", 100.0))
 	for k in d.jobs_done:
 		d.jobs_done[k] = int(d.jobs_done[k])
@@ -1912,3 +1919,106 @@ func caught_stealing() -> void:
 	d.wallet = maxi(d.wallet - SEARCH_FINE, 0)
 	_trust("farmer", -15)
 	_standing("kasei", -10)
+
+
+# --- Nation and squad (docs/game-plan.md) ---
+
+## Runs between two turns on you by a squadmate (decision 3: never a
+## pattern), and standing lost for turning on your own squad.
+const TURN_GAP_RUNS := 3
+const TURN_STANDING := -25
+const RUN_STANDING := 5  ## a run where the squad held together
+
+
+## Your nation (Nations index), NONE until you choose on arrival.
+func nation() -> int:
+	return Nations.index_of(str(d.nation))
+
+
+func choose_nation(i: int) -> bool:
+	if i < 0 or i >= Nations.IDS.size():
+		return false
+	d.nation = Nations.IDS[i]
+	return true
+
+
+## The first run is the guided one: nobody turns on you and nothing is
+## taken if you fall (you're learning).
+func guided_run() -> bool:
+	return int(d.runs) == 0
+
+
+## This run's squadmate from your nation's roster: never someone who turned
+## on you (they're gone, a renegade), otherwise a different face each run
+## where the roster allows, people you've met coming back.
+func pick_squadmate(seed_value: int) -> String:
+	var roster: Array = Nations.names(nation())
+	if roster.is_empty():
+		return ""
+	var ok := roster.filter(func(n: String) -> bool: return int(_mate(n).turned_on_me) == 0)
+	if ok.is_empty():
+		ok = roster
+	var fresh := ok.filter(func(n: String) -> bool: return n != str(d.get("last_mate", "")))
+	if not fresh.is_empty():
+		ok = fresh  # never the same face twice in a row
+	return ok[absi(seed_value) % ok.size()]
+
+
+func _mate(who: String) -> Dictionary:
+	return d.squad.get(who, {"runs": 0, "turned_on_me": 0, "i_turned": 0})
+
+
+## Whether `who` holds a grudge: you turned on them and they haven't paid
+## you back yet.
+func grudge(who: String) -> bool:
+	return int(_mate(who).i_turned) > 0
+
+
+## Whether this run's squadmate may turn on you at all (its own character
+## still decides if it does, BotBrain): never on the guided run; always to
+## settle a grudge; otherwise only TURN_GAP_RUNS after the last time.
+func squadmate_may_turn(who: String) -> bool:
+	if guided_run():
+		return false
+	if grudge(who):
+		return true
+	return int(d.runs) - int(d.last_turned_run) >= TURN_GAP_RUNS
+
+
+## After a run with `who`: "" (held together), "turned_on_me", "i_turned".
+func record_squad_run(who: String, outcome: String) -> void:
+	if who.is_empty():
+		return
+	var m := _mate(who)
+	m.runs = int(m.runs) + 1
+	d["last_mate"] = who
+	match outcome:
+		"turned_on_me":
+			m.turned_on_me = int(m.turned_on_me) + 1
+			m.i_turned = 0  # a grudge settled is a grudge gone
+			d.last_turned_run = int(d.runs)
+		"i_turned":
+			m.i_turned = int(m.i_turned) + 1
+			d.nation_standing = int(d.nation_standing) + TURN_STANDING
+		_:
+			d.nation_standing = int(d.nation_standing) + RUN_STANDING
+	d.squad[who] = m
+
+
+## Down in a run: robbed (decision 4). The pack (everything in it: goods,
+## weapons, spares), the armed gun and the gear upgrades are gone; clothes
+## and helmet (cosmetics) stay, and so do the wallet, the home locker and
+## the rover's hold. Your nation re-issues the Pulse. Not on the guided
+## run. Returns what was taken: {"items": {item: n}, "gear": {kind: level}}.
+func robbed() -> Dictionary:
+	var out := {"items": {}, "gear": {}}
+	if guided_run():
+		return out
+	out.items = d.stash.duplicate()
+	for k in d.gear:
+		if int(d.gear[k]) > 0:
+			out.gear[k] = int(d.gear[k])
+		d.gear[k] = 0
+	d.stash.clear()
+	d.armed = ""
+	return out

@@ -252,6 +252,16 @@ func add_bot(bot_name: String, driver: RefCounted) -> SimPlayer:
 	return p
 
 
+## A bot takes a name (THE HUNT: the people of its nation's roster).
+func rename_bot(id: int, new_name: String) -> void:
+	var p: SimPlayer = world.players.get(id)
+	if p == null or not p.is_bot:
+		return
+	p.display_name = new_name
+	stats.add_player(id, new_name, true, world.tick)
+	_broadcast_roster()
+
+
 ## Co-op: one bot of the current wave, hunting the humans.
 func add_wave_bot(difficulty: int) -> SimPlayer:
 	var bot_name: String = BOT_NAMES[_bot_seq % BOT_NAMES.size()]

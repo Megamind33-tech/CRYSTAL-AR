@@ -234,3 +234,88 @@ func test_scavenge_and_theft() -> void:
 	c.steal_algae(2)
 	c.caught_stealing()
 	assert_false(c.d.stash.has("algae_culture"), "the guards took it back")
+
+
+# --- Nation, squad and robbery (docs/game-plan.md) ---
+
+func test_choosing_a_nation() -> void:
+	var c := Career.new()
+	assert_eq(c.nation(), Nations.NONE, "nobody's until you choose")
+	assert_true(c.choose_nation(2))
+	assert_eq(c.nation(), 2)
+	assert_false(c.choose_nation(9), "only the four")
+	assert_eq(Career.new(c.d).nation(), 2, "it's saved")
+
+
+func test_robbed_down_to_clothes_and_helmet() -> void:
+	var c := Career.new()
+	c.d.runs = 3
+	c.d.stash = {"rail_sniper": 1, "medkit": 2, "rare_ore": 4}
+	c.d.armed = "rail_sniper"
+	c.d.gear = {"plating": 2, "ammo": 1}
+	c.d.cosmetics.append("helmet_visor")
+	c.d.home.locker = {"refined_ingot": 3}
+	var wallet: int = c.d.wallet
+	var lost := c.robbed()
+	assert_eq(lost.items, {"rail_sniper": 1, "medkit": 2, "rare_ore": 4}, "the whole pack")
+	assert_eq(lost.gear, {"plating": 2, "ammo": 1}, "and the upgrades")
+	assert_true(c.d.stash.is_empty())
+	assert_eq(c.d.armed, "", "back to the issued Pulse")
+	assert_eq(c.primary_index(), 0)
+	assert_true("helmet_visor" in c.d.cosmetics, "clothes and helmet stay")
+	assert_eq(c.d.home.locker, {"refined_ingot": 3}, "the locker at home is safe")
+	assert_eq(c.d.wallet, wallet, "and the money")
+
+
+func test_the_guided_run_is_insured() -> void:
+	var c := Career.new()
+	c.d.stash = {"medkit": 1}
+	assert_true(c.guided_run())
+	assert_true(c.robbed().items.is_empty(), "nothing is taken on your first run")
+	assert_eq(c.d.stash, {"medkit": 1})
+	c.choose_nation(0)
+	assert_false(c.squadmate_may_turn(c.pick_squadmate(5)), "and nobody turns on you")
+
+
+func test_turns_on_you_are_paced_and_never_by_the_same_person() -> void:
+	var c := Career.new()
+	c.choose_nation(1)
+	c.d.runs = 5
+	var mate := c.pick_squadmate(11)
+	assert_true(mate in Nations.names(1))
+	assert_true(c.squadmate_may_turn(mate))
+	c.record_squad_run(mate, "turned_on_me")
+	for s in 40:
+		assert_ne(c.pick_squadmate(s), mate, "who turned on you is never your squadmate again")
+	var next := c.pick_squadmate(12)
+	assert_false(c.squadmate_may_turn(next), "not again right away")
+	c.d.runs = 5 + Career.TURN_GAP_RUNS
+	assert_true(c.squadmate_may_turn(next), "only after a while")
+
+
+func test_turning_on_your_squad_costs_and_is_remembered() -> void:
+	var c := Career.new()
+	c.choose_nation(0)
+	c.d.runs = 4
+	var mate := c.pick_squadmate(3)
+	var standing: int = c.d.nation_standing
+	c.record_squad_run(mate, "i_turned")
+	assert_eq(c.d.nation_standing, standing + Career.TURN_STANDING, "your nation notices")
+	assert_true(c.grudge(mate), "and so do they")
+	c.d.last_turned_run = c.d.runs  # even right after a turn
+	assert_true(c.squadmate_may_turn(mate), "a grudge may be settled any time")
+	c.record_squad_run(mate, "turned_on_me")
+	assert_false(c.grudge(mate), "settled")
+	c.record_squad_run(c.pick_squadmate(4), "")
+	assert_eq(c.d.nation_standing, standing + Career.TURN_STANDING + Career.RUN_STANDING, "a run together pays")
+
+
+func test_a_new_squadmate_each_run() -> void:
+	var c := Career.new()
+	c.choose_nation(3)
+	var last := ""
+	for run in 12:
+		var mate := c.pick_squadmate(run * 31)
+		assert_ne(mate, last, "never the same face twice in a row")
+		c.record_squad_run(mate, "")
+		last = mate

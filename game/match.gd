@@ -257,9 +257,12 @@ func _ready() -> void:
 			elif MatchConfig.spawn_at != Vector3.INF:
 				server.world.add_vehicle(MatchConfig.spawn_at + Vector3(5, 0.3, 0), PI)
 			add_child(RoverVisuals.new())
-		# THE HUNT: the career's gear goes on before the first spawn.
+		# THE HUNT: the career's gear goes on before the first spawn, and
+		# your nation seats the run (docs/game-plan.md).
 		if server.world.hunt != null:
 			server.world.hunt.gear[ServerSession.LOCAL_PLAYER_ID] = Profile.career().loadout()
+			if Profile.career().nation() != Nations.NONE:
+				server.world.hunt.home_nations = {ServerSession.LOCAL_PLAYER_ID: Profile.career().nation()}
 		var nav := BotNavigation.new()
 		nav.name = "BotNavigation"
 		add_child(nav)
@@ -595,6 +598,7 @@ func _process(delta: float) -> void:
 			server.world.teleport(me, _arrival)
 			_arrival = Vector3.INF
 			_bring_companion()
+	_setup_squad()
 	_update_aim_assist(delta)
 	if city != null:
 		city.update()
@@ -1318,6 +1322,14 @@ func _nearest_wanted() -> int:
 func _update_hunt_objective(h: HuntRules, tick: int) -> void:
 	var me := local_id()
 	var carried := h.carried_by(me)
+	# The guided first run (Guide): one step at a time, with the distance.
+	var career := Profile.career()
+	if int(career.d.runs) == 0 and h.extract_progress.get(me, 0) == 0 and h.social.proposals.get(me, {}).is_empty():
+		var at := _position_of(me)
+		var obj := Guide.run_objective(career, h, me, at, tick)
+		hud.set_objective(tr("GUIDE_STEP") % obj.step + "  " + str(obj.text) + Guide.distance_text(at, obj.target),
+				UiStyle.ACCENT)
+		return
 	if carried != null:
 		var what := _treasure_name(carried, me)
 		var progress: int = h.extract_progress.get(me, 0)
@@ -1385,6 +1397,72 @@ func _treasure_name(t: HuntRules.Treasure, me: int) -> String:
 
 
 ## THE HUNT events: kill-feed lines, captions and cues.
+## THE HUNT's squad (docs/game-plan.md): once the run has seated its
+## nations, the AI take names from their nations' rosters and their
+## characters (Nations.personality), and your squadmate the career's pacing
+## (whether it may turn on you this run, and any grudge it holds).
+var _squad_done := false
+var _squadmate := ""       ## this run's squadmate's name
+var _squad_outcome := ""   ## "", "turned_on_me" or "i_turned" (Career.record_squad_run)
+
+
+func _setup_squad() -> void:
+	if _squad_done or server == null or server.world.hunt == null or server.world.hunt.nations.is_empty():
+		return
+	_squad_done = true
+	var h := server.world.hunt
+	var career := Profile.career()
+	var me := ServerSession.LOCAL_PLAYER_ID
+	var mate: int = h.social.allies.get(me, 0) if h.social.is_squad(me) else 0
+	var used := {}
+	if mate != 0:
+		_squadmate = career.pick_squadmate(server.world.match_seed)
+		used[_squadmate] = true
+	var ids: Array = h.nations.keys()
+	ids.sort()
+	for id: int in ids:
+		var p: SimPlayer = server.world.players.get(id)
+		if p == null or not p.is_bot:
+			continue
+		var who := _squadmate if id == mate else _roster_name(h.nation_of(id), used, server.world.match_seed + id)
+		if who.is_empty():
+			continue
+		used[who] = true
+		server.rename_bot(id, who)
+		h.personalities[id] = Nations.personality(who)
+		_rebuild[id] = true  # the body and nameplate take the new name and colours
+	if mate != 0:
+		h.may_turn[mate] = career.squadmate_may_turn(_squadmate)
+		h.grudges[mate] = career.grudge(_squadmate)
+		var line := tr("SQUAD_GRUDGE") if career.grudge(_squadmate) else tr("SQUAD_WITH")
+		_kill_feed.add_note(_squadmate, line, Nations.color(career.nation()), true)
+
+
+func _roster_name(nation: int, used: Dictionary, seed_value: int) -> String:
+	var free := Nations.names(nation).filter(func(n: String) -> bool: return not used.has(n))
+	return free[absi(seed_value) % free.size()] if not free.is_empty() else ""
+
+
+## Down at someone's hands in a run or out in the valley: robbed (Career
+## .robbed, decision 4). The Marshals' arrest is its own thing (busted).
+func _on_local_death(e: Dictionary) -> void:
+	if server == null or (config.game_mode != GameMode.HUNT and config.game_mode != GameMode.CITY):
+		return
+	var killer := int(e.killer)
+	if killer == 0 or killer == local_id() or _display_name(killer).contains("Marshal·"):
+		return
+	var lost := Profile.career().robbed()
+	if lost.items.is_empty() and lost.gear.is_empty():
+		return
+	config.primary = 0
+	server.set_primary(local_id(), 0)  # your nation re-issues the Pulse
+	Profile.save()
+	var n := 0
+	for k: String in lost.items:
+		n += int(lost.items[k])
+	_kill_feed.add_note(tr("ROBBED_TITLE"), tr("ROBBED_TEXT") % n, UiStyle.DANGER, true)
+
+
 func _on_hunt_event(e: Dictionary, me: int) -> void:
 	var who := _display_name(e.player) if e.player != 0 else ""
 	var color := HuntVisuals.GRAND if e.kind == HuntRules.Kind.GRAND else (HuntVisuals.ALARM if e.kind == HuntRules.Kind.PROOF \
@@ -1505,9 +1583,24 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 		"alliance_betrayed":
 			_kill_feed.add_note(who, tr("HUNT_FEED_BETRAYED") % _display_name(e.target), UiStyle.WARN,
 					e.player == me or e.target == me)
+			if e.get("squad", false) and (e.player == me or e.target == me):
+				_squad_outcome = "i_turned" if e.player == me else "turned_on_me"
 			if e.target == me:
 				audio.play_ui("shield_break")
-				hud.show_caption(tr("HUNT_BETRAYED_YOU") % who)
+				# Each way of turning reads as what it is (never the same scene).
+				var key: String = {"fire": "HUNT_TURNED_FIRE", "grudge": "HUNT_TURNED_GRUDGE", "prize": "HUNT_TURNED_PRIZE",
+						"grand": "HUNT_TURNED_GRAND"}.get(str(e.get("reason", "")), "HUNT_BETRAYED_YOU")
+				hud.show_caption(tr(key) % who)
+			elif e.player == me and e.get("squad", false):
+				hud.show_caption(tr("HUNT_YOU_TURNED") % _display_name(e.target))
+			return
+		"squad_formed":
+			return
+		"friendly_fire":
+			if e.player == me:
+				hud.show_caption(tr("HUNT_FF_HOLD") % _display_name(e.target))
+			elif e.target == me:
+				hud.show_caption(tr("HUNT_FF_WATCH") % who)
 			return
 		"cooperation_bonus":
 			_kill_feed.add_note(who, tr("HUNT_FEED_COOP_BONUS") % e.points, UiStyle.GOOD, e.player == me)
@@ -1548,6 +1641,8 @@ func _settle_career(result_id: String, me: int) -> void:
 	if server == null or server.world.hunt == null or result_id.is_empty():
 		return
 	var career := Profile.career()
+	if not result_id in career.d.settled:
+		career.record_squad_run(_squadmate, _squad_outcome)  # before settle counts the run
 	var report := career.settle(result_id, server.world.hunt.haul.get(me, []))
 	if report.applied:
 		career.d["last_report"] = report
@@ -1732,6 +1827,9 @@ func _visual_for(id: int, display_name: String, is_bot: bool, character: int, co
 	var color: Color = GameMode.team_color(team) if team < 2 else PlayerVisual.color_for(id, color_pick, is_bot)
 	if id == local_id() and _game_mode() == GameMode.CITY and CityStyle.suit_color() != null:
 		color = CityStyle.suit_color()  # the suit you wear (the Style menu)
+	var nation := _nation_of(id)
+	if nation != Nations.NONE:
+		color = Nations.color(nation)  # a run: everyone wears their nation's colours
 	if v != null and (v.rig_style != style or v.color != color or _rebuild.has(id)):
 		_rebuild.erase(id)
 		v.queue_free()
@@ -1751,7 +1849,18 @@ func _visual_for(id: int, display_name: String, is_bot: bool, character: int, co
 		_visuals[id] = v
 		v.face_movement = _game_mode() == GameMode.HUNT or _game_mode() == GameMode.CITY
 		v.holstered = _game_mode() == GameMode.CITY and (city == null or not city.raid_on())
+	if nation != Nations.NONE:
+		v.nameplate_color = Nations.color(nation).lightened(0.25)
+		v.nameplate_nation = nation
+		v.nameplate_squad = id != local_id() and server.world.hunt.social.allied(local_id(), id)
 	return v
+
+
+## A hunter's nation in a run (Nations.NONE outside one).
+func _nation_of(id: int) -> int:
+	if server == null or server.world.hunt == null:
+		return Nations.NONE
+	return server.world.hunt.nation_of(id)
 
 
 static func _is_friend_name(n: String) -> bool:
@@ -1889,6 +1998,7 @@ func _handle_event(e: Dictionary) -> void:
 			if e.victim == me:
 				_death_cam = {"pos": e.position + Vector3(0.0, 1.6, 0.0), "killer": e.killer,
 						"until": _time + DEATH_CAM_SECONDS, "suicide": e.suicide}
+				_on_local_death(e)
 		"results":
 			_results.show_results(e, -1 if spectating() else me)
 			_results_applied = true

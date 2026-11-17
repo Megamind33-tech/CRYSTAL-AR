@@ -32,6 +32,8 @@ var color := Color.WHITE
 var nameplate_text := ""
 var nameplate_color := Color.WHITE
 var nameplate_team := -1
+var nameplate_nation := -1  ## THE HUNT: Nations index (its colour and shape)
+var nameplate_squad := false  ## your squadmate: seen through walls, from further
 var nameplate_shown := true
 var bar_fraction := 1.0
 var bar_on_shield := true
@@ -59,6 +61,7 @@ const TURN_RATE := 11.0
 const SHIELD_SHADER := preload("res://presentation/shield.gdshader")
 ## Past this nameplates fade out: unreadable on a phone anyway.
 const NAMEPLATE_RANGE := 30.0  ## metres
+const SQUAD_RANGE := 120.0  ## your squadmate's name, through walls
 const SHELL_SECONDS := 0.3
 ## Animation detail (CharacterRig.set_detail), by distance from the camera:
 ## the arms hold the weapon by IK within IK_RANGE (a metre either side

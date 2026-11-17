@@ -159,7 +159,10 @@ static func canyon(x: float, off: float = 0.0) -> Vector3:
 static func dig_hunt_data() -> Dictionary:
 	var spots: Array[Vector3] = []
 	for x in [130.0, 155.0, 180.0, 205.0, 260.0, 280.0, 320.0]:
-		spots.append(canyon(x, -6.0 if int(x) % 2 == 0 else 6.0))
+		# Beside the channel, on the floor (x = 320's south side is 3.5 m up
+		# the wall, out of reach on foot: its cargo lies on the north side).
+		var off := -6.0 if int(x) % 2 == 0 else 6.0
+		spots.append(canyon(x, 6.0 if x == 320.0 else off))
 	for p: Vector2 in [Vector2(170, 112), Vector2(250, 98), Vector2(300, 82), Vector2(150, 238),
 			Vector2(215, 232), Vector2(280, 200), Vector2(110, 150), Vector2(330, 165), Vector2(235, 120)]:
 		spots.append(WorldTerrain.at(p.x, p.y))

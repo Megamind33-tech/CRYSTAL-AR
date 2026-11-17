@@ -616,8 +616,9 @@ func test_allies_share_the_vault_and_cooperation_pays_modestly() -> void:
 	assert_true(h.request(world, 1, "propose_alliance", {"target": 2}))
 	assert_true(h.request(world, 2, "respond_alliance", {"accept": true}))
 	assert_true(h.social.allied(1, 2))
-	assert_false(world._can_hurt(1, pl[1]) or world._can_hurt(2, pl[0]), "allies can't hurt each other")
-	assert_true(world._can_hurt(1, pl[2]), "others still can")
+	assert_true(h.friendly(1, 2) and h.friendly(2, 1), "allies don't target each other")
+	assert_false(h.friendly(1, 3), "others are fair game")
+	assert_true(world._can_hurt(1, pl[1]), "but anyone can turn on anyone (friendly fire is on)")
 	SimHarness.place(pl[1], VAULT + Vector3(3, 0.05, 0), 0.0)  # the ally is inside the vault
 	var c1: int = h.economy.credits[1]
 	var c2: int = h.economy.credits[2]
@@ -685,7 +686,7 @@ func test_leaving_peacefully_keeps_protection_briefly_and_costs_nothing() -> voi
 	_ally(1, 2)
 	assert_true(h.request(world, 1, "leave_alliance"))
 	_step(HuntSocial.DISSOLVE_GRACE_TICKS - 10)
-	assert_false(world._can_hurt(1, pl[1]), "still protected during the notice")
+	assert_true(h.friendly(1, 2), "still allies during the notice")
 	_step(20)
 	assert_false(h.social.allied(1, 2), "then it ends")
 	assert_eq(h.social.rep_of(1), HuntSocial.START_REPUTATION, "no penalty for leaving honestly")
@@ -794,3 +795,69 @@ func test_bots_buy_intel_when_idle_and_use_it_not_live_positions() -> void:
 	var r: Dictionary = h.economy.intel_of(2, world.tick)[0]
 	assert_eq(bot._intel_lead(pl[1]), r.position, "then follows the report, not the live position")
 	assert_ne(r.position, pl[2].state.position)
+
+
+# --- Nations, squads and friendly fire (docs/game-plan.md) ---
+
+func test_nations_seat_every_hunter_and_squad_the_human() -> void:
+	var seats := Nations.seat([1, 1000, 1001, 1002, 1003, 1004], {1: 2}, 77)
+	assert_eq(seats[1], 2, "the human keeps their nation")
+	assert_eq(seats[1000], 2, "the first AI is the human's squadmate")
+	var counts := {}
+	for id: int in seats:
+		counts[seats[id]] = int(counts.get(seats[id], 0)) + 1
+	assert_eq(counts.size(), 4, "all four nations take part")
+	assert_eq(Nations.seat([1, 1000, 1001, 1002, 1003, 1004], {1: 2}, 77), seats, "the same seed seats the same way")
+	assert_ne(Nations.seat([1, 1000, 1001, 1002, 1003, 1004], {1: 2}, 78), seats, "another run, other rivals")
+
+
+func test_a_runs_squads_start_allied() -> void:
+	var pl := _hunters(3)
+	h.home_nations = {1: 0}
+	h.reset(world)
+	var mate: int = h.social.allies.get(1, 0)
+	assert_ne(mate, 0, "the human starts with a squadmate")
+	assert_eq(h.nation_of(mate), 0, "of their own nation")
+	assert_true(h.social.is_squad(1))
+	assert_true(h.friendly(1, mate))
+	assert_eq(pl.size(), 3)
+
+
+func test_friendly_fire_warns_then_turns() -> void:
+	var pl := _hunters(2)
+	h.social.form(world, 1, 2)
+	world.drain_events()
+	world._damage(pl[1], 1, 10.0, false, Weapons.at(Weapons.PULSE), 1)
+	assert_true(h.social.allied(1, 2), "a stray hit is only a warning")
+	assert_eq(_events("friendly_fire").size(), 1)
+	world._damage(pl[1], 1, 40.0, false, Weapons.at(Weapons.PULSE), 2)
+	assert_false(h.social.allied(1, 2), "keep shooting and you've turned on them")
+	var turned := _events("alliance_betrayed")
+	assert_eq(turned.size(), 1)
+	assert_eq(turned[0].player, 1, "the shooter is the betrayer")
+	assert_eq(turned[0].reason, "fire")
+	assert_true(turned[0].squad)
+	assert_true(h.social.is_wanted(1), "with a bounty")
+
+
+func test_a_squadmate_the_run_forbids_never_turns() -> void:
+	var pl := _hunters(2)
+	h.social.form(world, 1, 2)
+	h.personalities[2] = "ambitious"
+	h.may_turn[2] = false
+	var brain := BotBrain.new(world, null, 2, 1)
+	pl[0].state.health = 10.0
+	pl[0].state.shield = 0.0
+	pl[1].state.health = 100.0
+	pl[1].state.shield = 100.0
+	SimHarness.place(pl[1], pl[0].state.position + Vector3(3, 0, 0), 0.0)
+	h.grand().carrier = 1  # the prize, on a beaten partner, late in the run
+	brain._keep_or_break(world.tick, pl[1])
+	assert_true(h.social.allied(1, 2), "the career said not this run")
+	h.may_turn[2] = true
+	h.personalities[2] = "loyal"
+	brain._keep_or_break(world.tick, pl[1])
+	assert_true(h.social.allied(1, 2), "the loyal never turn first")
+	h.grudges[2] = true
+	brain._keep_or_break(world.tick, pl[1])
+	assert_false(h.social.allied(1, 2), "but a grudge is settled")
