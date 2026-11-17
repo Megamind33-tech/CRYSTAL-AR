@@ -1155,3 +1155,5 @@ SEARCH_PACK,Pack: %s
 SEARCH_HOLD,Vehicle hold: %s
 SEARCH_HOME,Home locker: %s
 SCAN_LINE,%s · %d
+# rubies
+SHELF_BUY_RUBIES,Buy · %d rubies
