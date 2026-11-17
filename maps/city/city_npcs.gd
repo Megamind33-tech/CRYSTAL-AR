@@ -111,6 +111,31 @@ func _ready() -> void:
 		var s := _state(path[0], 0.0)
 		_walkers.append([v, s, path, 1])
 		i += 1
+	# Titan's settlement block: the people who live and work in its
+	# buildings, on routines with stops (TitanSettlement), and at posts.
+	for r: Array in TitanSettlement.ROUTINES:
+		var bp := TitanSettlement.piece(r[0])
+		if bp.is_empty():
+			continue
+		var path := []
+		var stops := []
+		for st: Array in r[3]:
+			path.append(TitanSettlement.to_world(bp, st[0], st[1]))
+			stops.append([float(st[2]), TitanSettlement.to_yaw(bp, st[3])])
+		var rv := _body("", COLORS[int(r[2]) % COLORS.size()], i, true, r[1])
+		_light_weight.call_deferred(rv)
+		_walkers.append([rv, _state(path[0], 0.0), path, 1, stops])
+		i += 1
+	for post: Array in TitanSettlement.POSTS:
+		var bp := TitanSettlement.piece(post[0])
+		if bp.is_empty():
+			continue
+		var at := TitanSettlement.to_world(bp, post[3], post[4])
+		var pv := _body("", COLORS[int(post[2]) % COLORS.size()], i, true, post[1])
+		pv.face_movement = false
+		var ps := _state(at, TitanSettlement.to_yaw(bp, post[5]))
+		_vendors.append([pv, ps, ps.yaw, "", at])
+		i += 1
 	# The Kasei Marshals walk their beat round the plaza and past the gate.
 	for path: Array in CityLayout.patrols():
 		var mv := _body("", COLORS[5], i, true, "marshal")
@@ -420,6 +445,7 @@ func _process_people(delta: float) -> void:
 				_mood.erase(v)
 				s.stance = PlayerSimState.Stance.STAND
 				s.sprinting = false
+				v.face_movement = true
 				mode = "walk"
 		# Someone walking into you: they stop, step aside, say so.
 		if mode == "walk" and player_position != Vector3.INF and s.position.distance_to(player_position) < 1.4:
@@ -437,7 +463,12 @@ func _process_people(delta: float) -> void:
 				var to := target - s.position
 				to.y = 0.0
 				if to.length() < 0.3:
-					w[3] = (int(w[3]) + 1) % (w[2] as Array).size()
+					var reached := int(w[3])
+					w[3] = (reached + 1) % (w[2] as Array).size()
+					# A stop on a routine: stay a while facing the work.
+					if w.size() > 4 and float(w[4][reached][0]) > 0.0:
+						_mood[v] = {"mode": "work", "t": float(w[4][reached][0]), "yaw": float(w[4][reached][1])}
+						v.face_movement = false
 					continue
 				dir = to.normalized()
 				speed = WALK_SPEED
@@ -447,6 +478,8 @@ func _process_people(delta: float) -> void:
 				dir = away.normalized() if away.length() > 0.1 else Vector3.FORWARD
 				speed = RUN_SPEED
 				s.sprinting = true
+			"work":
+				s.yaw = float(m.yaw)  # facing the stove, the desk, the machine
 			"cower":
 				s.stance = PlayerSimState.Stance.CROUCH
 				if player_position != Vector3.INF:

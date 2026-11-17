@@ -70,6 +70,9 @@ func _ready() -> void:
 	var devils := DustDevils.new()
 	devils.name = "Wind"
 	add_child(devils)
+	var settlement := TitanSettlement.new()
+	settlement.name = "Settlement"
+	add_child(settlement)
 	var people := CityNpcs.new()
 	people.name = "People"
 	add_child(people)

@@ -28,7 +28,7 @@ func _run() -> void:
 		Profile.career().d.stash = {"oxygen_canister": 1}
 	if Platform.user_args.has("--people"):
 		Profile.career().d["body"] = "female"  # play as a woman
-	if Platform.user_args.has("--block") or Platform.user_args.has("--head"):
+	if Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin"):
 		Profile.career().choose_nation(0)
 	if Platform.user_args.has("--phase1") and dig:
 		Profile.career().choose_nation(0)  # a recruit of the Aurora Compact, on the first run
@@ -40,6 +40,9 @@ func _run() -> void:
 	m.hud._touch = true
 	var me: SimPlayer = m.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	print("CITY WALK: player at %s, phase %s" % [me.state.position, m.server.phase])
+	if Platform.user_args.has("--walkin"):
+		await _walkin_test(me)
+		return
 	if Platform.user_args.has("--head"):
 		await _pose(me, CityLayout.ORIGIN + Vector3(0, 0.05, 10), 0.0, -0.05)
 		m.view.third_person = true
@@ -1231,6 +1234,85 @@ func _dig_run(me: SimPlayer) -> void:
 	await _pose(me, WorldTerrain.at(200.0, 135.0) + Vector3(0, 0.3, 0), 0.0, -0.15)
 	await _shot("d5_rim_extraction")
 	get_tree().quit(0)
+
+
+## --walkin: the settlement block's acceptance test, by walking (real
+## physics, the joystick held): for each building, from outside its airlock
+## through both doors into the room, then back out; the doors must open for
+## you; the people must reach their stops. Exits 0 only if all hold.
+const WALKIN := [["titan/hab_r14", 10.0], ["titan/market_hub", 10.0], ["titan/plant_ex03", 12.0], ["titan/gatehouse", 10.0]]
+
+
+func _local_y(bp: Array, at: Vector3) -> float:
+	var local := Basis(Vector3.UP, deg_to_rad(float(bp[2]))).inverse() * (at - (bp[1] as Vector3))
+	return -local.z
+
+
+func _walk(me: SimPlayer, yaw: float, seconds: float, until: Callable) -> bool:
+	m.input.look_yaw = yaw
+	var frames := 0
+	while frames < int(seconds * 30.0):
+		m.input.touch_move = Vector2(0, 1)
+		await get_tree().process_frame
+		frames += 1
+		if until.call():
+			m.input.touch_move = Vector2.ZERO
+			return true
+	m.input.touch_move = Vector2.ZERO
+	return false
+
+
+func _walkin_test(me: SimPlayer) -> void:
+	var fails: Array[String] = []
+	var settlement: TitanSettlement = m.presentation.find_child("Settlement", true, false) if m.get("presentation") != null else get_tree().root.find_child("Settlement", true, false)
+	for b: Array in WALKIN:
+		var bp := TitanSettlement.piece(b[0])
+		var d: float = b[1]
+		var gate: bool = b[0] == "titan/gatehouse"
+		var outside := -d / 2.0 - (4.0 if gate else 5.5)
+		var start := TitanSettlement.to_world(bp, 0.0 if not gate else 2.0, outside) + Vector3(0, 0.3, 0)
+		var inward := TitanSettlement.to_yaw(bp, 0.0)
+		await _pose(me, start, inward, -0.05)
+		var inside_y := -1.0 if not gate else d / 2.0 + 3.0  # the gatehouse: right through to the far side
+		var t0 := Time.get_ticks_msec()
+		var opened := false
+		var got_in: bool = await _walk(me, inward, 14.0, func() -> bool:
+			if settlement != null:
+				for door: Array in settlement._doors:
+					if float(door[6]) > 0.9:
+						opened = true
+			return _local_y(bp, me.state.position) > inside_y)
+		await _shot("w_%s_in" % str(b[0]).get_file())
+		var got_out: bool = await _walk(me, wrapf(inward + PI, -PI, PI), 14.0, func() -> bool:
+			return _local_y(bp, me.state.position) < outside + 1.0 if not gate else _local_y(bp, me.state.position) < -d / 2.0 - 2.0)
+		print("WALKIN %-18s in %s, out %s, a door opened %s, at %s (%.1f s)" % [b[0], got_in, got_out, opened, me.state.position,
+				(Time.get_ticks_msec() - t0) / 1000.0])
+		if not got_in:
+			fails.append("%s: couldn't walk in" % b[0])
+		if not got_out:
+			fails.append("%s: couldn't walk out" % b[0])
+		if not opened:
+			fails.append("%s: no door opened" % b[0])
+	# The people: every routine visits its stops.
+	var npcs: CityNpcs = get_tree().get_first_node_in_group("city_npcs")
+	var visits := {}
+	for w: Array in npcs._walkers:
+		if w.size() > 4:
+			visits[w] = {}
+	for f in 900:
+		await get_tree().process_frame
+		for w: Array in visits:
+			visits[w][int(w[3])] = true
+			npcs.player_position = (w[1] as PlayerSimState).position  # keep each one awake (they rest when you're far)
+	var k := 0
+	for w: Array in visits:
+		var stops := (w[2] as Array).size()
+		print("WALKIN person %d: %d of %d stops reached" % [k, (visits[w] as Dictionary).size(), stops])
+		if (visits[w] as Dictionary).size() < mini(stops, 3):
+			fails.append("person %d stuck on their routine" % k)
+		k += 1
+	print("WALKIN: %s" % ("PASS" if fails.is_empty() else "FAIL: " + "; ".join(fails)))
+	get_tree().quit(0 if fails.is_empty() else 1)
 
 
 ## --block: the settlement block (the plaza) and each building's inside,

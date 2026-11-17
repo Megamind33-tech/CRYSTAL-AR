@@ -81,6 +81,10 @@ const BODY_RADIUS := 1.2
 
 ## `variant` picks the character model (e.g. one astronaut per player);
 ## `p_style` the body (CharacterRig.STYLES), else `style`.
+func _enter_tree() -> void:
+	add_to_group("movers")  # doors open for anyone (TitanSettlement)
+
+
 func setup(display_name: String, is_bot: bool, p_color: Color, variant: int = 0, p_style: String = "") -> void:
 	color = p_color
 	rig_style = p_style if not p_style.is_empty() else style
