@@ -86,7 +86,8 @@ var _next_entity_gen: int = 1
 class Item:
 	var id: int = 0
 	var spot: int = -1  ## the spot it came from, or -1
-	var weapon: int = -1  ## Weapons.ALL index; -1 = grenade
+	var weapon: int = -1  ## Weapons.ALL index; -1 = grenade (or an ammo box)
+	var box: bool = false  ## an ammo box: tops up every carried weapon
 	var position := Vector3.ZERO
 	var mag: int = 0
 	var reserve: int = 0
@@ -849,9 +850,10 @@ func _reset_pickups() -> void:
 
 func _spawn_item(spot: int) -> void:
 	var def: Dictionary = pickup_spots[spot]
-	var w := Weapons.by_id(def.weapon) if def.weapon != &"grenade" else null
-	_add_item(spot, Weapons.index_of(def.weapon) if w != null else -1, def.position,
+	var w := Weapons.by_id(def.weapon) if def.weapon != &"grenade" and def.weapon != &"ammo_box" else null
+	var it := _add_item(spot, Weapons.index_of(def.weapon) if w != null else -1, def.position,
 			w.mag_size if w != null else 0, w.reserve if w != null else 0, 0)
+	it.box = def.weapon == &"ammo_box"
 	spot_respawn[spot] = 0
 
 
@@ -910,6 +912,12 @@ func _step_pickups(ids: Array, interacting: Dictionary) -> void:
 ## carries; a new weapon only on interact (never by walking over it).
 func _wants(p: SimPlayer, it: Item, interact: bool) -> bool:
 	var s := p.state
+	if it.box:
+		for i in s.weapons.size():
+			var bw := Weapons.at(s.weapons[i])
+			if bw != null and not WeaponSim.endless_reserve(bw) and s.reserve[i] < bw.reserve:
+				return true
+		return false
 	if it.weapon < 0:
 		return s.grenades < Balance.PLAYER.grenades_per_life
 	var slot := s.weapons.find(it.weapon)
@@ -928,18 +936,40 @@ static func needs_interact(s: PlayerSimState, weapon: int) -> bool:
 func _take(p: SimPlayer, it: Item) -> void:
 	var s := p.state
 	items.erase(it)
-	_emit("p:%d:%d" % [it.id, tick], "pickup", {"player": p.net_id, "weapon": Weapons.at(it.weapon).id if it.weapon >= 0 else &"grenade",
-			"position": it.position})
+	## Every pickup event carries what the pack gets: kind (&"weapon", &"ammo",
+	## &"grenade", &"ammo_box"), item (weapon id, or the kind for the rest)
+	## and count (1 for a weapon/grenade, rounds added for ammo, mags for a box).
+	var ev := {"player": p.net_id, "position": it.position,
+			"weapon": &"ammo_box" if it.box else (Weapons.at(it.weapon).id if it.weapon >= 0 else &"grenade")}
+	var eid := "p:%d:%d" % [it.id, tick]
+	if it.box:
+		var mags := 0
+		for i in s.weapons.size():
+			var bw := Weapons.at(s.weapons[i])
+			if bw != null and not WeaponSim.endless_reserve(bw) and s.reserve[i] < bw.reserve:
+				s.reserve[i] = mini(s.reserve[i] + bw.mag_size, bw.reserve)
+				mags += 1
+		ev.merge({"kind": &"ammo_box", "item": &"ammo_box", "count": mags})
+		_emit(eid, "pickup", ev)
+		_instance_gone(it.spot)
+		return
 	if it.weapon < 0:
 		s.grenades += 1
+		ev.merge({"kind": &"grenade", "item": &"grenade", "count": 1})
+		_emit(eid, "pickup", ev)
 		_instance_gone(it.spot)
 		return
 	var w := Weapons.at(it.weapon)
 	var slot := s.weapons.find(it.weapon)
 	if slot >= 0:
-		s.reserve[slot] = mini(s.reserve[slot] + it.mag + it.reserve, w.reserve)
+		var before: int = s.reserve[slot]
+		s.reserve[slot] = mini(before + it.mag + it.reserve, w.reserve)
+		ev.merge({"kind": &"ammo", "item": w.id, "count": s.reserve[slot] - before})
+		_emit(eid, "pickup", ev)
 		_instance_gone(it.spot)
 		return
+	ev.merge({"kind": &"weapon", "item": w.id, "count": 1})
+	_emit(eid, "pickup", ev)
 	# Swap the primary: the old one drops (and despawns in 20 s).
 	_drop_slot(p, 0)
 	s.set_slot(0, it.weapon, it.mag, it.reserve)

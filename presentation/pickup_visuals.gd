@@ -51,7 +51,7 @@ func sync(items: Array, spot_ticks: PackedInt32Array) -> void:
 	for i in spots.size():
 		var ticks: int = spot_ticks[i] if i < spot_ticks.size() else 0
 		var label := _labels[i]
-		label.visible = ticks > 0 and spots[i].weapon != &"grenade"
+		label.visible = ticks > 0 and spots[i].weapon != &"grenade" and spots[i].weapon != &"ammo_box"
 		if label.visible:
 			var secs := ceili(ticks / float(Sim.TICK_RATE))
 			label.text = "%d:%02d" % [floori(secs / 60.0), secs % 60]
@@ -61,7 +61,7 @@ func sync(items: Array, spot_ticks: PackedInt32Array) -> void:
 ## The middle of `node`'s meshes in its parent's space.
 ## The glow colour of a pickup of weapon `id` (&"grenade" for grenades).
 static func color_of(id: StringName) -> Color:
-	var data := Weapons.by_id(id) if id != &"grenade" else null
+	var data := Weapons.by_id(id) if id != &"grenade" and id != &"ammo_box" else null
 	return GRENADE_COLOR if data == null else (POWER_COLOR if data.is_power_weapon else WEAPON_COLOR)
 
 
