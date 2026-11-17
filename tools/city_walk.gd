@@ -1246,10 +1246,10 @@ func _dig_run(me: SimPlayer) -> void:
 func _frisk_run(me: SimPlayer) -> void:
 	var at := CityLayout.ORIGIN + Vector3(0, 0.05, 20)
 	await _pose(me, at, 0.0, -0.1)
-	var raider := m.server.add_bot("Concern·Rook", TargetDummyDriver.new(1))
+	var raider: SimPlayer = m.server.add_bot("Concern·Rook", TargetDummyDriver.new(1))
 	m.server.world.teleport(raider, at + Vector3(0, 0, -3))
 	m.server.world.packs[raider.net_id] = {"red_dust": 2, "rare_ore": 3, "medkit": 1}
-	var rv := m.server.world.add_vehicle(at + Vector3(6, 0.3, -3), 0.0)
+	var rv: SimVehicle = m.server.world.add_vehicle(at + Vector3(6, 0.3, -3), 0.0)
 	rv.owner = raider.net_id
 	rv.cargo = {"refined_ingot": 2, "stolen_cargo": 1}
 	await _frames(20)
