@@ -10,7 +10,7 @@ extends RefCounted
 ## the cel shaders) is unchanged. No SSAO, SSR or volumetrics (phones).
 
 
-const HAZE := Color(0.76, 0.6, 0.34)
+const HAZE := Color(0.7, 0.63, 0.5)
 
 
 static func add(parent: Node) -> void:
@@ -27,7 +27,7 @@ static func add(parent: Node) -> void:
 	# The haze: brown-amber overhead to a pale gold horizon.
 	var sky_mat := ProceduralSkyMaterial.new()
 	sky_mat.sky_top_color = Color(0.4, 0.31, 0.17)
-	sky_mat.sky_horizon_color = Color(0.82, 0.68, 0.42)
+	sky_mat.sky_horizon_color = Color(0.8, 0.7, 0.5)
 	sky_mat.sky_curve = 0.3
 	sky_mat.ground_horizon_color = Color(0.58, 0.48, 0.32)
 	sky_mat.ground_bottom_color = Color(0.16, 0.13, 0.09)
@@ -53,7 +53,7 @@ static func add(parent: Node) -> void:
 	env.glow_bloom = 0.0
 	env.fog_enabled = true
 	env.fog_light_color = HAZE
-	env.fog_density = 0.0028  # Titan's haze: the far side of the valley is a silhouette
+	env.fog_density = 0.0016  # Titan's haze: the far side of the valley fades, the near ground keeps its colours
 	env.fog_aerial_perspective = 0.15
 	env.fog_sky_affect = 0.4
 	# A light grade: contrast and saturation (cheap; part of tonemapping).

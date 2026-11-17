@@ -9,8 +9,8 @@ extends RefCounted
 ## triangles of a cell split on its (i+1, j)-(i, j+1) diagonal, like the
 ## physics height map: what you see is what you stand on.
 
-const DUST_A := Color(0.33, 0.26, 0.19)
-const DUST_B := Color(0.44, 0.35, 0.25)
+const DUST_A := Color(0.27, 0.21, 0.16)
+const DUST_B := Color(0.38, 0.29, 0.2)
 const STRATA := [Color(0.6, 0.59, 0.55), Color(0.71, 0.7, 0.66), Color(0.5, 0.49, 0.46)]
 const ICE := Color(0.86, 0.9, 0.93)
 const ROAD := Color(0.66, 0.6, 0.5)  ## the road's gravel (Presentation.ROAD_SURFACE)

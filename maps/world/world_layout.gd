@@ -122,12 +122,12 @@ static func roads() -> Array:
 	var out := [
 		# The Hollow road: out of the gate, east past the factory to the Hollow.
 		curve([Vector2(-220, 62), gate, Vector2(-170, 92), Vector2(-110, 70), Vector2(-60, 58), Vector2(-25, 15),
-				hollow_ring(6)]),
+				hollow_ring(18)]),
 		ring,
 		# To the dig: into the canyon at its shallow west end, then down the floor.
-		curve([hollow_ring(2), Vector2(122, 40), Vector2(95, 130), CANYON_GATE, cy.call(120), cy.call(160),
+		curve([hollow_ring(6), Vector2(122, 40), Vector2(95, 130), CANYON_GATE, cy.call(120), cy.call(160),
 				cy.call(200), cy.call(240)]),
-		curve([hollow_ring(14), Vector2(128, -150), Vector2(140, -186)]),  # up to the crater's rim, over the ice cutter
+		curve([hollow_ring(42), Vector2(128, -150), Vector2(140, -186)]),  # up to the crater's rim, over the ice cutter
 		# North: past the factory to the lift at the Anvil's foot, round the
 		# Anvil's west side (Helios's avenue turns off) to the Skyport's street.
 		curve([Vector2(-110, 70), Vector2(-150, -50), Vector2(-200, -120), LIFT_ROAD, HELIOS_JUNCTION, Vector2(-240, -330),
@@ -135,7 +135,7 @@ static func roads() -> Array:
 		[SKYPORT + Vector2(-110, 25), SKYPORT + Vector2(110, 25)],  # the Skyport's street
 		curve([HELIOS_JUNCTION, HELIOS + Vector2(60, 0), HELIOS + Vector2(16, 0)]),  # Helios's avenue, to the Ring
 		# The Skyport road out of the Hollow, past the wreck: the loop's east side.
-		curve([hollow_ring(12), Vector2(50, -180), Vector2(10, -270), SKYPORT + Vector2(110, 25)]),
+		curve([hollow_ring(36), Vector2(50, -180), Vector2(10, -270), SKYPORT + Vector2(110, 25)]),
 		# West: the gate to the Galleria's forecourt, and on north to Helios's south street.
 		curve([gate, Vector2(-290, 112), Vector2(-350, 70), GALLERIA + Vector2(62, 0)]),
 		curve([Vector2(-350, 70), Vector2(-375, -30), HELIOS + Vector2(0, 120), HELIOS + Vector2(0, 16)]),
@@ -169,11 +169,11 @@ const CANYON_GATE := Vector2(80, 188)
 ## Where Helios's avenue leaves the north road.
 const HELIOS_JUNCTION := Vector2(-295, -250)
 ## Dust Hollow's ring street: round the settlement's centre, HOLLOW_RING_R
-## out, HOLLOW_RING_POINTS points (0 east, then clockwise on the map: 4
-## south, 8 west, 12 north).
+## out, HOLLOW_RING_POINTS points (0 east, then clockwise on the map: 12
+## south, 24 west, 36 north).
 const HOLLOW_RING_C := Vector2(64, -60)
 const HOLLOW_RING_R := 66.0
-const HOLLOW_RING_POINTS := 16
+const HOLLOW_RING_POINTS := 48
 
 
 static func hollow_ring(k: int) -> Vector2:
