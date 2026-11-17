@@ -23,14 +23,26 @@ past the Galleria), the far mesa (north-east).
 - **The loop:** city gate → Galleria → Helios → Skyport → Dust Hollow → city.
 - **Spokes from the gate:** east to the Hollow, north to the lift and the
   Anvil, south to Nova Terrace.
-- **The canyon road:** Hollow → dig → along the canyon → Nova Terrace.
+- **The canyon road:** from the Hollow into the canyon at its shallow west
+  mouth, then down the floor to the dig; the Terrace road turns off at the mouth.
+- **District streets:** a street round Helios's Ring joins its avenue and its
+  south street; a ring street round Nova Terrace's plaza joins its three roads.
 - **The monorail:** elevated, round the city's west side, from the Skyport
   past Helios and the Galleria to Nova Terrace.
+
+Every road runs on a **road bed** (`WorldTerrain` road beds). The ground
+is cut and filled along the road to a smoothed profile held to 12% (the
+steepest is about 17%, where roads meet). The bed is level across, with
+banks back to the land. Where one road starts or ends on another, its bed
+meets that road's at the same height, and the beds blend into one surface.
+Roads are therefore laid in order: a road that joins another comes after
+it in `WorldLayout.roads()`.
 
 Every road ends in a district's street or on the Hollow's loop. None of
 them run through buildings: `test_world.gd` checks this against each
 building's real footprint. It also checks that buildings stand on level
-ground and don't overlap.
+ground and don't overlap, and `test_roads_drivable` holds every road
+to 18% and level across.
 
 ## Where it lives
 

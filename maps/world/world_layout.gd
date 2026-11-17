@@ -106,36 +106,58 @@ const BAY_RADIUS := 6.5
 ## colour already follows them: tools/blender/build_world.py ROADS), paved
 ## by the presentation, driven by traffic, drawn on the minimap.
 static func roads() -> Array:
+	if _cache.has("roads"):
+		return _cache["roads"]
 	var gate := Vector2(-220, 84)
 	# The canyon road keeps to the channel's north side, clear of the dig's camp.
 	var cy := func(x: float) -> Vector2: return Vector2(x, WorldTerrain.canyon_center(x) + 5.0)
-	return [
+	# Nova Terrace's plaza: a ring street the three roads in meet.
+	var plaza := []
+	for k in 17:
+		var a := k * TAU / 16.0
+		plaza.append(TERRACE + Vector2(cos(a), sin(a)) * TERRACE_PLAZA)
+	# In laying order: a road that starts or ends on another comes after it
+	# (its bed meets the other's: WorldTerrain's road beds).
+	var out := [
 		# The Hollow road: out of the gate, east past the factory to the Hollow.
 		[Vector2(-220, 62), gate, Vector2(-170, 92), Vector2(-110, 70), Vector2(-60, 62), Vector2(-40, 20),
 				HOLLOW_LOOP[0] + Vector2(0, -15)],
 		# Dust Hollow's loop street, round the settlement: the roads meet it.
 		HOLLOW_LOOP + [HOLLOW_LOOP[0]],
-		[HOLLOW_LOOP[3], Vector2(160, 60), cy.call(190), cy.call(205), cy.call(220), cy.call(240)],  # down to the dig
-		[HOLLOW_LOOP[2], Vector2(140, -190)],  # to the crater's ice cutter
-		# North: up past the factory to the lift at the Anvil's foot, on round
-		# the Anvil to Helios's avenue and to the Skyport's street.
-		[Vector2(-110, 70), Vector2(-150, -60), LIFT_ROAD, Vector2(-265, -250), Vector2(-215, -330),
-				SKYPORT + Vector2(-110, 25)],
-		[Vector2(-265, -250), HELIOS + Vector2(120, 0), HELIOS + Vector2(16, 0)],  # Helios's avenue, to the Ring
+		# To the dig: into the canyon at its shallow west end (CANYON_GATE),
+		# then down the channel's floor.
+		[HOLLOW_LOOP[3], Vector2(100, 60), Vector2(88, 140), CANYON_GATE, cy.call(110), cy.call(140), cy.call(170),
+				cy.call(200), cy.call(220), cy.call(240)],
+		[HOLLOW_LOOP[2], Vector2(135, -160), Vector2(150, -205)],  # over the crater's rim to the ice cutter
+		# North: past the factory to the lift at the Anvil's foot, round the
+		# Anvil's west side (Helios's avenue turns off) to the Skyport's street.
+		[Vector2(-110, 70), Vector2(-150, -60), LIFT_ROAD, HELIOS_JUNCTION, Vector2(-235, -335), SKYPORT + Vector2(-110, 25)],
+		[SKYPORT + Vector2(-110, 25), SKYPORT + Vector2(110, 25)],  # the Skyport's street
+		[HELIOS_JUNCTION, HELIOS + Vector2(16, 0)],  # Helios's avenue, to the Ring
 		# The Skyport road out of the Hollow, past the wreck: the loop's east side.
 		[Vector2(48, HOLLOW_LOOP[1].y), Vector2(48, -175), Vector2(-20, -300), SKYPORT + Vector2(110, 25)],
-		[SKYPORT + Vector2(-110, 25), SKYPORT + Vector2(110, 25)],  # the Skyport's street
-		# West: the gate to the Galleria's east forecourt, and on north to Helios.
+		# West: the gate to the Galleria's east forecourt, and on north to Helios's south street.
 		[gate, Vector2(-300, 110), Vector2(-360, 64), GALLERIA + Vector2(62, 0)],
-		[Vector2(-360, 64), Vector2(-370, -40), HELIOS + Vector2(0, 120), HELIOS + Vector2(0, 16)],  # its south street
-		# South: the gate to Nova Terrace's north gap, the Galleria to its west
-		# gap, and the canyon road out of the dig to its east gap.
-		[gate, Vector2(-210, 170), TERRACE + Vector2(0, -95), TERRACE + Vector2(0, -26)],
-		[Vector2(-360, 64), Vector2(-330, 200), TERRACE + Vector2(-95, 0), TERRACE + Vector2(-26, 0)],
-		[cy.call(240), cy.call(255), cy.call(270), cy.call(285), cy.call(300), cy.call(320), cy.call(345), cy.call(370),
-				Vector2(330, 290), Vector2(150, 335), Vector2(-20, 345),
-				TERRACE + Vector2(95, 0), TERRACE + Vector2(26, 0)],
+		[Vector2(-360, 64), Vector2(-370, -40), HELIOS + Vector2(0, 120), HELIOS + Vector2(0, 16)],
+		[HELIOS + Vector2(16, 0), HELIOS + Vector2(16, 16), HELIOS + Vector2(0, 16)],  # round the Ring
+		# South: Nova Terrace's plaza, and the roads in: from the gate (north),
+		# the Galleria (west), and from the canyon's mouth (east).
+		plaza,
+		[gate, Vector2(-210, 170), TERRACE + Vector2(0, -95), TERRACE + Vector2(0, -TERRACE_PLAZA)],
+		[Vector2(-360, 64), Vector2(-330, 200), TERRACE + Vector2(-95, 0), TERRACE + Vector2(-TERRACE_PLAZA, 0)],
+		[CANYON_GATE, Vector2(100, 280), Vector2(-20, 345), TERRACE + Vector2(95, 0), TERRACE + Vector2(TERRACE_PLAZA, 0)],
 	]
+	_cache["roads"] = out
+	return out
+
+
+## The canyon's mouth (its shallow west end): the dig road goes in here,
+## the Terrace road turns off.
+const CANYON_GATE := Vector2(80, 188)
+## Where Helios's avenue leaves the north road.
+const HELIOS_JUNCTION := Vector2(-280, -250)
+## Nova Terrace's plaza street, its radius from the centre.
+const TERRACE_PLAZA := 30.0
 
 
 ## Dust Hollow's loop street: the corners (x, z) round the settlement,

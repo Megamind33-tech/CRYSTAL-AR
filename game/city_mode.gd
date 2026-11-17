@@ -536,7 +536,8 @@ var _traffic: Array = []  ## [mesh, road points, distance along, direction, spee
 
 func _step_traffic(me: SimPlayer, dt: float) -> void:
 	if _traffic.is_empty():
-		var roads := WorldLayout.roads()
+		# Traffic keeps to the long roads (a short street has no room to turn back).
+		var roads := WorldLayout.roads().filter(func(r: Array) -> bool: return WorldLayout.road_samples(r, 2.0).size() > 80)
 		for k in TRAFFIC:
 			var pts: Array = []
 			for sample: Array in WorldLayout.road_samples(roads[k % roads.size()], 2.0):

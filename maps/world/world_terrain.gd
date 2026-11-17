@@ -20,7 +20,9 @@ const SKYPORT := [-100.0, -430.0, 10.0, 115.0, 170.0]   # north: Kasei Skyport
 ## Respray & Chop (WorldLayout.FACTORY, GARAGE).
 const FACTORY_YARD := [-95.0, 28.0, 3.0, 32.0, 60.0]
 const GARAGE_YARD := [-176.0, 108.0, 11.0, 16.0, 36.0]
-const SITES := [CITY, HOLLOW, HELIOS, GALLERIA, TERRACE, SKYPORT, FACTORY_YARD, GARAGE_YARD]
+## The lift house's yard at the Anvil's foot, the north road through it.
+const LIFT_YARD := [-197.0, -169.0, 0.0, 16.0, 34.0]
+const SITES := [CITY, HOLLOW, HELIOS, GALLERIA, TERRACE, SKYPORT, FACTORY_YARD, GARAGE_YARD, LIFT_YARD]
 ## Mesas: [x, z, radius, height]. The Anvil (Deep Furrow's lift at its
 ## foot) and its neighbour north of the city; the rest frame the routes.
 const ANVIL := [-180.0, -250.0, 56.0, 34.0]
@@ -55,7 +57,16 @@ static func canyon_center(x: float) -> float:
 	return 150.0 + 42.0 * sin(x * 0.012)
 
 
+## The ground at (x, z): the land (natural) with the road beds cut and
+## filled into it. Everything stands on this: the physics, the mesh, the
+## vehicles, every placement.
 static func height(x: float, z: float) -> float:
+	return _road_bed(x, z, natural(x, z))
+
+
+## The land before the roads: dunes, swells, the rim, mesas, craters, the
+## canyon, and the flats the settlements stand on.
+static func natural(x: float, z: float) -> float:
 	var h := 6.0 * sin(x * 0.011 + 0.7) * cos(z * 0.009) + 3.0 * sin(x * 0.023 - z * 0.017)
 	h += 0.9 * sin(x * 0.09 + sin(z * 0.05) * 2.0) * cos(z * 0.031)
 	var edge := maxf(absf(x), absf(z))
@@ -104,3 +115,155 @@ static func surface(x: float, z: float) -> float:
 		return h00 + (h10 - h00) * fx + (h01 - h00) * fz
 	var h11 := height(x0 + STEP, z0 + STEP)
 	return h11 + (h01 - h11) * (1.0 - fx) + (h10 - h11) * (1.0 - fz)
+
+
+# --- Road beds ---------------------------------------------------------
+# Each road (WorldLayout.roads) runs on a bed: a profile along it that
+# follows the land, smoothed and held to ROAD_GRADE at most (cut into rises,
+# built up over dips, the two balanced), ROAD_BED_HALF either side flat
+# across, then sloping back to the land. Where a road starts or ends on
+# another, it meets that road's bed at the same height.
+
+const ROAD_GRADE := 0.12
+const ROAD_BED_HALF := 6.5
+const ROAD_SPACING := 4.0  ## metres between profile points
+const ROAD_REACH := 30.0   ## the widest an embankment or cutting spreads
+const _BUCKET := 32.0
+## [a, b, height at a, height at b, road] per stretch of every road's bed.
+static var _segs: Array = []
+## Bucket (x, z) -> indices into _segs of the stretches that reach it.
+static var _buckets: Dictionary = {}
+static var _bed_ready := false
+
+
+static func _road_bed(x: float, z: float, h: float) -> float:
+	if not _bed_ready:
+		_build_beds()
+	var cell := Vector2i(floori(x / _BUCKET), floori(z / _BUCKET))
+	if not _buckets.has(cell):
+		return h
+	var p := Vector2(x, z)
+	# The nearest stretch of each road here: road -> [distance, bed height].
+	var near := {}
+	for i: int in _buckets[cell]:
+		var sg: Array = _segs[i]
+		var a: Vector2 = sg[0]
+		var ab: Vector2 = (sg[1] as Vector2) - a
+		var t := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+		var d := p.distance_to(a + ab * t)
+		var road: int = sg[4]
+		if not near.has(road) or d < float(near[road][0]):
+			near[road] = [d, lerpf(sg[2], sg[3], t)]
+	# Where roads meet, their beds blend (nearer counts more), so a junction
+	# is one surface, not a step where one road's bed gives way to another's.
+	var pull := 0.0
+	var sum := 0.0
+	var wsum := 0.0
+	for road: int in near:
+		var d: float = near[road][0]
+		var bed: float = near[road][1]
+		# The bank: 1 in 1.5 from the bed's edge back to the land.
+		var bank := clampf(absf(h - bed) * 1.5, 3.0, ROAD_REACH)
+		var k := smoothstep(ROAD_BED_HALF + bank, ROAD_BED_HALF, d)
+		if k <= 0.0:
+			continue
+		var w := k * k / (d + 4.0)
+		sum += bed * w
+		wsum += w
+		pull = maxf(pull, k)
+	if wsum <= 0.0:
+		return h
+	return lerpf(h, sum / wsum, pull)
+
+
+static func _build_beds() -> void:
+	_bed_ready = true  # natural() never reads the beds: no recursion
+	_segs.clear()
+	_buckets.clear()
+	var roads := WorldLayout.roads()
+	for ri in roads.size():
+		var road: Array = roads[ri]
+		var pts: Array = []
+		for sm: Array in WorldLayout.road_samples(road, ROAD_SPACING):
+			pts.append(sm[0])
+		var n := pts.size()
+		if n < 2:
+			continue
+		var land := PackedFloat32Array()
+		land.resize(n)
+		for i in n:
+			land[i] = natural(pts[i].x, pts[i].y)
+		# Smoothed over about 40 m, so the bed doesn't copy every dune.
+		var smooth := PackedFloat32Array()
+		smooth.resize(n)
+		for i in n:
+			var sum := 0.0
+			var cnt := 0
+			for k in range(maxi(i - 5, 0), mini(i + 6, n)):
+				sum += land[k]
+				cnt += 1
+			smooth[i] = sum / cnt
+		# Ends that meet a road already laid take its bed's height; the others
+		# the land's (a street ends level with its square).
+		var pins := {}
+		for end: int in [0, n - 1]:
+			var at := _bed_at(pts[end])
+			pins[end] = at if not is_nan(at) else land[end]
+		var step := ROAD_SPACING * ROAD_GRADE
+		# Cut-only (the highest grade-held line under the land) and fill-only
+		# (the lowest over it), both through the pins; the bed is between.
+		var cut := _held(smooth, pins, step, true)
+		var fill := _held(smooth, pins, step, false)
+		var start := _segs.size()
+		for i in n - 1:
+			_segs.append([pts[i], pts[i + 1], (cut[i] + fill[i]) * 0.5, (cut[i + 1] + fill[i + 1]) * 0.5, ri])
+		for si in range(start, _segs.size()):
+			var a: Vector2 = _segs[si][0]
+			var b: Vector2 = _segs[si][1]
+			var r := ROAD_BED_HALF + ROAD_REACH
+			for bx in range(floori((minf(a.x, b.x) - r) / _BUCKET), floori((maxf(a.x, b.x) + r) / _BUCKET) + 1):
+				for bz in range(floori((minf(a.y, b.y) - r) / _BUCKET), floori((maxf(a.y, b.y) + r) / _BUCKET) + 1):
+					var key := Vector2i(bx, bz)
+					if not _buckets.has(key):
+						_buckets[key] = PackedInt32Array()
+					var list: PackedInt32Array = _buckets[key]
+					list.append(si)
+					_buckets[key] = list
+
+
+## The bed's height where a road already laid passes within 3 m of p
+## (NAN if none does).
+static func _bed_at(p: Vector2) -> float:
+	var best := 3.0
+	var out := NAN
+	for sg: Array in _segs:
+		var a: Vector2 = sg[0]
+		var ab: Vector2 = (sg[1] as Vector2) - a
+		var t := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+		var d := p.distance_to(a + ab * t)
+		if d < best:
+			best = d
+			out = lerpf(sg[2], sg[3], t)
+	return out
+
+
+## A line held to `step` per point: below the profile (cut) or above it
+## (fill), passing through the pinned points.
+static func _held(profile: PackedFloat32Array, pins: Dictionary, step: float, below: bool) -> PackedFloat32Array:
+	var n := profile.size()
+	var out := profile.duplicate()
+	# Within reach of every pin at the grade (so the line can meet each one).
+	for i in n:
+		var lo := -INF
+		var hi := INF
+		for j: int in pins:
+			lo = maxf(lo, float(pins[j]) - step * absi(i - j))
+			hi = minf(hi, float(pins[j]) + step * absi(i - j))
+		out[i] = clampf(out[i], lo, maxf(lo, hi))
+	for i in range(1, n):
+		out[i] = minf(out[i], out[i - 1] + step) if below else maxf(out[i], out[i - 1] - step)
+	for i in range(n - 2, -1, -1):
+		out[i] = minf(out[i], out[i + 1] + step) if below else maxf(out[i], out[i + 1] - step)
+	for i: int in pins:
+		out[i] = pins[i]
+	return out
