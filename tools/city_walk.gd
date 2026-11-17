@@ -1275,26 +1275,27 @@ func _walkin_test(me: SimPlayer) -> void:
 		await _pose(me, start, inward, -0.05)
 		var inside_y := -d / 2.0 + 1.0 if not gate else d / 2.0 + 3.0  # past the inner door; the gatehouse: right through
 		var t0 := Time.get_ticks_msec()
-		var opened := false
+		var opened := {"any": false}  # (a lambda gets a copy of a plain bool)
 		var got_in: bool = await _walk(me, inward, 14.0, func() -> bool:
 			if settlement != null:
 				for door: Array in settlement._doors:
 					if float(door[6]) > 0.9:
-						opened = true
+						opened.any = true
 			return _local_y(bp, me.state.position) > inside_y)
 		await _shot("w_%s_in" % str(b[0]).get_file())
 		var got_out: bool = await _walk(me, wrapf(inward + PI, -PI, PI), 14.0, func() -> bool:
 			return _local_y(bp, me.state.position) < outside + 1.0 if not gate else _local_y(bp, me.state.position) < -d / 2.0 - 2.0)
-		print("WALKIN %-18s in %s, out %s, a door opened %s, at %s (%.1f s)" % [b[0], got_in, got_out, opened, me.state.position,
+		print("WALKIN %-18s in %s, out %s, a door opened %s, at %s (%.1f s)" % [b[0], got_in, got_out, opened.any, me.state.position,
 				(Time.get_ticks_msec() - t0) / 1000.0])
 		if not got_in:
 			fails.append("%s: couldn't walk in" % b[0])
 		if not got_out:
 			fails.append("%s: couldn't walk out" % b[0])
-		if not opened:
+		if not opened.any:
 			fails.append("%s: no door opened" % b[0])
 	# The people: every routine visits its stops.
 	var npcs: CityNpcs = get_tree().get_first_node_in_group("city_npcs")
+	npcs.everyone_awake = true  # the test watches them all at once
 	var routines: Array = npcs._walkers.filter(func(w: Array) -> bool: return w.size() > 4)
 	var visits: Array = []
 	for w in routines:
@@ -1303,7 +1304,6 @@ func _walkin_test(me: SimPlayer) -> void:
 		await get_tree().process_frame
 		for k in routines.size():
 			visits[k][int(routines[k][3])] = true
-		npcs.player_position = (routines[(f / 60) % routines.size()][1] as PlayerSimState).position  # keep them awake
 	for k in routines.size():
 		var stops := (routines[k][2] as Array).size()
 		print("WALKIN person %d: %d of %d stops reached" % [k, (visits[k] as Dictionary).size(), stops])
