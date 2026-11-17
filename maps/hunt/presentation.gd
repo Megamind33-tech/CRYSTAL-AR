@@ -102,7 +102,7 @@ func _build_terrain() -> void:
 	var mi := MeshInstance3D.new()
 	mi.name = "Terrain"
 	mi.mesh = st.commit()
-	mi.material_override = _pbr("terrain_red_01", 0.05, Color(0.85, 0.62, 0.52))
+	mi.material_override = _pbr("terrain_red_01", 0.05, Color(0.56, 0.54, 0.5))  # Titan's grey ice bedrock
 	add_child(mi)
 
 
@@ -154,4 +154,4 @@ func _emissive(color: Color, energy: float) -> StandardMaterial3D:
 ## the air. One directional light with two shadow splits; no SSAO, SSR or
 ## volumetrics (phones).
 func _add_lighting() -> void:
-	MarsLighting.add(self)
+	TitanLighting.add(self)

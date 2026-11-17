@@ -61,14 +61,12 @@ func _ready() -> void:
 	_monorail()
 	_estates()
 	batches.build()
-	MarsLighting.add(self)
-	MarsLighting.add_moons(self)
+	TitanLighting.add(self)
+	TitanLighting.add_moons(self)
 	var weather := DustStorms.new()
 	weather.name = "Weather"
 	add_child(weather)
-	var devils := DustDevils.new()
-	devils.name = "Wind"
-	add_child(devils)
+	_lakes()
 	var settlement := TitanSettlement.new()
 	settlement.name = "Settlement"
 	add_child(settlement)
@@ -518,3 +516,27 @@ func _terrain(mat: Material) -> void:
 		out.lod_bias = TERRAIN_LOD_BIAS
 		out.material_override = mat
 		add_child(out)
+
+
+## Sinlap crater's methane lake: dark, still, a little sheen, filling the
+## crater's floor (shallow: you wade in it).
+func _lakes() -> void:
+	var cr: Array = WorldTerrain.CRATER2
+	var c := Vector2(cr[0], cr[1])
+	var floor_y := WorldTerrain.height(c.x, c.y)
+	var lake := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = float(cr[2]) * 0.62
+	disc.bottom_radius = disc.top_radius
+	disc.height = 0.1
+	disc.radial_segments = 48
+	disc.rings = 1
+	lake.mesh = disc
+	lake.position = Vector3(c.x, floor_y + 1.4, c.y)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.09, 0.075, 0.06)
+	mat.roughness = 0.12
+	mat.metallic_specular = 0.7
+	lake.material_override = mat
+	lake.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(lake)

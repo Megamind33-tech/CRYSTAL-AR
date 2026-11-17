@@ -1,6 +1,6 @@
 class_name NationPick
 extends Control
-## First arrival (docs/game-plan.md §7): choose the nation you came to Mars
+## First arrival (docs/game-plan.md §7): choose the nation you came to Titan
 ## for. Four cards, each its colour, shape, name and motto; one tap
 ## chooses. Shown over the city until you do.
 

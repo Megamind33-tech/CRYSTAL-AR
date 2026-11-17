@@ -14,8 +14,8 @@ extends RefCounted
 
 ## Original factions of the Martian settlements.
 const FACTIONS := {
-	"tharsis": {"name": "Tharsis Mining Concern", "short": "THARSIS"},
-	"kasei": {"name": "Kasei Freight Union", "short": "KASEI"},
+	"tharsis": {"name": "Kraken Mining Concern", "short": "KRAKEN"},
+	"kasei": {"name": "Xanadu Freight Union", "short": "XANADU"},
 	"ledger": {"name": "The Crimson Ledger", "short": "LEDGER"},
 }
 ## Loot from a run (HuntRules.haul item ids) and its market base price.

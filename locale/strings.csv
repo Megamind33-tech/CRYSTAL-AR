@@ -537,7 +537,7 @@ CITY_PROMPT_TERMINAL,%s
 CITY_TERMINAL_CONTRACTS,Contract board
 CITY_TERMINAL_MARKET,Market exchange
 CITY_TERMINAL_OUTFITTER,Outfitter
-CITY_NPC_BROKER,Oyelaran · Kasei broker
+CITY_NPC_BROKER,Oyelaran · Xanadu broker
 CITY_NPC_TRADER,Mbeki · Exchange trader
 CITY_NPC_ARMOURER,Varga · Armourer
 CITY_HINT_BOARD,Contracts: Huygens Gate board · the dig is east
@@ -545,7 +545,7 @@ CITY_NPC_FOREMAN,Adaeze · Hollow foreman
 WORLD_HOLLOW_SIGN,Work board
 WORLD_HOLLOW,DUST HOLLOW
 WORLD_HOLLOW_SUB,FRONTIER MINING SETTLEMENT · XANADU BASIN
-WORLD_HOLLOW_RULE,CONTESTED · Tharsis Mining Concern holds it
+WORLD_HOLLOW_RULE,CONTESTED · Kraken Mining Concern holds it
 WORLD_DIG,RUSTWOOD DIG
 WORLD_DIG_SUB,EXTRACTION SITE · EASTERN CANYON
 WORLD_DIG_RULE,LAWLESS · step on the pad to go in
@@ -579,7 +579,7 @@ TALK_CLAIM_NEED_MONEY,Not enough money
 TALK_LEAVE,Leave
 TALK_TO,Talk to %s
 NPC_BROKER_STRANGER,"New face. Contracts are on the board, if you can finish one."
-NPC_BROKER_KNOWN,You got the job done last time. Kasei remembers that.
+NPC_BROKER_KNOWN,You got the job done last time. Xanadu remembers that.
 NPC_BROKER_FRIEND,For you I keep the better-paying freight back. Don't make me regret it.
 NPC_BROKER_CHAT,The Concern's been leaning on the Hollow again. Watch yourself out there.
 NPC_TRADER_STRANGER,I buy what you haul. Prices move: sell too much at once and they drop.
@@ -598,7 +598,7 @@ NPC_FOREMAN_THANKS,%d crates. That'll keep the refinery turning. Thank you.
 NPC_FOREMAN_CLAIMED,Then it's done. Dust Hollow is yours. Keep us supplied.
 NPC_FOREMAN_BOSS,Boss. The refinery runs on supplies: one crate makes an ingot.
 WORLD_HOLLOW_YOURS,YOURS · %d supplies · %d ingots waiting
-WORLD_HOLLOW_SIGN_THARSIS,THARSIS MINING CONCERN
+WORLD_HOLLOW_SIGN_THARSIS,KRAKEN MINING CONCERN
 WORLD_HOLLOW_SIGN_YOURS,UNDER NEW MANAGEMENT
 CITY_BUY_SUPPLY,Buy a supply crate for Dust Hollow · $%d   (carrying %d)
 CITY_RAID_DUE,CONCERN RAIDERS ARE MOVING ON DUST HOLLOW · GO DEFEND IT
@@ -611,14 +611,14 @@ CITY_JOB_DONE,JOB DONE · +$%d
 CITY_PROMPT_SLEEP,Sleep in the bunk
 CITY_PROMPT_JOB_SALVAGE,Salvage the wreck
 CITY_PROMPT_JOB_ICE,Cut ice
-CITY_SEARCHED,CHECKPOINT · %d Red Dust confiscated · -$%d
+CITY_SEARCHED,CHECKPOINT · %d Tholin confiscated · -$%d
 TALK_BUY_O2,Buy an oxygen canister · $%d
 TALK_LAB_OXYGEN,Brew oxygen: 1 water ice + $%d → %d canisters (%d s)
-TALK_LAB_RED_DUST,Cook Red Dust: 1 rare ore + 1 helium-3 + $%d → %d doses (%d s) · ILLEGAL
+TALK_LAB_RED_DUST,Cook Tholin: 1 rare ore + 1 helium-3 + $%d → %d doses (%d s) · ILLEGAL
 TALK_LAB_NEED,Missing ingredients (extract them at the dig)
 TALK_LAB_COLLECT,Collect %d × %s
 TALK_LAB_WAIT,Batch ready in %d s
-TALK_DEALER_SELL,Sell Red Dust (%d doses · $%d each)
+TALK_DEALER_SELL,Sell Tholin (%d doses · $%d each)
 TALK_JOB_ACTIVE,On the job: %s
 TALK_JOB_TAKE,%s · $%d
 TALK_COMPANION,Come with me on the next runs
@@ -633,7 +633,7 @@ NPC_CHEMIST_STRANGER,The lab's for paying customers. Bring ice and I'll give you
 NPC_CHEMIST_KNOWN,"You again. The electrolysis cells are warm, if you've brought ice."
 NPC_CHEMIST_FRIEND,For you I'll run the other batch too. Quietly.
 NPC_CHEMIST_CHAT,Everyone out there is breathing borrowed air. That's my business.
-NPC_DEALER_STRANGER,"You're not a guard. Good. I buy Red Dust, no questions."
+NPC_DEALER_STRANGER,"You're not a guard. Good. I buy Tholin, no questions."
 NPC_DEALER_KNOWN,The Ledger remembers its suppliers.
 NPC_DEALER_FRIEND,Keep it coming. The Ledger looks after its own.
 NPC_DEALER_CHAT,The Gate searches one in three. Don't carry what you can't lose.
@@ -657,7 +657,7 @@ CITY_RIG_RUNNING,Drilling… %d%% (stay at the controls)
 WORLD_FARM,DEEP FURROW
 WORLD_FARM_SUB,UNDERGROUND FARM · UNDER THE ANVIL
 WORLD_FARM_RULE,Pressurised · fresh air, fresh greens
-WORLD_STORM,DUST STORM · filters clogging - air and water drain faster outside
+WORLD_STORM,METHANE SQUALL · freezing rain soaks the filters - air and water drain faster outside
 TALK_BUY_FOOD,Buy fresh greens · $%d
 NPC_FARMER_STRANGER,Mind the beds. Everything down here took years to grow.
 NPC_FARMER_KNOWN,Up top they pay a fortune for greens. Down here we just eat.
@@ -806,12 +806,12 @@ SHELF_DESC_FOOD,Fills you %d%% · worth about $%d
 TALK_BUY_MEAT,Buy fresh meat from the hutches · $%d
 CITY_PROMPT_KIOSK,Use the kiosk (nobody's at it)
 CITY_SHOP_CLOSED,%s · CLOSED · opens at %s
-MOTORS_NAME,Kasei Motors
+MOTORS_NAME,Xanadu Motors
 MOTORS_LINE,Your ride: the %s. Trade it in for something new? ($%d to spend)
 MOTORS_YOURS,The %s · yours
 MOTORS_BUY,The %s · %d km/h · %d-stack hold · $%d with trade-in
 MOTORS_BOUGHT,NEW RIDE · the %s waits at the city gate
-CITY_PROMPT_SHOWROOM,Kasei Motors showroom · buy a ride
+CITY_PROMPT_SHOWROOM,Xanadu Motors showroom · buy a ride
 CITY_JOB_MARK,Job: %s
 CITY_EAT,Eat ×%d
 CITY_DRINK,Drink ×%d
@@ -842,18 +842,17 @@ WORLD_GALLERIA_SUB,THE VALLEY'S MALL · SHOPS · FOOD COURT
 WORLD_GALLERIA_RULE,PRESSURISED · helmets off inside · SALTS patrol
 WORLD_TERRACE,NOVA TERRACE
 WORLD_TERRACE_SUB,POD HOMES · THE SOUTH-EAST OUTLANDS
-WORLD_SKYPORT,KASEI SKYPORT
+WORLD_SKYPORT,XANADU SKYPORT
 WORLD_SKYPORT_SUB,LANDING FIELD · ORBIT SHUTTLES
 WORLD_LAWFUL_RULE,PROTECTED · the SALTS patrol here
-WORLD_LANDMARK_LOWELL,Lowell Crater
+WORLD_LANDMARK_LOWELL,Sinlap Crater
 WORLD_LANDMARK_HELIOS_RING,The Helios Ring
-WORLD_LANDMARK_SKYPORT_PADS,Kasei Skyport's landing field
+WORLD_LANDMARK_SKYPORT_PADS,Xanadu Skyport's landing field
 WORLD_LANDMARK_FAR_MESA,The Far Mesa
 MAP_HELIOS,Helios
 MAP_GALLERIA,Galleria
 MAP_TERRACE,Terrace
 MAP_SKYPORT,Skyport
-MAP_CITY,Tharsis
 ESTATE_INCOME,Your businesses paid $%d
 ESTATE_EVICTED,Rent unpaid: you've lost %s
 ESTATE_PROMPT_EXIT,Go outside
@@ -861,12 +860,12 @@ ESTATE_NOT_YOURS,Not yours: rent or buy the place first
 ESTATE_PROMPT_HOME,Go home: %s
 ESTATE_PROMPT_DOOR,"%s: rent, buy or look around"
 ESTATE_PROMPT_VISA,Immigration office: visas and permits
-ESTATE_PROMPT_AERO,Kasei Aero: aircraft
+ESTATE_PROMPT_AERO,Xanadu Aero: aircraft
 ESTATE_PROMPT_GANG,The back room: your gang
 ESTATE_CUTTING,Cutting… %d%%
 ESTATE_PROMPT_TREE,Cut the tree down (plasma saw)
 VISA_OFFICE,Immigration office
-AERO_NAME,Kasei Aero
+AERO_NAME,Xanadu Aero
 GANG_TITLE,Your gang
 ESTATE_RENTED,Rented: %s
 ESTATE_BOUGHT,It's yours: %s
@@ -913,7 +912,7 @@ WORLD_INTERIOR_RULE,Pressurised · the door takes you back out
 BOUNTY_BOARD,SALTS' Bounty Board
 BOUNTY_BOARD_SIGN,BOUNTY BOARD
 VISA_OFFICE_SIGN,IMMIGRATION
-AERO_SIGN,KASEI AERO
+AERO_SIGN,XANADU AERO
 GANG_SIGN,THE BACK ROOM
 BOUNTY_BOARD_LINE,Wanted in Xanadu Basin. Take one: you get their face and where they were last seen. Alive pays more.
 BOUNTY_CURRENT,"%s
@@ -983,7 +982,7 @@ TRADE_CHAIN_DONE_3,You know the cuts: mix them at home (burner)
 TRADE_TAKE_WORK,Take the work
 TRADE_SOLD_THEM,They're sold
 TRADE_BRING_ICE,Here's the ice (2 water ice cores)
-TRADE_BUY_DUST,Buy 5 doses of red dust: $%d
+TRADE_BUY_DUST,Buy 5 doses of tholin: $%d
 TRADE_ORDER_LINE,%s: %d× %s in %s · %d min left
 TRADE_NO_ORDERS,No orders right now.
 TRADE_CARRYING,Carrying: %s
@@ -1047,21 +1046,21 @@ SATNET_FAME,Fame: %s (%d)
 SATNET_EMPTY,Nothing on your feed yet.
 SATNET_YOU,you
 SATNET_LIKES,♥ %d
-SATNET_NEWS,KaseiNews
+SATNET_NEWS,XanaduNews
 SATNET_PING,SatNet: %s
 SATNET_POSTED,Posted: %d likes and counting
 SATNET_TIER,SatNet knows you now: %s
 SATNET_SNAP_CAPTION,"Out here in %s.|Views from %s. Not bad for Titan.|%s, today. No filter.|Another long day in %s."
-SATNET_CHATTER,"Lena_V::who's selling Frost near the Galleria tonight?|DustDevil88::storm's coming in from the west, tie your rovers down|KaseiSALTS::Reminder: carrying contraband in the city is a crime.|Okon_Saloon::half-price ale at the Dust Devil till dark|HeliosLiving::Penthouse views from the Spire, now leasing|SkyportOps::Shuttle KX-4 delayed: dust on the pads|Tobi::anyone seen my rover? left it by the Terrace|RedLantern::live music tonight. Masks off at the door.|MinerMags::Hollow refinery hiring. Bring your own suit.|Ash_H::the Ring at sunset >>>|NovaTerrace::water fund still missing. SALTS say nothing|Ledger_Watch::the Blue Line are getting nervous on their corner"
+SATNET_CHATTER,"Lena_V::who's selling Frost near the Galleria tonight?|Driftwalker88::squall's coming in from the west, tie your rovers down|XanaduSALTS::Reminder: carrying contraband in the city is a crime.|Okon_Saloon::half-price ale at the Dust Devil till dark|HeliosLiving::Penthouse views from the Spire, now leasing|SkyportOps::Shuttle KX-4 delayed: dust on the pads|Tobi::anyone seen my rover? left it by the Terrace|RedLantern::live music tonight. Masks off at the door.|MinerMags::Hollow refinery hiring. Bring your own suit.|Ash_H::the Ring at sunset >>>|NovaTerrace::water fund still missing. SALTS say nothing|Ledger_Watch::the Blue Line are getting nervous on their corner"
 SATNET_MANHUNT,Manhunt across Xanadu Basin: the SALTS are after an armed suspect
 SATNET_BOUNTY_ALIVE,Bounty hunter brings in %s alive. The SALTS say thanks.
 SATNET_BOUNTY_DEAD,%s won't be troubling anyone now: a bounty paid in full.
 SATNET_HEIST,"The Helios Ring's vault cleaned out! Bonds gone, the thieves vanished into the dust."
 SATNET_BOUGHT,New money in the valley: someone just bought %s.
-SATNET_AIRCRAFT,Spotted over Kasei: a brand new %s.
+SATNET_AIRCRAFT,Spotted over Xanadu: a brand new %s.
 SATNET_GANG_RANK,The %s are moving up: now %s.
 SATNET_TURF,The Blue Line crew are off the Galleria corner. Someone new runs it now.
-SATNET_COUPLE,Seen together again: %s and a certain someone. Kasei's newest couple?
+SATNET_COUPLE,Seen together again: %s and a certain someone. Xanadu's newest couple?
 NPC_BARK_FAMOUS,"Hey, you're the one from SatNet!|Saw you on my feed!|Can I get a snap with you?|Big fan. Don't shoot me."
 PARTNER_PROMPT_MEET,Say hello to %s
 PARTNER_PROMPT_TOGETHER,With %s · %d%%
@@ -1071,7 +1070,7 @@ PARTNER_INVITE,%s: meet me at %s?
 PARTNER_STOOD_UP,You stood %s up
 PARTNER_HUNG_OUT,A good time with %s (bond %d)
 PARTNER_FIGHTS,%s has your back now: she'll fight beside you
-PARTNER_HELLO,Oh! Hi. I'm Rhea. I fix shuttles at the Skyport.|Hey. New in the valley? I'm Rhea.
+PARTNER_HELLO,Oh! Hi. I'm Rhea. I fix rotorcraft at the Skyport.|Hey. New in the valley? I'm Rhea.
 PARTNER_HAPPY,This was nice.|Same time next sol?|You're good company.|I needed that.
 PARTNER_CHAT,Busy sol?|Don't get yourself shot.|The pads are lovely at sunset.|Text me.
 HANGOUT_BAR,the Red Lantern

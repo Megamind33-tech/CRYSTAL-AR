@@ -658,7 +658,7 @@ func _draw_banner() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-# --- Text helpers (outlined, for readability on a bright Mars sky) ---
+# --- Text helpers (outlined, for readability on Titan's bright haze) ---
 
 func _text(pos: Vector2, text: String, f: Font, size_px: float, col: Color) -> void:
 	var px := roundi(size_px * _s)

@@ -244,7 +244,7 @@ func _enter_vault(me: SimPlayer, c: Career) -> void:
 	for k in n:
 		# At the back of the room, by the vault: you come in at the door.
 		var at := o + Vector3(-4.5 + (k % 3) * 4.5, 0.3, -3.6 + (k / 3) * 1.6)
-		guards.raiders.append(guards._bot("Kasei·Vault Guard %d" % (k + 1), 1, false, at, "concern"))
+		guards.raiders.append(guards._bot("Xanadu·Vault Guard %d" % (k + 1), 1, false, at, "concern"))
 	city.estate.crew_join(guards, me)
 	if a == "loud":
 		_raise_alarm(me)

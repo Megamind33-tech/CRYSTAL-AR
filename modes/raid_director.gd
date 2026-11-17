@@ -40,7 +40,7 @@ func start(defender: int, hollow: Vector3, raider_count: int, militia_count: int
 
 ## Deep Furrow's guards answering a theft: they come down at `posts` and
 ## hunt the thief (step() 1 when they're down, 2 when the thief is).
-func start_guards(thief: int, posts: Array, role: String = "guard", names: String = "Kasei·Guard %d", first: int = 1) -> void:
+func start_guards(thief: int, posts: Array, role: String = "guard", names: String = "Xanadu·Guard %d", first: int = 1) -> void:
 	_defender = thief
 	var world := _session.world
 	world.teams_enabled = true

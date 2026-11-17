@@ -2,17 +2,18 @@ class_name TerrainMesh
 extends RefCounted
 ## Kasei Valley's visible ground, built at load from the same height grid as
 ## the physics (WorldTerrain.grid), so the map can be re-laid out in code
-## with no baked asset to rebuild. Vertex colours: dust on the flats, rock
-## strata on the slopes, ice in the craters, packed dirt on the roads. Each
+## with no baked asset to rebuild. Vertex colours, Titan's: dark organic
+## dunes on the flats, pale water-ice bedrock in bands on the slopes, frost
+## in the ice crater, packed gravel on the roads. Each
 ## TILE-metre square is its own mesh (culled off screen, with LODs). Both
 ## triangles of a cell split on its (i+1, j)-(i, j+1) diagonal, like the
 ## physics height map: what you see is what you stand on.
 
-const DUST_A := Color(0.62, 0.31, 0.17)
-const DUST_B := Color(0.72, 0.42, 0.24)
-const STRATA := [Color(0.42, 0.18, 0.11), Color(0.58, 0.29, 0.16), Color(0.33, 0.15, 0.1)]
-const ICE := Color(0.82, 0.86, 0.9)
-const ROAD := Color(0.36, 0.19, 0.12)
+const DUST_A := Color(0.33, 0.26, 0.19)
+const DUST_B := Color(0.44, 0.35, 0.25)
+const STRATA := [Color(0.6, 0.59, 0.55), Color(0.71, 0.7, 0.66), Color(0.5, 0.49, 0.46)]
+const ICE := Color(0.86, 0.9, 0.93)
+const ROAD := Color(0.66, 0.6, 0.5)  ## the road's gravel (Presentation.ROAD_SURFACE)
 const ROAD_HALF := 5.0
 
 
@@ -78,7 +79,7 @@ static func color_at(x: float, z: float, h: float, slope: float, road: float) ->
 	var c := DUST_A.lerp(DUST_B, nz * 0.5 + 0.5)
 	var band := posmod(floori(h / 3.2), 3)
 	c = c.lerp(STRATA[band], smoothstep(0.12, 0.35, slope))
-	for cr: Array in [WorldTerrain.CRATER, WorldTerrain.CRATER2]:
+	for cr: Array in [WorldTerrain.CRATER]:  # (Sinlap, CRATER2, holds a lake)
 		if Vector2(x - cr[0], z - cr[1]).length() < float(cr[2]) * 0.42 and slope < 0.2:
 			c = c.lerp(ICE, 0.75 * (0.5 + 0.5 * sin(x * 0.4) * sin(z * 0.37)))
 	if road < ROAD_HALF:
