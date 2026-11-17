@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c77clqoru00qa"
-path="res://.godot/imported/militia_harness.glb-f2bcb8a8984d3028c744e0d0aff288fb.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/world/militia_harness.glb"
-dest_files=["res://.godot/imported/militia_harness.glb-f2bcb8a8984d3028c744e0d0aff288fb.scn"]
 
 [params]
 

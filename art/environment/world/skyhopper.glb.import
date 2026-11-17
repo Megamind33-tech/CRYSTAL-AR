@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://3ylusvsesfyh"
-path="res://.godot/imported/skyhopper.glb-f91f6530ca7b1848e107930e26dec2ad.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/world/skyhopper.glb"
-dest_files=["res://.godot/imported/skyhopper.glb-f91f6530ca7b1848e107930e26dec2ad.scn"]
 
 [params]
 

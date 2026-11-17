@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c47wxx54414mj"
-path="res://.godot/imported/Platform_Squares.gltf-304104e55ff1cb832739380d7e4937a0.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/scifi/Platform_Squares.gltf"
-dest_files=["res://.godot/imported/Platform_Squares.gltf-304104e55ff1cb832739380d7e4937a0.scn"]
 
 [params]
 

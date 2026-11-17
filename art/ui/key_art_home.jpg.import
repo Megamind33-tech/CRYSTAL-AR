@@ -3,15 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cdg4oy3yb5blk"
-path="res://.godot/imported/key_art_home.jpg-ab97941f04ad2af493cf8475473bfe3d.ctex"
-metadata={
-"vram_texture": false
-}
+valid=false
 
 [deps]
 
 source_file="res://art/ui/key_art_home.jpg"
-dest_files=["res://.godot/imported/key_art_home.jpg-ab97941f04ad2af493cf8475473bfe3d.ctex"]
 
 [params]
 

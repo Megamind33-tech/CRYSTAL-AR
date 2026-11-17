@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dvxpfriikf7jd"
-path="res://.godot/imported/street_lamp.glb-81987ce76232ebdc4c31c610ed1c8927.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/kit/street_lamp.glb"
-dest_files=["res://.godot/imported/street_lamp.glb-81987ce76232ebdc4c31c610ed1c8927.scn"]
 
 [params]
 

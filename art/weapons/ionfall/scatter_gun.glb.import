@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cpfswy01ec0n8"
-path="res://.godot/imported/scatter_gun.glb-a98c05008c6b91559491502bbf951caf.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/weapons/ionfall/scatter_gun.glb"
-dest_files=["res://.godot/imported/scatter_gun.glb-a98c05008c6b91559491502bbf951caf.scn"]
 
 [params]
 

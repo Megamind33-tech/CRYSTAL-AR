@@ -3,17 +3,11 @@
 importer="2d_array_texture"
 type="CompressedTexture2DArray"
 uid="uid://bevsf2jmy5g4k"
-path.bptc="res://.godot/imported/presentation.exr-d3db3f622953167200a80b579c61533b.bptc.ctexarray"
-path.astc="res://.godot/imported/presentation.exr-d3db3f622953167200a80b579c61533b.astc.ctexarray"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://maps/spire/presentation.exr"
-dest_files=["res://.godot/imported/presentation.exr-d3db3f622953167200a80b579c61533b.bptc.ctexarray", "res://.godot/imported/presentation.exr-d3db3f622953167200a80b579c61533b.astc.ctexarray"]
 
 [params]
 

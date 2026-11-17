@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://nqwex8owwxhl"
-path="res://.godot/imported/Platform_Metal.gltf-f0e0399644c5df84b4ba69bf6ea4d48f.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/scifi/Platform_Metal.gltf"
-dest_files=["res://.godot/imported/Platform_Metal.gltf-f0e0399644c5df84b4ba69bf6ea4d48f.scn"]
 
 [params]
 

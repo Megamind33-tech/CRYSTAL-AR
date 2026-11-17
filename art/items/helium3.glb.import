@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://buw1skrr0uo81"
-path="res://.godot/imported/helium3.glb-1a6703be8357ed23597c8660702dcadd.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/helium3.glb"
-dest_files=["res://.godot/imported/helium3.glb-1a6703be8357ed23597c8660702dcadd.scn"]
 
 [params]
 

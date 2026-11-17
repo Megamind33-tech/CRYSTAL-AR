@@ -105,6 +105,67 @@ static func shape_texture(i: int, size: int = 48) -> ImageTexture:
 	return tex
 
 
+## Flag designs: [field, stripe, emblem, emblem kind]. Kinds: "star"
+## (Aurora, a bright star on a night-blue field with a pale band), "sun"
+## (Meridian: a rising sun on amber over a dark band), "chevron" (Vesper:
+## a chevron on magenta), "cross" (Halden: a cross on white-blue ice).
+const FLAGS := {
+	"aurora": [Color(0.05, 0.3, 0.55), Color(0.16, 0.78, 1.0), Color(1, 1, 1), "star"],
+	"meridian": [Color(1.0, 0.76, 0.12), Color(0.55, 0.3, 0.05), Color(0.2, 0.1, 0.02), "sun"],
+	"vesper": [Color(1.0, 0.32, 0.78), Color(0.35, 0.08, 0.3), Color(1, 0.95, 0.6), "chevron"],
+	"halden": [Color(0.9, 0.93, 1.0), Color(0.2, 0.35, 0.7), Color(0.2, 0.35, 0.7), "cross"],
+}
+static var _flags: Dictionary = {}
+
+
+static func flag_design(i: int) -> Array:
+	return FLAGS[IDS[i]] if i >= 0 and i < IDS.size() else []
+
+
+## The nation's flag, drawn once: field, a stripe, the emblem, an ink border.
+static func flag_texture(i: int, w: int = 120) -> ImageTexture:
+	var h := w * 2 / 3
+	var key := i * 10000 + w
+	if _flags.has(key):
+		return _flags[key]
+	var d := flag_design(i)
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var ink := Color(0.05, 0.04, 0.08)
+	var b := maxf(2.0, w * 0.03)
+	for y in h:
+		for x in w:
+			var u := (x + 0.5) / w
+			var v := (y + 0.5) / h
+			var c: Color = d[0]
+			if i >= 0:
+				if v > 0.72 and v < 0.88:
+					c = d[1]
+				if _in_emblem(d[3], Vector2(u - 0.5, (v - 0.4) * h / w)):
+					c = d[2]
+			if x < b or y < b or x >= w - b or y >= h - b:
+				c = ink
+			img.set_pixel(x, y, c)
+	var tex := ImageTexture.create_from_image(img)
+	_flags[key] = tex
+	return tex
+
+
+## Is `p` (x across, y down, in flag widths from the emblem's centre) in it.
+static func _in_emblem(kind: String, p: Vector2) -> bool:
+	match kind:
+		"star":
+			var ang := atan2(p.y, p.x)
+			var r := 0.17 * (0.55 + 0.45 * absf(cos(ang * 2.5)))
+			return p.length() < r
+		"sun":
+			return p.length() < 0.14 or (p.y < 0.0 and p.length() < 0.2 and fmod(absf(atan2(p.y, p.x)) * 6.0, 1.0) < 0.5)
+		"chevron":
+			return absf(p.y - absf(p.x) * 0.8 + 0.1) < 0.045 and absf(p.x) < 0.2
+		"cross":
+			return (absf(p.x) < 0.04 and absf(p.y) < 0.16) or (absf(p.y) < 0.04 and absf(p.x) < 0.16)
+	return false
+
+
 ## Seats the hunters of a run (sorted net ids, `home`: nation per human id)
 ## so each nation has company: a human's nation gets one AI squadmate, the
 ## remaining AI fill the other nations in turn. Deterministic for `seed`.

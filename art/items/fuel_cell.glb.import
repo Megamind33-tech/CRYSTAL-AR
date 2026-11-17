@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://btlr6upbj0ife"
-path="res://.godot/imported/fuel_cell.glb-c77429878e2c7d12e71059034d417cd6.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/fuel_cell.glb"
-dest_files=["res://.godot/imported/fuel_cell.glb-c77429878e2c7d12e71059034d417cd6.scn"]
 
 [params]
 

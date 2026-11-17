@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c1lrvargnjtat"
-path="res://.godot/imported/control_tower.glb-566b82ccb364b015976dae4d00b1ea50.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/districts/control_tower.glb"
-dest_files=["res://.godot/imported/control_tower.glb-566b82ccb364b015976dae4d00b1ea50.scn"]
 
 [params]
 

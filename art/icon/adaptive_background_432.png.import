@@ -3,15 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cvjudo1kwmblw"
-path="res://.godot/imported/adaptive_background_432.png-66f0ad734ac70900b59354fb34b28f94.ctex"
-metadata={
-"vram_texture": false
-}
+valid=false
 
 [deps]
 
 source_file="res://art/icon/adaptive_background_432.png"
-dest_files=["res://.godot/imported/adaptive_background_432.png-66f0ad734ac70900b59354fb34b28f94.ctex"]
 
 [params]
 

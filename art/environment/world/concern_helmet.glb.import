@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c55mw82tjlpmq"
-path="res://.godot/imported/concern_helmet.glb-d8213d997cf03d2d1c3e1d545d00e65e.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/world/concern_helmet.glb"
-dest_files=["res://.godot/imported/concern_helmet.glb-d8213d997cf03d2d1c3e1d545d00e65e.scn"]
 
 [params]
 

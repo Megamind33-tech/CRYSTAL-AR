@@ -3,12 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ckmwt2i5mhw7b"
-path.s3tc="res://.godot/imported/frag_grenade_Image_0.png-c42bb120e41270aa302b8394b13def23.s3tc.ctex"
-path.etc2="res://.godot/imported/frag_grenade_Image_0.png-c42bb120e41270aa302b8394b13def23.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 generator_parameters={
 "md5": "602ada16221f7a8a7e6f85d15a6dde95"
 }
@@ -16,7 +11,6 @@ generator_parameters={
 [deps]
 
 source_file="res://art/weapons/ionfall/frag_grenade_Image_0.png"
-dest_files=["res://.godot/imported/frag_grenade_Image_0.png-c42bb120e41270aa302b8394b13def23.s3tc.ctex", "res://.godot/imported/frag_grenade_Image_0.png-c42bb120e41270aa302b8394b13def23.etc2.ctex"]
 
 [params]
 

@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://6u08qh62fbix"
-path="res://.godot/imported/jump.fbx-9a09f944a015d93e1b3947020bab9635.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/characters/kenney/jump.fbx"
-dest_files=["res://.godot/imported/jump.fbx-9a09f944a015d93e1b3947020bab9635.scn"]
 
 [params]
 

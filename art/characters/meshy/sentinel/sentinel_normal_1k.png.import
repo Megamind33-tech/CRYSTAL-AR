@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cfkbd1hcraxdw"
-path.s3tc="res://.godot/imported/sentinel_normal_1k.png-aedede2b72486b69066ca237861dbe1b.s3tc.ctex"
-path.etc2="res://.godot/imported/sentinel_normal_1k.png-aedede2b72486b69066ca237861dbe1b.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/characters/meshy/sentinel/sentinel_normal_1k.png"
-dest_files=["res://.godot/imported/sentinel_normal_1k.png-aedede2b72486b69066ca237861dbe1b.s3tc.ctex", "res://.godot/imported/sentinel_normal_1k.png-aedede2b72486b69066ca237861dbe1b.etc2.ctex"]
 
 [params]
 

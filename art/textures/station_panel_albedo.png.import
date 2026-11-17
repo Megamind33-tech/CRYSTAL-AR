@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bpx3a2n3nvo11"
-path.s3tc="res://.godot/imported/station_panel_albedo.png-bba5ae40d05c7b942db449eeeed9ed61.s3tc.ctex"
-path.etc2="res://.godot/imported/station_panel_albedo.png-bba5ae40d05c7b942db449eeeed9ed61.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/textures/station_panel_albedo.png"
-dest_files=["res://.godot/imported/station_panel_albedo.png-bba5ae40d05c7b942db449eeeed9ed61.s3tc.ctex", "res://.godot/imported/station_panel_albedo.png-bba5ae40d05c7b942db449eeeed9ed61.etc2.ctex"]
 
 [params]
 

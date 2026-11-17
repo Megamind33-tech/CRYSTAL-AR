@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ckis65s0qk7rj"
-path="res://.godot/imported/freighter_wreck.glb-899489d058acf9609396547e1ea20b9b.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/world/freighter_wreck.glb"
-dest_files=["res://.godot/imported/freighter_wreck.glb-899489d058acf9609396547e1ea20b9b.scn"]
 
 [params]
 

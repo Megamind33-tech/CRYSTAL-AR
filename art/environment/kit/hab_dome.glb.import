@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dt878hyermx3x"
-path="res://.godot/imported/hab_dome.glb-2195c1a759bb61766acd76c5a86fd65e.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/kit/hab_dome.glb"
-dest_files=["res://.godot/imported/hab_dome.glb-2195c1a759bb61766acd76c5a86fd65e.scn"]
 
 [params]
 

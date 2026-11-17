@@ -3,15 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ctfndjuuq8ex4"
-path="res://.godot/imported/foundry.png-e9a44f7e7aabb235d13cb03e45d264b8.ctex"
-metadata={
-"vram_texture": false
-}
+valid=false
 
 [deps]
 
 source_file="res://ui/maps/foundry.png"
-dest_files=["res://.godot/imported/foundry.png-e9a44f7e7aabb235d13cb03e45d264b8.ctex"]
 
 [params]
 

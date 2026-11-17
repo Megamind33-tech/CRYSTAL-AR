@@ -3,12 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cevefas6y7bjk"
-path.s3tc="res://.godot/imported/sentinel_Image_1.jpg-902bb65bbeab3ed6317833324074e1b0.s3tc.ctex"
-path.etc2="res://.godot/imported/sentinel_Image_1.jpg-902bb65bbeab3ed6317833324074e1b0.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 generator_parameters={
 "md5": "1d20f1f90707ae4a798a55e5bc20bc46"
 }
@@ -16,7 +11,6 @@ generator_parameters={
 [deps]
 
 source_file="res://art/characters/meshy/sentinel/sentinel_Image_1.jpg"
-dest_files=["res://.godot/imported/sentinel_Image_1.jpg-902bb65bbeab3ed6317833324074e1b0.s3tc.ctex", "res://.godot/imported/sentinel_Image_1.jpg-902bb65bbeab3ed6317833324074e1b0.etc2.ctex"]
 
 [params]
 

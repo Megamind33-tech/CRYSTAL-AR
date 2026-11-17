@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c5hbexywvk5d5"
-path="res://.godot/imported/pipe_run.glb-0719a5227cdb713b6dc2979a14b42265.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/kit/pipe_run.glb"
-dest_files=["res://.godot/imported/pipe_run.glb-0719a5227cdb713b6dc2979a14b42265.scn"]
 
 [params]
 

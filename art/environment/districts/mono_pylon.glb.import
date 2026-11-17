@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dyl0uaghpjpbm"
-path="res://.godot/imported/mono_pylon.glb-91fe905e9e1d2988538ce59cf2118c1e.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/districts/mono_pylon.glb"
-dest_files=["res://.godot/imported/mono_pylon.glb-91fe905e9e1d2988538ce59cf2118c1e.scn"]
 
 [params]
 

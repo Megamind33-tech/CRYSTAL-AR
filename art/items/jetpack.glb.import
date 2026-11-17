@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cp00ien4pgrar"
-path="res://.godot/imported/jetpack.glb-c0fa1af8d7fdacfeaed1f69fff6b9270.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/jetpack.glb"
-dest_files=["res://.godot/imported/jetpack.glb-c0fa1af8d7fdacfeaed1f69fff6b9270.scn"]
 
 [params]
 

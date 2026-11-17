@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ct2wo8xbojkiq"
-path="res://.godot/imported/rare_ore.glb-9d64fcc21b97c4d99e5cfe3ff35d663b.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/rare_ore.glb"
-dest_files=["res://.godot/imported/rare_ore.glb-9d64fcc21b97c4d99e5cfe3ff35d663b.scn"]
 
 [params]
 

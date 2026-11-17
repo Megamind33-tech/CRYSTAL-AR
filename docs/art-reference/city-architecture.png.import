@@ -3,15 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c00fb6ludgtyp"
-path="res://.godot/imported/city-architecture.png-796f4fb6f0e5d190b303384dca330e85.ctex"
-metadata={
-"vram_texture": false
-}
+valid=false
 
 [deps]
 
 source_file="res://docs/art-reference/city-architecture.png"
-dest_files=["res://.godot/imported/city-architecture.png-796f4fb6f0e5d190b303384dca330e85.ctex"]
 
 [params]
 

@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://co4vvxic3lyag"
-path="res://.godot/imported/galleria.glb-b6b37b0f8a4677c90f14fa3d34bfd970.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/districts/galleria.glb"
-dest_files=["res://.godot/imported/galleria.glb-b6b37b0f8a4677c90f14fa3d34bfd970.scn"]
 
 [params]
 

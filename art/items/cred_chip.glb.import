@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://jngc8vtw3abj"
-path="res://.godot/imported/cred_chip.glb-23453f87a0d780facc06f9529166a465.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/cred_chip.glb"
-dest_files=["res://.godot/imported/cred_chip.glb-23453f87a0d780facc06f9529166a465.scn"]
 
 [params]
 

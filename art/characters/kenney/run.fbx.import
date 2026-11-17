@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ul7xat4ftkl6"
-path="res://.godot/imported/run.fbx-6489a93591b71bc9e61b07447f8ceccf.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/characters/kenney/run.fbx"
-dest_files=["res://.godot/imported/run.fbx-6489a93591b71bc9e61b07447f8ceccf.scn"]
 
 [params]
 

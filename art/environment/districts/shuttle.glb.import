@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://0b20mvfh71k5"
-path="res://.godot/imported/shuttle.glb-590f0b0d3f3e36fbc5a3a3f35b8834fa.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/districts/shuttle.glb"
-dest_files=["res://.godot/imported/shuttle.glb-590f0b0d3f3e36fbc5a3a3f35b8834fa.scn"]
 
 [params]
 

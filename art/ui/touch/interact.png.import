@@ -3,15 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://62g0ubdsytuk"
-path="res://.godot/imported/interact.png-3bf3bba44232e27f9d040474e92d7e7a.ctex"
-metadata={
-"vram_texture": false
-}
+valid=false
 
 [deps]
 
 source_file="res://art/ui/touch/interact.png"
-dest_files=["res://.godot/imported/interact.png-3bf3bba44232e27f9d040474e92d7e7a.ctex"]
 
 [params]
 

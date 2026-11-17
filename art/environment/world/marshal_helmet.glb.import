@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c1t2q5jun55yc"
-path="res://.godot/imported/marshal_helmet.glb-a04c84586cf1594c3317a080d3660ae1.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/world/marshal_helmet.glb"
-dest_files=["res://.godot/imported/marshal_helmet.glb-a04c84586cf1594c3317a080d3660ae1.scn"]
 
 [params]
 

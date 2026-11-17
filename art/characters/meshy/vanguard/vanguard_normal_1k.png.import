@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cta31uf63dtap"
-path.s3tc="res://.godot/imported/vanguard_normal_1k.png-d13ff7bc48825197d6ea2c61ac108a27.s3tc.ctex"
-path.etc2="res://.godot/imported/vanguard_normal_1k.png-d13ff7bc48825197d6ea2c61ac108a27.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/characters/meshy/vanguard/vanguard_normal_1k.png"
-dest_files=["res://.godot/imported/vanguard_normal_1k.png-d13ff7bc48825197d6ea2c61ac108a27.s3tc.ctex", "res://.godot/imported/vanguard_normal_1k.png-d13ff7bc48825197d6ea2c61ac108a27.etc2.ctex"]
 
 [params]
 

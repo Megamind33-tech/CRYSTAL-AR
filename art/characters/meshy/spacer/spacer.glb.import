@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bkk2fgaxteuhd"
-path="res://.godot/imported/spacer.glb-86c8a44cb91ab72f0371ec98bdbb28c1.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/characters/meshy/spacer/spacer.glb"
-dest_files=["res://.godot/imported/spacer.glb-86c8a44cb91ab72f0371ec98bdbb28c1.scn"]
 
 [params]
 

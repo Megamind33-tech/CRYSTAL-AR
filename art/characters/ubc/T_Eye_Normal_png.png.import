@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://do2re75enynmm"
-path.s3tc="res://.godot/imported/T_Eye_Normal_png.png-ebd2f524afa8c46f8b90e270953a0809.s3tc.ctex"
-path.etc2="res://.godot/imported/T_Eye_Normal_png.png-ebd2f524afa8c46f8b90e270953a0809.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/characters/ubc/T_Eye_Normal_png.png"
-dest_files=["res://.godot/imported/T_Eye_Normal_png.png-ebd2f524afa8c46f8b90e270953a0809.s3tc.ctex", "res://.godot/imported/T_Eye_Normal_png.png-ebd2f524afa8c46f8b90e270953a0809.etc2.ctex"]
 
 [params]
 

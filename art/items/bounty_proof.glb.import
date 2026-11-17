@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://biyk7dxy2bg4m"
-path="res://.godot/imported/bounty_proof.glb-1e3f47455496588902c131004b404a30.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/bounty_proof.glb"
-dest_files=["res://.godot/imported/bounty_proof.glb-1e3f47455496588902c131004b404a30.scn"]
 
 [params]
 

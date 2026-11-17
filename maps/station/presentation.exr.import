@@ -3,17 +3,11 @@
 importer="2d_array_texture"
 type="CompressedTexture2DArray"
 uid="uid://fsnata251rxb"
-path.bptc="res://.godot/imported/presentation.exr-d037aa4f8ff95856d9ef559398c99742.bptc.ctexarray"
-path.astc="res://.godot/imported/presentation.exr-d037aa4f8ff95856d9ef559398c99742.astc.ctexarray"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://maps/station/presentation.exr"
-dest_files=["res://.godot/imported/presentation.exr-d037aa4f8ff95856d9ef559398c99742.bptc.ctexarray", "res://.godot/imported/presentation.exr-d037aa4f8ff95856d9ef559398c99742.astc.ctexarray"]
 
 [params]
 

@@ -1155,3 +1155,13 @@ SEARCH_PACK,Pack: %s
 SEARCH_HOLD,Vehicle hold: %s
 SEARCH_HOME,Home locker: %s
 SCAN_LINE,%s · %d
+PATH_TITLE,HOW WILL YOU WORK?
+PATH_GOVERNMENT,GOVERNMENT
+PATH_GOVERNMENT_SUB,Steady pay and a badge. Your nation's orders come first.
+PATH_FREELANCE,FREELANCE
+PATH_FREELANCE_SUB,Your own contracts and risks. Nobody to answer to.
+REG_TITLE,REGISTRATION
+REG_NAME,Your name
+REG_BODY,Choose your body
+REG_NEXT,CONTINUE
+REG_BAD_NAME,A name needs 3 to 16 letters.

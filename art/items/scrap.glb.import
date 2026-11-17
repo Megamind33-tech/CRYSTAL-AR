@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cei2hxsktkeoa"
-path="res://.godot/imported/scrap.glb-56073a8b5491c99d45087e3aaafd79ed.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/scrap.glb"
-dest_files=["res://.godot/imported/scrap.glb-56073a8b5491c99d45087e3aaafd79ed.scn"]
 
 [params]
 

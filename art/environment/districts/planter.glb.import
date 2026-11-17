@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://yf6ab1mceuuw"
-path="res://.godot/imported/planter.glb-68efa846e71ca679381df1a3c9c6538a.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/districts/planter.glb"
-dest_files=["res://.godot/imported/planter.glb-68efa846e71ca679381df1a3c9c6538a.scn"]
 
 [params]
 

@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c56hehwue8mro"
-path="res://.godot/imported/merc_helmet.glb-f3111a4b1371cc3e764a5c72388efe11.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/world/merc_helmet.glb"
-dest_files=["res://.godot/imported/merc_helmet.glb-f3111a4b1371cc3e764a5c72388efe11.scn"]
 
 [params]
 

@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cpkcqdg73kun1"
-path="res://.godot/imported/frag_grenade.glb-fc0f2a44e6881e2839ea46a06fc40138.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/weapons/ionfall/frag_grenade.glb"
-dest_files=["res://.godot/imported/frag_grenade.glb-fc0f2a44e6881e2839ea46a06fc40138.scn"]
 
 [params]
 

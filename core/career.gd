@@ -268,7 +268,7 @@ static func fresh() -> Dictionary:
 			"heist": {}, "heists_done": {},
 			"feed": [], "fame": 0, "partner": {},
 			"cosmetics": ["emote_dance", "emote_talk"], "equipped": {}, "season": {"xp": 0, "claimed": []},
-			"nation": "", "nation_standing": 0, "squad": {}, "last_turned_run": -100, "guide": 0, "caches": []}
+			"nation": "", "reg": {"done": false, "name": "", "body": 0}, "path": "", "arrived": false, "nation_standing": 0, "squad": {}, "last_turned_run": -100, "guide": 0, "caches": []}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -1957,6 +1957,31 @@ const RUN_STANDING := 5  ## a run where the squad held together
 ## Your nation (Nations index), NONE until you choose on arrival.
 func nation() -> int:
 	return Nations.index_of(str(d.nation))
+
+
+## Registration (first launch): your name and body. Saved into the career.
+func register(p_name: String, body: int) -> bool:
+	var n := p_name.strip_edges()
+	if n.length() < 3 or n.length() > 16:
+		return false
+	d.reg = {"done": true, "name": n, "body": clampi(body, 0, CharacterRig.SELECTABLE.size() - 1)}
+	return true
+
+
+func registered() -> bool:
+	return bool(d.reg.get("done", false))
+
+
+## The career path after arrival: "" (not yet chosen), "government" or "freelance".
+func path() -> String:
+	return str(d.path)
+
+
+func choose_path(p: String) -> bool:
+	if not Arrival.PATHS.has(p):
+		return false
+	d.path = p
+	return true
 
 
 func choose_nation(i: int) -> bool:
