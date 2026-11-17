@@ -268,7 +268,7 @@ static func fresh() -> Dictionary:
 			"heist": {}, "heists_done": {},
 			"feed": [], "fame": 0, "partner": {},
 			"cosmetics": ["emote_dance", "emote_talk"], "equipped": {}, "season": {"xp": 0, "claimed": []},
-			"nation": "", "nation_standing": 0, "squad": {}, "last_turned_run": -100, "guide": 0}
+			"nation": "", "nation_standing": 0, "squad": {}, "last_turned_run": -100, "guide": 0, "caches": []}
 
 
 func _init(data: Dictionary = {}) -> void:
@@ -2041,3 +2041,47 @@ func robbed() -> Dictionary:
 	d.stash.clear()
 	d.armed = ""
 	return out
+
+
+# --- Hidden stashes: goods put away out in the world, collected later ---
+
+const MAX_CACHES := 5
+const CACHE_REACH := 2.5
+
+
+## The stash within reach of `at` (-1: none).
+func cache_at(at: Vector3) -> int:
+	for i in d.caches.size():
+		var p: Array = d.caches[i].at
+		if at.distance_to(Vector3(p[0], p[1], p[2])) < CACHE_REACH:
+			return i
+	return -1
+
+
+## A new stash at `at` (or the one already there). -1 if you have too many.
+func make_cache(at: Vector3) -> int:
+	var i := cache_at(at)
+	if i >= 0:
+		return i
+	if d.caches.size() >= MAX_CACHES:
+		return -1
+	d.caches.append({"at": [at.x, at.y, at.z], "items": {}})
+	return d.caches.size() - 1
+
+
+## Moves all of `item` from the pack into stash `i`.
+func hide_in(i: int, item: String) -> int:
+	if i < 0 or i >= d.caches.size() or is_weapon(item) and item == d.armed:
+		return 0
+	var n := int(d.stash.get(item, 0))
+	if n <= 0:
+		return 0
+	d.stash.erase(item)
+	var items: Dictionary = d.caches[i].items
+	items[item] = int(items.get(item, 0)) + n
+	return n
+
+
+## Empty stashes are forgotten.
+func tidy_caches() -> void:
+	d.caches = d.caches.filter(func(c: Dictionary) -> bool: return not (c.items as Dictionary).is_empty())

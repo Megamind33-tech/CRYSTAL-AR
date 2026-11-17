@@ -1146,3 +1146,9 @@ HUNT_HOLD_ROBBED,searched your vehicle and took %s
 TITAN_INSPECTION,"SALTS checkpoint: stop, your vehicle's hold is being searched"
 TITAN_HOLD_SEIZED,"They found %d dust in the hold: seized, fined $%d"
 TITAN_HOLD_CLEAR,Hold searched: clean. On your way
+SHELF_HIDE,Hide it here
+SHELF_HIDDEN,%s hidden
+SHELF_HIDE_HERE,Hide goods here
+SHELF_CACHE_TITLE,YOUR STASH
+CITY_PROMPT_CACHE,Your stash
+CITY_CACHES_FULL,You already have %d stashes: empty one first

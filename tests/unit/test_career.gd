@@ -329,3 +329,21 @@ func test_the_hold_is_searched_apart_from_the_pack() -> void:
 	assert_eq(c.confiscate_hold(), 3, "the hold's dust is found")
 	assert_eq(c.d.rover_cargo, {"rare_ore": 1}, "the rest of the hold stays")
 	assert_eq(c.d.stash, {"red_dust": 2}, "the pack wasn't searched")
+
+
+func test_hidden_stashes_survive_a_robbery() -> void:
+	var c := Career.new()
+	c.d.runs = 2
+	c.d.stash = {"rare_ore": 4, "red_dust": 2}
+	var i := c.make_cache(Vector3(100, 0, 50))
+	assert_eq(c.make_cache(Vector3(101, 0, 50)), i, "the same spot is the same stash")
+	assert_eq(c.hide_in(i, "rare_ore"), 4)
+	assert_eq(c.cache_at(Vector3(100.5, 0, 50)), i, "found again when you come back")
+	assert_eq(c.cache_at(Vector3(120, 0, 50)), -1)
+	c.robbed()
+	assert_eq(c.d.caches[i].items, {"rare_ore": 4}, "robbers take your pack, not your stash")
+	for k in Career.MAX_CACHES:
+		c.make_cache(Vector3(k * 20.0, 0, 0))
+	assert_eq(c.make_cache(Vector3(999, 0, 0)), -1, "only so many stashes")
+	c.tidy_caches()
+	assert_eq(c.d.caches.size(), 1, "empty ones are forgotten")

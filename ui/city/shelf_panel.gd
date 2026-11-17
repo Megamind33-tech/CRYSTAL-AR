@@ -44,6 +44,8 @@ const LOOK := {
 }
 
 var mode: String = "pack"
+var cfg_cache: int = -1  ## "cache" mode: which of the career's stashes
+var hide_here: bool = false  ## "pack" mode: offer to make a stash where you stand
 var title: String = ""
 var right: Dictionary = {}
 var shop: String = ""
@@ -73,6 +75,8 @@ func _ready() -> void:
 
 func open(cfg: Dictionary) -> void:
 	mode = cfg.get("mode", "pack")
+	cfg_cache = int(cfg.get("cache", -1))
+	hide_here = bool(cfg.get("hide_here", false))
 	title = cfg.get("title", "")
 	right = cfg.get("right", {}) if mode != "shop" else {}
 	shop = cfg.get("shop", "")
@@ -141,7 +145,11 @@ func refresh() -> void:
 						var got := c.sell_at(shop, item)
 						if got > 0:
 							_done("sell", item, tr("SHELF_SOLD") % [_name(item), got]))
-		elif _sel_side == 1 and mode in ["loot", "hold"]:
+		elif _sel_side == 0 and mode == "cache" and item != "pulse_rifle":
+			_button(tr("SHELF_HIDE"), true, ComicUI.CYAN, func() -> void:
+				if c.hide_in(int(cfg_cache), item) > 0:
+					_done("hide", item, tr("SHELF_HIDDEN") % _name(item)))
+		elif _sel_side == 1 and mode in ["loot", "hold", "cache"]:
 			var n: int = right.get(item, 0)
 			_button(tr("SHELF_TAKE") % n, n > 0, ComicUI.GREEN, func() -> void:
 				var moved := Robbery.take(right, c.d.stash, item, n)
@@ -195,7 +203,10 @@ func refresh() -> void:
 		_button(tr("SHELF_BODY_MAN") if woman else tr("SHELF_BODY_WOMAN"), true, ComicUI.CYAN, func() -> void:
 			c.d["body"] = "male" if woman else "female"
 			_done("body", "", tr("SHELF_BODY_DONE")))
-	if mode in ["loot", "hold"] and not right.is_empty():
+	if mode == "pack" and hide_here:
+		_button(tr("SHELF_HIDE_HERE"), true, ComicUI.CYAN, func() -> void:
+			acted.emit("hide_here", ""))
+	if mode in ["loot", "hold", "cache"] and not right.is_empty():
 		_button(tr("SHELF_TAKE_ALL"), true, ComicUI.GREEN, func() -> void:
 			var moved := Robbery.take_all(right, c.d.stash)
 			_done("take_all", "", tr("SHELF_TOOK_ALL") % moved.size())

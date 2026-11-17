@@ -337,6 +337,10 @@ func _update() -> void:
 	for bunk: Array in WorldLayout.bunks():
 		if _near.is_empty() and pos.distance_to(bunk[0]) < REACH + 1.0:
 			_near = "bunk"
+	if _near.is_empty() and me.state.vehicle < 0:
+		var ci := Profile.career().cache_at(pos)
+		if ci >= 0:
+			_near = "cache:%d" % ci
 	if _near.is_empty() and pos.distance_to(TitanSettlement.air_station()) < REACH + 0.5:
 		_near = "air_refill"
 	var job: Dictionary = Profile.career().d.job
@@ -494,6 +498,10 @@ func _update() -> void:
 			else:
 				_rig = i
 				_rig_t = 0.0
+		elif _near.begins_with("cache:"):
+			var ci := int(_near.substr(6))
+			if ci < Profile.career().d.caches.size():
+				_open_shelf({"mode": "cache", "title": tr("SHELF_CACHE_TITLE"), "right": Profile.career().d.caches[ci].items, "cache": ci})
 		elif _near == "air_refill":
 			# EX-03's filling station: a full air canister for your suit.
 			if me.state.o2_spares >= AIR_CANISTERS_MAX:
@@ -1838,7 +1846,9 @@ func _use_goods(me: SimPlayer) -> void:
 
 
 func open_pack() -> void:
-	_open_shelf({"mode": "pack", "title": tr("SHELF_PACK_TITLE")})
+	var hm: SimPlayer = match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID) if match_node.server != null else null
+	var can_hide: bool = hm != null and hm.state.vehicle < 0 and not region in WorldLayout.LAWFUL and region != "interior"
+	_open_shelf({"mode": "pack", "title": tr("SHELF_PACK_TITLE"), "hide_here": can_hide})
 
 
 func _open_shelf(cfg: Dictionary) -> void:
@@ -1852,6 +1862,18 @@ func _open_shelf(cfg: Dictionary) -> void:
 
 ## A change on the shelf: a new gun goes in your hands now.
 func _on_shelf(kind: String, item: String) -> void:
+	if kind == "hide_here":
+		var hme: SimPlayer = match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
+		var i := Profile.career().make_cache(hme.state.position)
+		if i < 0:
+			_note(tr("CITY_CACHES_FULL") % Career.MAX_CACHES, ComicUI.YELLOW)
+			return
+		Profile.save()
+		_open_shelf({"mode": "cache", "title": tr("SHELF_CACHE_TITLE"), "right": Profile.career().d.caches[i].items, "cache": i})
+		return
+	if kind == "hide" or kind == "take":
+		Profile.career().tidy_caches()
+		Profile.save()
 	if kind == "use":
 		use_kit(item)
 		shelf.refresh()
@@ -1962,6 +1984,8 @@ func prompt() -> String:
 		text = tr("CITY_PROMPT_SLEEP")
 	elif _near == "air_refill":
 		text = tr("TITAN_AIR_PROMPT") % AIR_CANISTER_PRICE
+	elif _near.begins_with("cache:"):
+		text = tr("CITY_PROMPT_CACHE")
 	elif _near.begins_with("loot:"):
 		for spot: Array in WorldLayout.loot_spots():
 			if spot[0] == _near.substr(5):
@@ -2291,6 +2315,11 @@ class _CityHud extends Control:
 				q = c + (q - c).normalized() * (rad - 8 * s)  # off the map: at its edge, pointing the way
 			var d := 7.0 * s
 			_sb.colored_polygon(PackedVector2Array([q + Vector2(0, -d), q + Vector2(d, 0), q + Vector2(0, d), q + Vector2(-d, 0)]), ComicUI.YELLOW)
+		# Your hidden stashes: small cyan squares (only you know them).
+		for cache: Dictionary in Profile.career().d.caches:
+			var cq: Vector2 = to_map.call(Vector2(float(cache.at[0]), float(cache.at[2])))
+			if cq.distance_to(c) < rad - 6 * s:
+				_sb.rect(Rect2(cq - Vector2(4, 4) * s, Vector2(8, 8) * s), ComicUI.CYAN)
 		# The tracker's place: a magenta diamond, at the edge when it's off the map.
 		if _tracker_target != Vector3.INF:
 			var tq: Vector2 = to_map.call(Vector2(_tracker_target.x, _tracker_target.z))
