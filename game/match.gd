@@ -2050,6 +2050,9 @@ func _handle_event(e: Dictionary) -> void:
 			effects.pickup_burst(e.position + Vector3(0.0, 0.6, 0.0), PickupVisuals.color_of(e.weapon))
 			if e.player == me:
 				audio.play_ui("pickup", -4.0)
+				var g := PickupItems.career_item(e)
+				if not g.is_empty():
+					Profile.career().receive_pickup(String(g.item), int(g.count))
 			else:
 				audio.play_at("pickup", e.position, "World", 1, -6.0)
 

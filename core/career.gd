@@ -61,6 +61,12 @@ const ITEMS := {
 	"scatter_gun": {"name": "Scatter gun", "base": 340, "weapon": 2},
 	"flux_smg": {"name": "Flux SMG", "base": 300, "weapon": 3},
 	"frag_grenade": {"name": "Frag grenade", "base": 45},
+	"pulse_rifle": {"name": "Pulse rifle", "base": 300},
+	"mag_pistol": {"name": "Mag pistol", "base": 160},
+	"rail_sniper": {"name": "Rail sniper", "base": 620},
+	"rocket_launcher": {"name": "Rocket launcher", "base": 700},
+	"bullets": {"name": "Bullets", "base": 1},
+	"ammo_case": {"name": "Ammo case", "base": 30},
 	# Tools and kit (what each does: TOOLS and USE below).
 	"crowbar": {"name": "Crowbar", "base": 25, "tool": true},
 	"lockpick": {"name": "Lockpicks", "base": 20},
