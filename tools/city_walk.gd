@@ -28,6 +28,8 @@ func _run() -> void:
 		Profile.career().d.stash = {"oxygen_canister": 1}
 	if Platform.user_args.has("--people"):
 		Profile.career().d["body"] = "female"  # play as a woman
+	if Platform.user_args.has("--block"):
+		Profile.career().choose_nation(0)
 	if Platform.user_args.has("--phase1") and dig:
 		Profile.career().choose_nation(0)  # a recruit of the Aurora Compact, on the first run
 	MatchConfig.pending = MatchConfig.for_place(GameMode.HUNT if dig else GameMode.CITY, "You")
@@ -38,6 +40,10 @@ func _run() -> void:
 	m.hud._touch = true
 	var me: SimPlayer = m.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	print("CITY WALK: player at %s, phase %s" % [me.state.position, m.server.phase])
+	if Platform.user_args.has("--block"):
+		await _block_tour(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--phase1"):
 		await _phase1_run(me, dig)
 		get_tree().quit(0)
@@ -1215,6 +1221,30 @@ func _dig_run(me: SimPlayer) -> void:
 	await _pose(me, WorldTerrain.at(200.0, 135.0) + Vector3(0, 0.3, 0), 0.0, -0.15)
 	await _shot("d5_rim_extraction")
 	get_tree().quit(0)
+
+
+## --block: the settlement block (the plaza) and each building's inside,
+## for before/after shots: [name, where (relative to CityLayout.ORIGIN),
+## yaw, pitch].
+const BLOCK_VIEWS := [
+	["b0_plaza", Vector3(0, 0.05, 30), 0.0, -0.05],
+	["b1_home_door", Vector3(-28, 0.05, -28), PI * 0.75, -0.05],
+	["b2_home_inside", Vector3(-35, 0.05, -35), PI * 0.75, -0.1],
+	["b3_shop_door", Vector3(-26, 0.05, 12), -PI * 0.5, -0.05],
+	["b4_shop_inside", Vector3(-35, 0.05, 12), -PI * 0.5, -0.1],
+	["b5_plant", Vector3(28, 0.05, -26), PI * 0.25, -0.05],
+	["b6_hangar_inside", Vector3(34, 0.05, 2), -PI * 0.5, -0.1],
+	["b7_gate", Vector3(0, 0.05, 30), PI, -0.05],
+]
+
+
+func _block_tour(me: SimPlayer) -> void:
+	if m.city != null and m.city._nation_pick == null:
+		Profile.career().choose_nation(0)
+	await _frames(10)
+	for v: Array in BLOCK_VIEWS:
+		await _pose(me, CityLayout.ORIGIN + (v[1] as Vector3), v[2], v[3])
+		await _shot(v[0])
 
 
 ## --phase1: the nation pick and the tracker in the city; in a run (with
