@@ -128,7 +128,8 @@ def terrain():
             bm.free()
             for p in me.polygons:
                 p.use_smooth = True
-            me.use_auto_smooth = True
+            if hasattr(me, "use_auto_smooth"):  # Blender < 4.1; custom normals need no flag after
+                me.use_auto_smooth = True
             me.normals_split_custom_set_from_vertices(normals)
             ob = bpy.data.objects.new(name, me)
             bpy.context.scene.collection.objects.link(ob)
@@ -137,8 +138,10 @@ def terrain():
             me.materials.append(m)
             total += (i1 - i0) * (j1 - j0) * 2
     path = os.path.join(OUT, "terrain.glb")
+    # Blender 4.2 renamed export_colors (vertex colours) to export_vertex_color.
+    colors = {"export_colors": True} if bpy.app.version < (4, 2, 0) else {"export_vertex_color": "ACTIVE"}
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", export_yup=True, export_normals=True,
-                              export_colors=True, export_materials="EXPORT")
+                              export_materials="EXPORT", **colors)
     print("WORLD terrain: %d tris in %d tiles -> %s" % (total, TILES * TILES, path))
 
 

@@ -62,9 +62,12 @@ def _finish_obj(o, mat, bevel=0.0, smooth=True, subsurf=0):
         s.levels = subsurf
         s.render_levels = subsurf
     if smooth:
-        bpy.ops.object.shade_smooth()
-        o.data.use_auto_smooth = True
-        o.data.auto_smooth_angle = math.radians(40)
+        if hasattr(o.data, "use_auto_smooth"):  # Blender < 4.1
+            bpy.ops.object.shade_smooth()
+            o.data.use_auto_smooth = True
+            o.data.auto_smooth_angle = math.radians(40)
+        else:
+            bpy.ops.object.shade_smooth_by_angle(angle=math.radians(40))
     return o
 
 
