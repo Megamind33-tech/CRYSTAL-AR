@@ -8,9 +8,9 @@ extends GutTest
 ## road beds). A
 ## change here moves the ground under everything placed on it: re-check
 ## the layout tests and the map (tools/plot_world_map.py) when you update it.
-const PINNED := [[0, 0, 3.6027], [-220, 20, 14.0000], [60, -60, 2.0000], [238, 161.83249824997, -21.1695],
-		[150, -240, -11.2001], [-60, -230, 31.8974], [390, -390, 15.4081], [123.4, -56.7, 2.1641], [-300, 150, -0.6022],
-		[-150, 80, 10.1815], [-290, -60, 9.2059], [-400, -250, 18.0000], [-170, 330, 6.0000], [-460, 330, -18.3174],
+const PINNED := [[0, 0, 1.8866], [-220, 20, 14.0000], [60, -60, 2.0000], [238, 161.83249824997, -21.1615],
+		[150, -240, -11.2001], [-60, -230, 31.8974], [390, -390, 15.4081], [123.4, -56.7, 2.2655], [-300, 150, -0.6022],
+		[-150, 80, 9.5896], [-290, -60, 9.2059], [-400, -250, 18.0000], [-170, 330, 6.0000], [-460, 330, -18.3174],
 		[580, -580, 76.3311], [420, -300, 44.7178], [-450, 300, -19.0679], [300, 520, 15.5758], [-180, -250, 37.9730],
 		[-95, 28, 3.0000]]
 
@@ -220,9 +220,10 @@ func test_gameplay_scene_builds() -> void:
 	assert_eq((ground.shape as HeightMapShape3D).map_width, WorldTerrain.cells() + 1)
 
 
-## The roads are drivable: no stretch steeper than MAX_GRADE, level across
-## (the bed), and a road that ends on another meets it at the same height.
-const MAX_GRADE := 0.18
+## The roads are drivable: no stretch steeper than MAX_GRADE, no sudden
+## change of grade (a bump) beyond MAX_BUMP per 4 m, and level across.
+const MAX_GRADE := 0.16
+const MAX_BUMP := 0.14
 
 
 func test_roads_drivable() -> void:
@@ -230,12 +231,17 @@ func test_roads_drivable() -> void:
 	var roads := WorldLayout.roads()
 	for ri in roads.size():
 		var smp := WorldLayout.road_samples(roads[ri], 4.0)
+		var prev := NAN
 		for i in smp.size() - 1:
 			var a: Vector2 = smp[i][0]
 			var b: Vector2 = smp[i + 1][0]
-			var grade := absf(WorldTerrain.surface(b.x, b.y) - WorldTerrain.surface(a.x, a.y)) / maxf(a.distance_to(b), 0.5)
+			var signed := (WorldTerrain.surface(b.x, b.y) - WorldTerrain.surface(a.x, a.y)) / maxf(a.distance_to(b), 0.5)
+			var grade := absf(signed)
 			if grade > MAX_GRADE:
 				bad.append("road %d at %s: %d%% grade" % [ri, a.round(), roundi(grade * 100)])
+			if not is_nan(prev) and absf(signed - prev) > MAX_BUMP:
+				bad.append("road %d at %s: a bump (%d%% to %d%%)" % [ri, a.round(), roundi(prev * 100), roundi(signed * 100)])
+			prev = signed
 			var across := Vector2(-(smp[i][1] as Vector2).y, (smp[i][1] as Vector2).x) * 4.0
 			var tilt := absf(WorldTerrain.surface(a.x + across.x, a.y + across.y) - WorldTerrain.surface(a.x - across.x, a.y - across.y))
 			if tilt > 1.5:

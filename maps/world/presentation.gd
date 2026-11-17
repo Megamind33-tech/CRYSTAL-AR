@@ -387,17 +387,20 @@ func _deploy_pad(at: Vector3) -> void:
 	add_child(beam)
 
 
-## The valley's roads (WorldLayout.roads): a paved strip 9 m wide laid on
-## the ground, white edge lines and a dashed yellow centre line; one mesh.
+## The valley's roads (WorldLayout.roads): packed ice gravel 9 m wide laid
+## on the ground, inked at the edges like the comic's outlines, two darker
+## wheel ruts down the middle.
 const ROAD_HALF := 4.5
+## Packed pale ice gravel: lighter than the dunes, so the roads read from afar.
+const ROAD_SURFACE := Color(0.66, 0.6, 0.5)
 
 
 func _roads() -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var tarmac := Color(0.2, 0.17, 0.16).srgb_to_linear()
-	var white := Color(0.85, 0.82, 0.76).srgb_to_linear()
-	var yellow := Color(0.95, 0.72, 0.12).srgb_to_linear()
+	var tarmac := ROAD_SURFACE.srgb_to_linear()
+	var ink := ComicUI.INK.srgb_to_linear()
+	var rut := ROAD_SURFACE.darkened(0.22).srgb_to_linear()
 	for road: Array in WorldLayout.roads():
 		var pts := WorldLayout.road_samples(road, 1.5)
 		for i in pts.size() - 1:
@@ -413,10 +416,9 @@ func _roads() -> void:
 			var nb := Vector2(-db.y, db.x)
 			_strip(st, a, b, na, nb, -ROAD_HALF, ROAD_HALF, 0.06, tarmac)
 			for side in [-1.0, 1.0]:
-				_strip(st, a, b, na, nb, side * (ROAD_HALF - 0.6) - 0.12, side * (ROAD_HALF - 0.6) + 0.12, 0.08, white)  # edge lines
-				_skirt(st, a, b, na, nb, side * ROAD_HALF, tarmac)  # no gap under the edge, from any angle
-			if i % 4 < 2:  # the dashed centre line
-				_strip(st, a, b, na, nb, -0.12, 0.12, 0.08, yellow)
+				_strip(st, a, b, na, nb, side * ROAD_HALF - 0.35 * side, side * ROAD_HALF, 0.08, ink)  # the inked edge
+				_strip(st, a, b, na, nb, side * 1.6 - 0.45, side * 1.6 + 0.45, 0.07, rut)  # a wheel rut
+				_skirt(st, a, b, na, nb, side * ROAD_HALF, ink)  # no gap under the edge, from any angle
 		_road_section(st, pts[pts.size() - 1][0])
 		st = SurfaceTool.new()
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)

@@ -21,8 +21,10 @@ const SKYPORT := [-100.0, -430.0, 10.0, 115.0, 170.0]   # north: Kasei Skyport
 const FACTORY_YARD := [-95.0, 28.0, 3.0, 32.0, 60.0]
 const GARAGE_YARD := [-176.0, 108.0, 11.0, 16.0, 36.0]
 ## The lift house's yard at the Anvil's foot, the north road through it.
-const LIFT_YARD := [-197.0, -169.0, 0.0, 16.0, 34.0]
+const LIFT_YARD := [-197.0, -169.0, 6.0, 16.0, 34.0]
 const SITES := [CITY, HOLLOW, HELIOS, GALLERIA, TERRACE, SKYPORT, FACTORY_YARD, GARAGE_YARD, LIFT_YARD]
+## The settlements' flats (the yards are not: a road may cross a yard's edge).
+const DISTRICTS := [CITY, HOLLOW, HELIOS, GALLERIA, TERRACE, SKYPORT]
 ## Mesas: [x, z, radius, height]. The Anvil (Deep Furrow's lift at its
 ## foot) and its neighbour north of the city; the rest frame the routes.
 const ANVIL := [-180.0, -250.0, 56.0, 34.0]
@@ -128,10 +130,10 @@ static func surface(x: float, z: float) -> float:
 # across, then sloping back to the land. Where a road starts or ends on
 # another, it meets that road's bed at the same height.
 
-const ROAD_GRADE := 0.12
+const ROAD_GRADE := 0.14
 const ROAD_BED_HALF := 6.5
 const ROAD_SPACING := 4.0  ## metres between profile points
-const ROAD_REACH := 30.0   ## the widest an embankment or cutting spreads
+const ROAD_REACH := 45.0   ## the widest an embankment or cutting spreads
 const _BUCKET := 32.0
 ## [a, b, height at a, height at b, road] per stretch of every road's bed.
 static var _segs: Array = []
@@ -166,8 +168,8 @@ static func _road_bed(x: float, z: float, h: float) -> float:
 	for road: int in near:
 		var d: float = near[road][0]
 		var bed: float = near[road][1]
-		# The bank: 1 in 1.5 from the bed's edge back to the land.
-		var bank := clampf(absf(h - bed) * 1.5, 3.0, ROAD_REACH)
+		# The bank: a gentle 1 in 3 from the bed's edge back to the land.
+		var bank := clampf(absf(h - bed) * 3.0, 4.0, ROAD_REACH)
 		var k := smoothstep(ROAD_BED_HALF + bank, ROAD_BED_HALF, d)
 		if k <= 0.0:
 			continue
@@ -213,14 +215,31 @@ static func _build_beds() -> void:
 		for end: int in [0, n - 1]:
 			var at := _bed_at(pts[end])
 			pins[end] = at if not is_nan(at) else land[end]
+		# A road never changes a settlement's flat: there, its bed is the flat.
+		for i in n:
+			for site: Array in DISTRICTS:
+				if Vector2(pts[i].x - float(site[0]), pts[i].y - float(site[1])).length() < float(site[3]):
+					pins[i] = land[i]
+					break
 		var step := ROAD_SPACING * ROAD_GRADE
 		# Cut-only (the highest grade-held line under the land) and fill-only
 		# (the lowest over it), both through the pins; the bed is between.
 		var cut := _held(smooth, pins, step, true)
 		var fill := _held(smooth, pins, step, false)
+		var bed := PackedFloat32Array()
+		bed.resize(n)
+		for i in n:
+			bed[i] = (cut[i] + fill[i]) * 0.5
+		# Rounded off (no kinks to bump over), the ends kept where they meet.
+		for pass_ in 8:
+			var soft := bed.duplicate()
+			for i in range(1, n - 1):
+				if not pins.has(i):
+					soft[i] = (bed[i - 1] + bed[i] * 2.0 + bed[i + 1]) * 0.25
+			bed = soft
 		var start := _segs.size()
 		for i in n - 1:
-			_segs.append([pts[i], pts[i + 1], (cut[i] + fill[i]) * 0.5, (cut[i + 1] + fill[i + 1]) * 0.5, ri])
+			_segs.append([pts[i], pts[i + 1], bed[i], bed[i + 1], ri])
 		for si in range(start, _segs.size()):
 			var a: Vector2 = _segs[si][0]
 			var b: Vector2 = _segs[si][1]

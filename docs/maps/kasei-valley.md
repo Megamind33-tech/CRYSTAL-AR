@@ -20,29 +20,33 @@ past the Galleria), the far mesa (north-east).
 
 ## Roads
 
+Twelve roads, about 3.1 km, drawn as smooth curves through their
+waypoints (`WorldLayout.curve`).
+
 - **The loop:** city gate → Galleria → Helios → Skyport → Dust Hollow → city.
-- **Spokes from the gate:** east to the Hollow, north to the lift and the
-  Anvil, south to Nova Terrace.
-- **The canyon road:** from the Hollow into the canyon at its shallow west
-  mouth, then down the floor to the dig; the Terrace road turns off at the mouth.
-- **District streets:** a street round Helios's Ring joins its avenue and its
-  south street; a ring street round Nova Terrace's plaza joins its three roads.
+- **Spokes from the gate:** east to the Hollow, north past the lift to
+  Helios and the Skyport, south to Nova Terrace's plaza.
+- **Dust Hollow:** a round ring street the eastern roads meet; the dig road
+  leaves it for the canyon's shallow west mouth and runs down the floor.
+  A short spur climbs to the crater's rim above the ice cutter.
+- **Helios:** the avenue and the south street, joined round the Ring.
 - **The monorail:** elevated, round the city's west side, from the Skyport
   past Helios and the Galleria to Nova Terrace.
 
-Every road runs on a **road bed** (`WorldTerrain` road beds). The ground
-is cut and filled along the road to a smoothed profile held to 12% (the
-steepest is about 17%, where roads meet). The bed is level across, with
-banks back to the land. Where one road starts or ends on another, its bed
-meets that road's at the same height, and the beds blend into one surface.
-Roads are therefore laid in order: a road that joins another comes after
-it in `WorldLayout.roads()`.
+**Surface:** packed pale ice gravel, inked at the edges in the comic style,
+with two darker wheel ruts. It is laid exactly on the ground's grid, so
+feet and wheels sit on what you see.
 
-Every road ends in a district's street or on the Hollow's loop. None of
-them run through buildings: `test_world.gd` checks this against each
-building's real footprint. It also checks that buildings stand on level
-ground and don't overlap, and `test_roads_drivable` holds every road
-to 18% and level across.
+**Road beds** (`WorldTerrain`): along each road the ground is cut and
+filled to a smoothed profile, held to 14%. The bed is level across and
+banked back to the land at a gentle 1 in 3. A road never changes a
+district's flat: there its bed is the flat, and the ramps happen outside.
+A road that starts or ends on another meets that road's bed, and beds
+blend where roads meet. Roads are therefore laid in order: a road that
+joins another comes after it in `WorldLayout.roads()`.
+`test_roads_drivable` holds every road to 16% grade, with no bump sharper
+than 14% per 4 m, and level across. `test_roads_clear_of_buildings` checks
+each road against each building's real footprint.
 
 ## Where it lives
 

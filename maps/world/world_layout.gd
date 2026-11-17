@@ -14,7 +14,7 @@ static var _cache: Dictionary = {}
 ## hall below it (the hall's lift end is straight under the lift house).
 const LIFT := Vector3(-190.0, 0.0, -165.0)
 ## Where the north road passes the lift house.
-const LIFT_ROAD := Vector2(-205, -175)
+const LIFT_ROAD := Vector2(-228, -185)
 const FARM_FLOOR := -200.0
 ## Drill rigs: [site, rig position (x, z), what it yields per shift].
 const RIGS := [
@@ -111,58 +111,74 @@ static func roads() -> Array:
 	var gate := Vector2(-220, 84)
 	# The canyon road keeps to the channel's north side, clear of the dig's camp.
 	var cy := func(x: float) -> Vector2: return Vector2(x, WorldTerrain.canyon_center(x) + 5.0)
-	# Nova Terrace's plaza: a ring street the three roads in meet.
-	var plaza := []
-	for k in 17:
-		var a := k * TAU / 16.0
-		plaza.append(TERRACE + Vector2(cos(a), sin(a)) * TERRACE_PLAZA)
+	# Dust Hollow's ring street, round the settlement.
+	var ring := []
+	for k in HOLLOW_RING_POINTS + 1:
+		ring.append(hollow_ring(k))
 	# In laying order: a road that starts or ends on another comes after it
-	# (its bed meets the other's: WorldTerrain's road beds).
+	# (its bed meets the other's: WorldTerrain's road beds). The routes are
+	# drawn through their waypoints as curves (curve()): a junction is a
+	# waypoint, so the curve passes through it.
 	var out := [
 		# The Hollow road: out of the gate, east past the factory to the Hollow.
-		[Vector2(-220, 62), gate, Vector2(-170, 92), Vector2(-110, 70), Vector2(-60, 62), Vector2(-40, 20),
-				HOLLOW_LOOP[0] + Vector2(0, -15)],
-		# Dust Hollow's loop street, round the settlement: the roads meet it.
-		HOLLOW_LOOP + [HOLLOW_LOOP[0]],
-		# To the dig: into the canyon at its shallow west end (CANYON_GATE),
-		# then down the channel's floor.
-		[HOLLOW_LOOP[3], Vector2(100, 60), Vector2(88, 140), CANYON_GATE, cy.call(110), cy.call(140), cy.call(170),
-				cy.call(200), cy.call(220), cy.call(240)],
-		[HOLLOW_LOOP[2], Vector2(135, -160), Vector2(150, -205)],  # over the crater's rim to the ice cutter
+		curve([Vector2(-220, 62), gate, Vector2(-170, 92), Vector2(-110, 70), Vector2(-60, 58), Vector2(-25, 15),
+				hollow_ring(6)]),
+		ring,
+		# To the dig: into the canyon at its shallow west end, then down the floor.
+		curve([hollow_ring(2), Vector2(122, 40), Vector2(95, 130), CANYON_GATE, cy.call(120), cy.call(160),
+				cy.call(200), cy.call(240)]),
+		curve([hollow_ring(14), Vector2(128, -150), Vector2(140, -186)]),  # up to the crater's rim, over the ice cutter
 		# North: past the factory to the lift at the Anvil's foot, round the
 		# Anvil's west side (Helios's avenue turns off) to the Skyport's street.
-		[Vector2(-110, 70), Vector2(-150, -60), LIFT_ROAD, HELIOS_JUNCTION, Vector2(-235, -335), SKYPORT + Vector2(-110, 25)],
+		curve([Vector2(-110, 70), Vector2(-150, -50), Vector2(-200, -120), LIFT_ROAD, HELIOS_JUNCTION, Vector2(-240, -330),
+				SKYPORT + Vector2(-110, 25)]),
 		[SKYPORT + Vector2(-110, 25), SKYPORT + Vector2(110, 25)],  # the Skyport's street
-		[HELIOS_JUNCTION, HELIOS + Vector2(16, 0)],  # Helios's avenue, to the Ring
+		curve([HELIOS_JUNCTION, HELIOS + Vector2(60, 0), HELIOS + Vector2(16, 0)]),  # Helios's avenue, to the Ring
 		# The Skyport road out of the Hollow, past the wreck: the loop's east side.
-		[Vector2(48, HOLLOW_LOOP[1].y), Vector2(48, -175), Vector2(-20, -300), SKYPORT + Vector2(110, 25)],
-		# West: the gate to the Galleria's east forecourt, and on north to Helios's south street.
-		[gate, Vector2(-300, 110), Vector2(-360, 64), GALLERIA + Vector2(62, 0)],
-		[Vector2(-360, 64), Vector2(-370, -40), HELIOS + Vector2(0, 120), HELIOS + Vector2(0, 16)],
+		curve([hollow_ring(12), Vector2(50, -180), Vector2(10, -270), SKYPORT + Vector2(110, 25)]),
+		# West: the gate to the Galleria's forecourt, and on north to Helios's south street.
+		curve([gate, Vector2(-290, 112), Vector2(-350, 70), GALLERIA + Vector2(62, 0)]),
+		curve([Vector2(-350, 70), Vector2(-375, -30), HELIOS + Vector2(0, 120), HELIOS + Vector2(0, 16)]),
 		[HELIOS + Vector2(16, 0), HELIOS + Vector2(16, 16), HELIOS + Vector2(0, 16)],  # round the Ring
-		# South: Nova Terrace's plaza, and the roads in: from the gate (north),
-		# the Galleria (west), and from the canyon's mouth (east).
-		plaza,
-		[gate, Vector2(-210, 170), TERRACE + Vector2(0, -95), TERRACE + Vector2(0, -TERRACE_PLAZA)],
-		[Vector2(-360, 64), Vector2(-330, 200), TERRACE + Vector2(-95, 0), TERRACE + Vector2(-TERRACE_PLAZA, 0)],
-		[CANYON_GATE, Vector2(100, 280), Vector2(-20, 345), TERRACE + Vector2(95, 0), TERRACE + Vector2(TERRACE_PLAZA, 0)],
+		# South: the gate to Nova Terrace's plaza.
+		curve([gate, Vector2(-205, 170), TERRACE + Vector2(0, -95), TERRACE + Vector2(0, -26)]),
 	]
 	_cache["roads"] = out
 	return out
 
 
-## The canyon's mouth (its shallow west end): the dig road goes in here,
-## the Terrace road turns off.
+## A route through its waypoints as a smooth curve (Catmull-Rom), a point
+## every few metres; it passes through every waypoint.
+static func curve(way: Array, spacing: float = 6.0) -> Array:
+	var out := [way[0]]
+	for i in way.size() - 1:
+		var p0: Vector2 = way[maxi(i - 1, 0)]
+		var p1: Vector2 = way[i]
+		var p2: Vector2 = way[i + 1]
+		var p3: Vector2 = way[mini(i + 2, way.size() - 1)]
+		var n := maxi(int(p1.distance_to(p2) / spacing), 1)
+		for k in range(1, n + 1):
+			var t := float(k) / n
+			# Centripetal-ish: tangents scaled down so short legs don't overshoot.
+			out.append(p1.cubic_interpolate(p2, p0, p3, t))
+	return out
+
+
+## The canyon's mouth (its shallow west end): the dig road goes in here.
 const CANYON_GATE := Vector2(80, 188)
 ## Where Helios's avenue leaves the north road.
-const HELIOS_JUNCTION := Vector2(-280, -250)
-## Nova Terrace's plaza street, its radius from the centre.
-const TERRACE_PLAZA := 30.0
+const HELIOS_JUNCTION := Vector2(-295, -250)
+## Dust Hollow's ring street: round the settlement's centre, HOLLOW_RING_R
+## out, HOLLOW_RING_POINTS points (0 east, then clockwise on the map: 4
+## south, 8 west, 12 north).
+const HOLLOW_RING_C := Vector2(64, -60)
+const HOLLOW_RING_R := 66.0
+const HOLLOW_RING_POINTS := 16
 
 
-## Dust Hollow's loop street: the corners (x, z) round the settlement,
-## south-west, north-west, north-east, south-east.
-const HOLLOW_LOOP := [Vector2(14, -15), Vector2(14, -106), Vector2(114, -106), Vector2(114, -15)]
+static func hollow_ring(k: int) -> Vector2:
+	var a := k * TAU / HOLLOW_RING_POINTS
+	return HOLLOW_RING_C + Vector2(cos(a), sin(a)) * HOLLOW_RING_R
 
 
 ## A road sampled every `step` metres: [position, direction] pairs.
