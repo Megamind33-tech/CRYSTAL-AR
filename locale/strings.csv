@@ -725,9 +725,9 @@ SHELF_FOR_SALE,for sale
 SHELF_THEIRS,theirs for the taking
 TOUCH_GAS,GAS
 TOUCH_BRAKE,BRAKE
-CITY_WANTED,WANTED BY THE MARSHALS · %d★
-CITY_LOST_THEM,LOST THE MARSHALS
-CITY_BUSTED,"THE MARSHALS GOT YOU · fined $%d, contraband seized"
+CITY_WANTED,WANTED BY THE SALTS · %d★
+CITY_LOST_THEM,LOST THE SALTS
+CITY_BUSTED,"THE SALTS GOT YOU · fined $%d, contraband seized"
 CITY_WANTED_SEARCHING,Out of sight · they lose you in %d s
 SHELF_BODY_WOMAN,Play as a woman
 SHELF_BODY_MAN,Play as a man
@@ -767,13 +767,13 @@ SHELF_DESC_MASK,Worn during a crime: one star less
 SHELF_DESC_HAND_DRILL,Drill-rig shifts give one more of everything
 GARAGE_NAME,Joe's Respray & Chop
 GARAGE_LINE,"Fuel %d%% · condition %d%%. Joe wipes his hands: ""What'll it be?"""
-GARAGE_RESPRAY,Respray · $%d · lose the Marshals
-GARAGE_RESPRAY_SEEN,No respray with a Marshal watching
+GARAGE_RESPRAY,Respray · $%d · lose the SALTS
+GARAGE_RESPRAY_SEEN,No respray with a SALTS officer watching
 GARAGE_CHOP,Sell it to the chop shop · $%d
 GARAGE_CHOP_HOT,Too hot to chop · come back in %d min
 GARAGE_FUEL,Fill the tank · $%d
 GARAGE_REPAIR,Fix it up · $%d
-GARAGE_RESPRAYED,New colour: the Marshals have lost you
+GARAGE_RESPRAYED,New colour: the SALTS have lost you
 GARAGE_FUELLED,Tank full
 GARAGE_FIXED,Good as new
 GARAGE_CHOPPED,CHOPPED · +$%d (the hold's %d kinds in your pack)
@@ -815,7 +815,7 @@ CITY_PROMPT_SHOWROOM,Kasei Motors showroom · buy a ride
 CITY_JOB_MARK,Job: %s
 CITY_EAT,Eat ×%d
 CITY_DRINK,Drink ×%d
-NPC_BARK_SHOTS,"Shots! Run!|Get down!|Somebody call the Marshals!|They're shooting!|Move, move!"
+NPC_BARK_SHOTS,"Shots! Run!|Get down!|Somebody call the SALTS!|They're shooting!|Move, move!"
 NPC_BARK_COWER,Don't hurt me!|Not again...|Take what you want!|Keep your head down!
 NPC_BARK_AIMED,"Easy! Easy!|Don't shoot!|Whoa, put that down!|I don't want trouble!|Okay, okay!"
 NPC_BARK_BUMP,"Watch it!|Hey, eyes up.|Mind the suit!|Excuse you.|Careful!"
@@ -825,7 +825,7 @@ NPC_BARK_BAR,Evening.|Pull up a stool.|First one's on you.|Long sol?
 BOT_BARK_CONTACT,Contact!|There!|Got eyes on them!|Over here!
 BOT_BARK_HIT,Agh!|I'm hit!|Taking fire!|Ugh!
 BOT_BARK_DOWN,Man down!|We lost one!|They got one of ours!
-BOT_BARK_MARSHAL,Marshals! Hands where we can see them!|Stop right there!|Drop the weapon!
+BOT_BARK_MARSHAL,SALTS! Hands where we can see them!|Stop right there!|Drop the weapon!
 BOT_BARK_WIN,Target's down.|Clear.|That's done.
 BOT_BARK_HONK,Move it!|Out of the road!|Hey!
 CITY_TORCH,Torch
@@ -839,12 +839,12 @@ WORLD_HELIOS,HELIOS ARCOLOGY
 WORLD_HELIOS_SUB,TOWERS · SKY GARDENS · THE RING
 WORLD_GALLERIA,PRISM GALLERIA
 WORLD_GALLERIA_SUB,THE VALLEY'S MALL · SHOPS · FOOD COURT
-WORLD_GALLERIA_RULE,PRESSURISED · helmets off inside · Marshals patrol
+WORLD_GALLERIA_RULE,PRESSURISED · helmets off inside · SALTS patrol
 WORLD_TERRACE,NOVA TERRACE
 WORLD_TERRACE_SUB,POD HOMES · THE SOUTH-EAST OUTLANDS
 WORLD_SKYPORT,KASEI SKYPORT
 WORLD_SKYPORT_SUB,LANDING FIELD · ORBIT SHUTTLES
-WORLD_LAWFUL_RULE,PROTECTED · the Marshals patrol here
+WORLD_LAWFUL_RULE,PROTECTED · the SALTS patrol here
 WORLD_LANDMARK_LOWELL,Lowell Crater
 WORLD_LANDMARK_HELIOS_RING,The Helios Ring
 WORLD_LANDMARK_SKYPORT_PADS,Kasei Skyport's landing field
@@ -903,14 +903,14 @@ GANG_FORM,Form the %s
 GANG_RECRUIT,Recruit someone: $%d
 GANG_DISMISS,Let %s go
 GANG_RANK_UP,The %s are now %s!
-VISA_HELIOS_WARN,"No Helios residency visa: leave the Arcology, or the Marshals are called"
+VISA_HELIOS_WARN,"No Helios residency visa: leave the Arcology, or the SALTS are called"
 ESTATE_FELLED,Timber! Two logs of Titan timber
 TOUCH_CLIMB,Climb
 TOUCH_DIVE,Descend
 WORLD_INTERIOR,INSIDE
 WORLD_INTERIOR_SUB,A HOME HIGH OVER THE VALLEY
 WORLD_INTERIOR_RULE,Pressurised · the door takes you back out
-BOUNTY_BOARD,Marshals' Bounty Board
+BOUNTY_BOARD,SALTS' Bounty Board
 BOUNTY_BOARD_SIGN,BOUNTY BOARD
 VISA_OFFICE_SIGN,IMMIGRATION
 AERO_SIGN,KASEI AERO
@@ -928,7 +928,7 @@ BOUNTY_KIND_GUARDED,two guards
 BOUNTY_KIND_CREW,a crew of three
 BOUNTY_TAKEN,Bounty taken: %s. Find the red area on your map
 BOUNTY_PAID,Bounty paid: $%d
-BOUNTY_TAKEN_ALIVE,%s taken alive: the Marshals pay $%d
+BOUNTY_TAKEN_ALIVE,%s taken alive: the SALTS pay $%d
 BOUNTY_DOWN,%s is down: take the proof from the body
 BOUNTY_SPOTTED,That's them: %s
 BOUNTY_SPOTTED_BINO,Spotted through the glasses: %s
@@ -963,9 +963,9 @@ TRADE_ORDER,%s wants %d× %s · meet in %s (burner)
 TRADE_ORDER_COLD,An order went cold: a client trusts you less
 TRADE_DEALERS_PAID,Your dealers paid in $%d
 TRADE_DEALER_ROBBED,Your dealer in %s was robbed: the stock's gone
-TRADE_RAN,You walked off on a Marshal: evading a search
+TRADE_RAN,You walked off on a SALTS officer: evading a search
 TRADE_CONFISCATED,"Searched: %d doses taken, fined $%d"
-TRADE_STOPPED,"A Marshal stops you: stay, or walk away fast"
+TRADE_STOPPED,"A SALTS officer stops you: stay, or walk away fast"
 TRADE_STOP,"Hold it. Search.|Arms out. Let's see the pack.|Stop right there, citizen."
 TRADE_TURF_FIGHT,The Blue Line crew: they won't give up the corner
 TRADE_TURF_WON,"The Galleria corner is yours: more clients, and dealers"
@@ -1042,31 +1042,31 @@ HEIST_GOT_BONDS,The bonds! Now get clear of Helios
 HEIST_PAID,Clean getaway: $%d after the crew's shares
 HEIST_FAILED,The job's blown: the bonds are lost (the prep still stands)
 HEIST_VAULT_ROOM,THE RING'S COUNTING ROOM
-MARSNET_SNAP,Snap a photo
-MARSNET_FAME,Fame: %s (%d)
-MARSNET_EMPTY,Nothing on your feed yet.
-MARSNET_YOU,you
-MARSNET_LIKES,♥ %d
-MARSNET_NEWS,KaseiNews
-MARSNET_PING,MarsNet: %s
-MARSNET_POSTED,Posted: %d likes and counting
-MARSNET_TIER,MarsNet knows you now: %s
-MARSNET_SNAP_CAPTION,"Out here in %s.|Views from %s. Not bad for Titan.|%s, today. No filter.|Another long day in %s."
-MARSNET_CHATTER,"Lena_V::who's selling Frost near the Galleria tonight?|DustDevil88::storm's coming in from the west, tie your rovers down|KaseiMarshals::Reminder: carrying contraband in the city is a crime.|Okon_Saloon::half-price ale at the Dust Devil till dark|HeliosLiving::Penthouse views from the Spire, now leasing|SkyportOps::Shuttle KX-4 delayed: dust on the pads|Tobi::anyone seen my rover? left it by the Terrace|RedLantern::live music tonight. Masks off at the door.|MinerMags::Hollow refinery hiring. Bring your own suit.|Ash_H::the Ring at sunset >>>|NovaTerrace::water fund still missing. Marshals say nothing|Ledger_Watch::the Blue Line are getting nervous on their corner"
-MARSNET_MANHUNT,Manhunt across Xanadu Basin: the Marshals are after an armed suspect
-MARSNET_BOUNTY_ALIVE,Bounty hunter brings in %s alive. The Marshals say thanks.
-MARSNET_BOUNTY_DEAD,%s won't be troubling anyone now: a bounty paid in full.
-MARSNET_HEIST,"The Helios Ring's vault cleaned out! Bonds gone, the thieves vanished into the dust."
-MARSNET_BOUGHT,New money in the valley: someone just bought %s.
-MARSNET_AIRCRAFT,Spotted over Kasei: a brand new %s.
-MARSNET_GANG_RANK,The %s are moving up: now %s.
-MARSNET_TURF,The Blue Line crew are off the Galleria corner. Someone new runs it now.
-MARSNET_COUPLE,Seen together again: %s and a certain someone. Kasei's newest couple?
-NPC_BARK_FAMOUS,"Hey, you're the one from MarsNet!|Saw you on my feed!|Can I get a snap with you?|Big fan. Don't shoot me."
+SATNET_SNAP,Snap a photo
+SATNET_FAME,Fame: %s (%d)
+SATNET_EMPTY,Nothing on your feed yet.
+SATNET_YOU,you
+SATNET_LIKES,♥ %d
+SATNET_NEWS,KaseiNews
+SATNET_PING,SatNet: %s
+SATNET_POSTED,Posted: %d likes and counting
+SATNET_TIER,SatNet knows you now: %s
+SATNET_SNAP_CAPTION,"Out here in %s.|Views from %s. Not bad for Titan.|%s, today. No filter.|Another long day in %s."
+SATNET_CHATTER,"Lena_V::who's selling Frost near the Galleria tonight?|DustDevil88::storm's coming in from the west, tie your rovers down|KaseiSALTS::Reminder: carrying contraband in the city is a crime.|Okon_Saloon::half-price ale at the Dust Devil till dark|HeliosLiving::Penthouse views from the Spire, now leasing|SkyportOps::Shuttle KX-4 delayed: dust on the pads|Tobi::anyone seen my rover? left it by the Terrace|RedLantern::live music tonight. Masks off at the door.|MinerMags::Hollow refinery hiring. Bring your own suit.|Ash_H::the Ring at sunset >>>|NovaTerrace::water fund still missing. SALTS say nothing|Ledger_Watch::the Blue Line are getting nervous on their corner"
+SATNET_MANHUNT,Manhunt across Xanadu Basin: the SALTS are after an armed suspect
+SATNET_BOUNTY_ALIVE,Bounty hunter brings in %s alive. The SALTS say thanks.
+SATNET_BOUNTY_DEAD,%s won't be troubling anyone now: a bounty paid in full.
+SATNET_HEIST,"The Helios Ring's vault cleaned out! Bonds gone, the thieves vanished into the dust."
+SATNET_BOUGHT,New money in the valley: someone just bought %s.
+SATNET_AIRCRAFT,Spotted over Kasei: a brand new %s.
+SATNET_GANG_RANK,The %s are moving up: now %s.
+SATNET_TURF,The Blue Line crew are off the Galleria corner. Someone new runs it now.
+SATNET_COUPLE,Seen together again: %s and a certain someone. Kasei's newest couple?
+NPC_BARK_FAMOUS,"Hey, you're the one from SatNet!|Saw you on my feed!|Can I get a snap with you?|Big fan. Don't shoot me."
 PARTNER_PROMPT_MEET,Say hello to %s
 PARTNER_PROMPT_TOGETHER,With %s · %d%%
 PARTNER_PROMPT_TALK,Talk to %s
-PARTNER_MET,"You met %s, %s: watch MarsNet for her messages"
+PARTNER_MET,"You met %s, %s: watch SatNet for her messages"
 PARTNER_INVITE,%s: meet me at %s?
 PARTNER_STOOD_UP,You stood %s up
 PARTNER_HUNG_OUT,A good time with %s (bond %d)

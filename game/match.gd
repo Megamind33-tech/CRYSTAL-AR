@@ -1449,7 +1449,7 @@ func _on_local_death(e: Dictionary) -> void:
 	if server == null or (config.game_mode != GameMode.HUNT and config.game_mode != GameMode.CITY):
 		return
 	var killer := int(e.killer)
-	if killer == 0 or killer == local_id() or _display_name(killer).contains("Marshal·"):
+	if killer == 0 or killer == local_id() or _display_name(killer).contains(CityMode.POLICE):
 		return
 	var lost := Profile.career().robbed()
 	if lost.items.is_empty() and lost.gear.is_empty():
@@ -1817,7 +1817,7 @@ func _visual_for(id: int, display_name: String, is_bot: bool, character: int, co
 		style = "mercenary"  # THE HUNT's own contractors, not IONFALL's troopers
 		# Uniforms: the Concern's raiders; the Hollow's militia and friends
 		# who come along (RaidDirector, HuntEconomy.names).
-		if display_name.begins_with("Marshal·"):
+		if display_name.begins_with(CityMode.POLICE):
 			style = "marshal"  # the Kasei Marshals: Mars' police
 		elif display_name.begins_with("Concern·") or display_name.begins_with("Kasei·"):
 			style = "concern"

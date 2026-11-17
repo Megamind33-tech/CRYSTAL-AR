@@ -46,7 +46,7 @@ const ITEMS := {
 	"red_ale": {"name": "Red ale", "base": 8},
 	"torch": {"name": "Torch", "base": 15, "tool": true},
 	"cutter": {"name": "Plasma saw", "base": 140, "tool": true},
-	"timber": {"name": "Mars timber", "base": 90},
+	"timber": {"name": "Titan timber", "base": 90},
 	"ring_bonds": {"name": "Helios Ring bearer bonds", "base": 0, "no_sale": true},
 	"jetpack": {"name": "Jetpack", "base": 900, "tool": true},
 	"grill_plate": {"name": "Grill plate", "base": 30},
@@ -1376,7 +1376,7 @@ func claim_season(t: int) -> Dictionary:
 
 const FEED_MAX := 40
 ## [fame needed, what people call you].
-const FAME_TIERS := [[0, "Nobody"], [40, "Local name"], [150, "Talk of the valley"], [400, "MarsNet star"],
+const FAME_TIERS := [[0, "Nobody"], [40, "Local name"], [150, "Talk of the valley"], [400, "SatNet star"],
 		[1000, "Legend of Kasei"]]
 
 
@@ -1613,7 +1613,7 @@ const GANG_COST := 1500
 const RECRUIT_COST := 250
 ## [rank name, respect needed, members it can hold].
 const GANG_RANKS := [["Street crew", 0, 2], ["Runners", 100, 3], ["Enforcers", 300, 4], ["Syndicate", 700, 6],
-		["Cartel", 1500, 8], ["Kingpins of Mars", 3000, 10]]
+		["Cartel", 1500, 8], ["Kingpins of Titan", 3000, 10]]
 const RECRUITS := ["Zuri", "Dax", "Imani", "Kofi", "Rhea", "Tomas", "Lerato", "Yuki", "Bram", "Ola", "Nikolai", "Sade"]
 
 

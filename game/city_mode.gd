@@ -160,7 +160,7 @@ func setup(layer: CanvasLayer) -> void:
 	burner_button.offset_bottom = 432
 	layer.add_child(burner_button)
 	marsnet_button = _side_button(ComicUI.CYAN, 0, func() -> void: social.open())
-	marsnet_button.text = "MarsNet"
+	marsnet_button.text = "SatNet"
 	marsnet_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	marsnet_button.offset_left = 232
 	marsnet_button.offset_right = 352
@@ -771,6 +771,8 @@ static func _tinted(mesh: PrimitiveMesh, c: Color) -> ArrayMesh:
 ## SMALL_RANGE at most: on phones each is a draw call or two, and from 500 m
 ## they're a pixel. The world's own pieces have their view distances
 ## (StaticBatches) and people theirs (CityNpcs), so they're left alone.
+## The settlements' police, the SALTS: their officers' names start so.
+const POLICE := "SALTS·"
 const SMALL_RANGE := 180.0
 const SMALL_SIZE := 12.0
 
@@ -1061,7 +1063,7 @@ func _step_police(me: SimPlayer, dt: float) -> void:
 		at = WorldTerrain.at(at.x, at.z) if region != "farm" else WorldLayout.farm_origin() + Vector3(0, 0.3, 24)
 		if region == "city":
 			at.y = CityLayout.ORIGIN.y
-		_police.start_guards(me.net_id, [at], "marshal", "Marshal·%d", _police.raiders.size() + 1)
+		_police.start_guards(me.net_id, [at], "marshal", CityMode.POLICE + "%d", _police.raiders.size() + 1)
 		_pending_says[_police.raiders.back()] = CityNpcs._line("BOT_BARK_MARSHAL")
 		if _police.militia.is_empty() and estate != null:
 			estate.crew_join(_police, me)  # your gang stands with you
@@ -1381,7 +1383,7 @@ func targets(pos: Vector3, reach: float, all: bool) -> Array:
 		var p: SimPlayer = world.players[id]
 		if id == ServerSession.LOCAL_PLAYER_ID or not p.state.alive or p.state.position.distance_to(pos) > reach:
 			continue
-		var cop := p.display_name.begins_with("Marshal·")
+		var cop := p.display_name.begins_with(CityMode.POLICE)
 		var hostile := id in _hostiles()
 		if all or cop or hostile:
 			var pack: Dictionary = world.packs.get(id, {})
@@ -2238,7 +2240,7 @@ class _CityHud extends Control:
 			var p: SimPlayer = world.players[id]
 			if id == me.net_id or not p.state.alive:
 				continue
-			var cop := p.display_name.begins_with("Marshal·")
+			var cop := p.display_name.begins_with(CityMode.POLICE)
 			if not cop and not (id in city._hostiles()):
 				continue
 			if city.bounty != null and id in city.bounty.fighters() and not city.bounty.hot:

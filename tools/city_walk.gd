@@ -646,11 +646,11 @@ func _garage_run(me: SimPlayer) -> void:
 	world.teleport(me, bay)
 	me.state.vehicle_speed = 0.0
 	for id: int in world.players:
-		if world.players[id].display_name.begins_with("Marshal·"):
+		if world.players[id].display_name.begins_with(CityMode.POLICE):
 			world.teleport(world.players[id], bay + Vector3(300, 0, 300))  # nobody watching
 	await _frames(40)
 	for id: int in world.players:
-		if world.players[id].display_name.begins_with("Marshal·"):
+		if world.players[id].display_name.begins_with(CityMode.POLICE):
 			world.teleport(world.players[id], bay + Vector3(300, 0, 300))
 	await _frames(3)
 	print("CITY WALK: garage open %s, stars %d, seen %s" % [m.city.garage.visible, m.city.wanted.stars, m.city._police_seen])

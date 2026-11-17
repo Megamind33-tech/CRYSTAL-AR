@@ -32,7 +32,7 @@ func _ready() -> void:
 	col.add_theme_constant_override("separation", 10)
 	panel.add_child(col)
 	var title := Label.new()
-	title.text = "MarsNet"
+	title.text = "SatNet"
 	title.add_theme_font_override("font", UiStyle.font_hud_big)
 	title.add_theme_font_size_override("font_size", 46)
 	title.add_theme_color_override("font_color", ComicUI.CYAN)
