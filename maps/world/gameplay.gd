@@ -1,6 +1,6 @@
 extends Node3D
 ## Gameplay half of Kasei Valley: the ground as a height map (WorldTerrain,
-## the same function Blender built the visible terrain from), the city's
+## the same grid the visible terrain is built from: TerrainMesh), the city's
 ## and the settlements' buildings, the valley's outer bounds, spawn points.
 
 
@@ -10,13 +10,8 @@ func _ready() -> void:
 	body.collision_layer = Sim.LAYER_WORLD
 	body.collision_mask = 0
 	add_child(body)
-	var n := int(WorldTerrain.SIZE / WorldTerrain.STEP) + 1
-	var half := WorldTerrain.SIZE * 0.5
-	var data := PackedFloat32Array()
-	data.resize(n * n)
-	for j in n:
-		for i in n:
-			data[j * n + i] = WorldTerrain.height(-half + i * WorldTerrain.STEP, -half + j * WorldTerrain.STEP)
+	var n := WorldTerrain.cells() + 1
+	var data := WorldTerrain.grid()
 	var hm := HeightMapShape3D.new()
 	hm.map_width = n
 	hm.map_depth = n

@@ -12,12 +12,14 @@ const HOLLOW := Vector3(60.0, 2.0, -60.0)
 static var _cache: Dictionary = {}
 ## The lift house at the Anvil's foot, and Deep Furrow, the underground farm
 ## hall below it (the hall's lift end is straight under the lift house).
-const LIFT := Vector3(-245.0, 0.0, -158.0)
+const LIFT := Vector3(-190.0, 0.0, -165.0)
+## Where the north road passes the lift house.
+const LIFT_ROAD := Vector2(-205, -175)
 const FARM_FLOOR := -200.0
 ## Drill rigs: [site, rig position (x, z), what it yields per shift].
 const RIGS := [
 	["hollow_rig", Vector2(96, -94), {"rare_ore": 1, "helium3": 1}],
-	["crater_cutter", Vector2(168, -228), {"water_ice": 2}],
+	["crater_cutter", Vector2(160, -234), {"water_ice": 2}],
 ]
 const RIG_SECONDS := 8.0       ## a shift at the controls
 const RIG_COOLDOWN := 120      ## seconds before a rig can run again
@@ -30,30 +32,36 @@ const REGIONS := [
 	["city", Vector2(-220, 20), 78.0],
 	["hollow", Vector2(60, -60), 72.0],
 	["dig", Vector2(238, 165), 60.0],
-	["helios", Vector2(-520, -470), 150.0],
-	["galleria", Vector2(-560, 200), 105.0],
-	["terrace", Vector2(470, 430), 140.0],
-	["skyport", Vector2(520, -440), 140.0],
+	["helios", Vector2(-400, -250), 150.0],
+	["galleria", Vector2(-440, 60), 105.0],
+	["terrace", Vector2(-170, 330), 140.0],
+	["skyport", Vector2(-100, -430), 140.0],
 ]
 ## Where the Marshals' law runs (shots and break-ins are crimes there).
 const LAWFUL := ["city", "hollow", "helios", "galleria", "terrace", "skyport"]
 
-## The outlands' districts (WorldTerrain.SITES): centres on their flats.
-const HELIOS := Vector2(-520, -470)
-const GALLERIA := Vector2(-560, 200)
-const TERRACE := Vector2(470, 430)
-const SKYPORT := Vector2(520, -440)
+## The districts round Tharsis Gate (WorldTerrain.SITES): centres on their
+## flats. Helios north-west, the Galleria west, Nova Terrace south, the
+## Skyport north; Dust Hollow and the dig are the mining country east.
+const HELIOS := Vector2(-400, -250)
+const GALLERIA := Vector2(-440, 60)
+const TERRACE := Vector2(-170, 330)
+const SKYPORT := Vector2(-100, -430)
+## Where the Skyport's aircraft stand (its middle pad), from its centre.
+const SKYPORT_APRON := Vector2(0, -40)
+## The freighter wreck, south of the Skyport road out of the Hollow.
+const WRECK := Vector2(0, -140)
 ## Landmarks you can discover: [id, centre (x, z), radius, survey fee].
 const LANDMARKS := [
-	["wreck", Vector2(-130, -110), 30.0, 60],
+	["wreck", WRECK, 30.0, 60],
 	["crater", Vector2(150, -240), 45.0, 80],
 	["relay", Vector2(255, -60), 36.0, 50],
-	["mesa", Vector2(-310, -210), 48.0, 70],
+	["mesa", Vector2(-180, -250), 48.0, 70],
 	["dig_rim", Vector2(200, 110), 26.0, 40],
-	["lowell", Vector2(-330, 400), 60.0, 90],
-	["helios_ring", Vector2(-520, -470), 40.0, 60],
-	["skyport_pads", Vector2(500, -490), 30.0, 50],
-	["far_mesa", Vector2(640, -60), 60.0, 80],
+	["lowell", Vector2(-460, 330), 60.0, 90],
+	["helios_ring", HELIOS, 40.0, 60],
+	["skyport_pads", SKYPORT + SKYPORT_APRON, 30.0, 50],
+	["far_mesa", Vector2(420, -300), 50.0, 80],
 ]
 
 
@@ -98,24 +106,41 @@ const BAY_RADIUS := 6.5
 ## colour already follows them: tools/blender/build_world.py ROADS), paved
 ## by the presentation, driven by traffic, drawn on the minimap.
 static func roads() -> Array:
+	var gate := Vector2(-220, 84)
+	# The canyon road keeps to the channel's north side, clear of the dig's camp.
+	var cy := func(x: float) -> Vector2: return Vector2(x, WorldTerrain.canyon_center(x) + 5.0)
 	return [
-		[Vector2(-220, 62), Vector2(-220, 84), Vector2(-170, 92), Vector2(-110, 70), Vector2(-40, 20), Vector2(20, -30),
-				Vector2(60, -60)],
-		[Vector2(60, -60), Vector2(110, -10), Vector2(160, 60), Vector2(205, WorldTerrain.canyon_center(205)),
-				Vector2(240, WorldTerrain.canyon_center(240))],
-		[Vector2(60, -60), Vector2(110, -150), Vector2(140, -190)],
-		[Vector2(-110, 70), Vector2(-160, -60), Vector2(-240, -146)],  # to the lift down to Deep Furrow
-		# The outlands: west to the Galleria, on past the lift to Helios, south
-		# to Nova Terrace, east from the Hollow to the Skyport, and the
-		# canyon road out of the dig to the Terrace.
-		[Vector2(-220, 84), Vector2(-300, 140), Vector2(-420, 190), Vector2(-482, 200)],
-		[Vector2(-240, -146), Vector2(-330, -290), Vector2(-420, -390), Vector2(-455, -430)],
-		[Vector2(-170, 92), Vector2(-160, 200), Vector2(-100, 300), Vector2(150, 385), Vector2(370, 425)],
-		[Vector2(60, -60), Vector2(250, -150), Vector2(400, -300), Vector2(460, -385)],
-		[Vector2(240, WorldTerrain.canyon_center(240)), Vector2(300, WorldTerrain.canyon_center(300)),
-				Vector2(370, WorldTerrain.canyon_center(370)), Vector2(420, 300), Vector2(440, 345)],
-		[Vector2(-560, 120), Vector2(-590, -60), Vector2(-570, -250), Vector2(-540, -350)],
+		# The Hollow road: out of the gate, east past the factory to the Hollow.
+		[Vector2(-220, 62), gate, Vector2(-170, 92), Vector2(-110, 70), Vector2(-60, 62), Vector2(-40, 20),
+				HOLLOW_LOOP[0] + Vector2(0, -15)],
+		# Dust Hollow's loop street, round the settlement: the roads meet it.
+		HOLLOW_LOOP + [HOLLOW_LOOP[0]],
+		[HOLLOW_LOOP[3], Vector2(160, 60), cy.call(190), cy.call(205), cy.call(220), cy.call(240)],  # down to the dig
+		[HOLLOW_LOOP[2], Vector2(140, -190)],  # to the crater's ice cutter
+		# North: up past the factory to the lift at the Anvil's foot, on round
+		# the Anvil to Helios's avenue and to the Skyport's street.
+		[Vector2(-110, 70), Vector2(-150, -60), LIFT_ROAD, Vector2(-265, -250), Vector2(-215, -330),
+				SKYPORT + Vector2(-110, 25)],
+		[Vector2(-265, -250), HELIOS + Vector2(120, 0), HELIOS + Vector2(16, 0)],  # Helios's avenue, to the Ring
+		# The Skyport road out of the Hollow, past the wreck: the loop's east side.
+		[Vector2(48, HOLLOW_LOOP[1].y), Vector2(48, -175), Vector2(-20, -300), SKYPORT + Vector2(110, 25)],
+		[SKYPORT + Vector2(-110, 25), SKYPORT + Vector2(110, 25)],  # the Skyport's street
+		# West: the gate to the Galleria's east forecourt, and on north to Helios.
+		[gate, Vector2(-300, 110), Vector2(-360, 64), GALLERIA + Vector2(62, 0)],
+		[Vector2(-360, 64), Vector2(-370, -40), HELIOS + Vector2(0, 120), HELIOS + Vector2(0, 16)],  # its south street
+		# South: the gate to Nova Terrace's north gap, the Galleria to its west
+		# gap, and the canyon road out of the dig to its east gap.
+		[gate, Vector2(-210, 170), TERRACE + Vector2(0, -95), TERRACE + Vector2(0, -26)],
+		[Vector2(-360, 64), Vector2(-330, 200), TERRACE + Vector2(-95, 0), TERRACE + Vector2(-26, 0)],
+		[cy.call(240), cy.call(255), cy.call(270), cy.call(285), cy.call(300), cy.call(320), cy.call(345), cy.call(370),
+				Vector2(330, 290), Vector2(150, 335), Vector2(-20, 345),
+				TERRACE + Vector2(95, 0), TERRACE + Vector2(26, 0)],
 	]
+
+
+## Dust Hollow's loop street: the corners (x, z) round the settlement,
+## south-west, north-west, north-east, south-east.
+const HOLLOW_LOOP := [Vector2(14, -15), Vector2(14, -106), Vector2(114, -106), Vector2(114, -15)]
 
 
 ## A road sampled every `step` metres: [position, direction] pairs.
@@ -147,6 +172,11 @@ static func rover_spots() -> Array:
 
 
 # --- The Rustwood Dig: the extraction run, in the canyon itself ---
+
+## How far (degrees) the canyon's channel turns from east-west at x.
+static func _canyon_turn(x: float) -> float:
+	return rad_to_deg(atan(42.0 * 0.012 * cos(x * 0.012)))
+
 
 ## A point on the canyon floor at x (`off`: metres across the channel).
 static func canyon(x: float, off: float = 0.0) -> Vector3:
@@ -510,7 +540,7 @@ static func _build_pieces() -> Array:
 		# Dust Hollow: the refinery (hangar), tanks, pipes, bunkhouses, the canteen.
 		["hangar", h.x + 18, h.z - 14, 0.0, 1.5, Vector3.ZERO],
 		["tank_cluster", h.x + 30, h.z + 12, 90.0, 1.3, Vector3(6, 9, 11)],
-		["tank_cluster", h.x + 38, h.z + 12, 90.0, 1.3, Vector3(6, 9, 11)],
+		["tank_cluster", h.x + 42, h.z + 12, 90.0, 1.3, Vector3(6, 9, 11)],
 		["pipe_run", h.x + 26, h.z + 2, 0.0, 1.2, Vector3.ZERO],
 		["pipe_run", h.x + 16, h.z + 2, 0.0, 1.2, Vector3.ZERO],
 		["life/hab_open", h.x - 26, h.z - 16, 60.0, 1.0, Vector3.ZERO],
@@ -527,20 +557,22 @@ static func _build_pieces() -> Array:
 		["kiosk", h.x - 4, h.z - 20, 0.0, 1.0, Vector3(1.2, 2.4, 1.2)],
 		# Drill rigs (mining): the Hollow's ore seam, the crater's ice cutter.
 		["life/mining_rig", h.x + 36, h.z - 34, -30.0, 1.0, Vector3.ZERO],
-		["life/mining_rig", 168.0, -228.0, 15.0, 1.0, Vector3.ZERO],
+		["life/mining_rig", 160.0, -234.0, 15.0, 1.0, Vector3.ZERO],  # on the crater floor
 		# The lift down to Deep Furrow, the farm under the Anvil.
 		["life/lift_head", LIFT.x, LIFT.z, 180.0, 1.0, Vector3.ZERO],
 		["hangar", GARAGE.x, GARAGE.y, 0.0, 1.3, Vector3.ZERO],  # Joe's Respray & Chop
 		["life/factory", FACTORY.x, FACTORY.y, 0.0, 1.0, Vector3.ZERO],  # Kasei Motors
 		# The Rustwood Dig: a field camp on the canyon floor.
-		["hangar", DIG_X + 14, WorldTerrain.canyon_center(DIG_X + 14) - 10, 90.0, 1.1, Vector3(12, 7, 16)],
+		# The camp's hangar lies along the channel (it runs north-east here).
+		["hangar", DIG_X + 14, WorldTerrain.canyon_center(DIG_X + 14) - 8, 90.0 - _canyon_turn(DIG_X + 14), 1.1,
+				Vector3(12, 7, 16)],
 		["tank_cluster", DIG_X - 16, WorldTerrain.canyon_center(DIG_X - 16) - 9, 0.0, 1.0, Vector3(8.5, 7, 5)],
-		["crate_stack", DIG_X - 6, WorldTerrain.canyon_center(DIG_X) + 9, 10.0, 1.0, Vector3(3.6, 3, 2)],
+		["crate_stack", DIG_X - 6, WorldTerrain.canyon_center(DIG_X - 6) + 12, 10.0, 1.0, Vector3(3.6, 3, 2)],
 		["comms_tower", 205.0, 112.0, 0.0, 1.2, Vector3(2.4, 20, 2.4)],
 		# Landmarks.
-		["world/freighter_wreck", -130.0, -110.0, 35.0, 1.4, Vector3(10, 7, 46)],
+		["world/freighter_wreck", WRECK.x, WRECK.y, 35.0, 1.4, Vector3(10, 7, 46)],
 		["comms_tower", 255.0, -60.0, 0.0, 1.6, Vector3.ZERO],
-		["hab_dome", -300.0, -205.0, 0.0, 0.8, Vector3.ZERO],
+		["hab_dome", WorldTerrain.ANVIL[0] + 10.0, WorldTerrain.ANVIL[1] + 5.0, 0.0, 0.8, Vector3.ZERO],  # on the Anvil
 	]
 	out.append_array(district_pieces())
 	return out
@@ -548,12 +580,32 @@ static func _build_pieces() -> Array:
 
 static var _district_pieces: Array = []
 
+## Yaw 0 turns a kit piece's front to +Z (south), 180 to the north, 90 to
+## the east, -90 to the west.
+## Helios Arcology's buildings, laid on a cross of streets: the avenue runs
+## east-west through the Ring's plaza (the road comes in from the east),
+## the arc towers close the north street, homes line the south street.
+## [property id, piece, x, z (from HELIOS), yaw, scale, door (piece-local,
+## before scale)]; the property doors are read from here.
+const HELIOS_BUILDINGS := [
+	["helios_spire", "districts/spire_a", -62.0, -50.0, 0.0, 1.0, Vector3(0, 0, 19.5)],
+	["helios_spire_2", "districts/spire_a", -62.0, 50.0, 180.0, 0.8, Vector3(0, 0, 19.5)],
+	["helios_lens", "districts/spire_b", 60.0, -42.0, 0.0, 1.0, Vector3(0, 0, 11.6)],
+	["helios_arc", "districts/arc_towers", 0.0, -92.0, 0.0, 1.0, Vector3(-20, 0, 9.6)],
+	["helios_ring", "districts/ring_hab", 0.0, 0.0, 0.0, 1.0, Vector3(0, 0, 5.6)],
+]
+## Nova Terrace's tower, at the end of its south street.
+const TERRACE_TOWER := Vector2(0.0, 100.0)
+## The Skyport's control tower (Kasei Aero's office), on the street's north side.
+const SKYPORT_TOWER := Vector2(-30.0, 8.0)
 
-## The outlands' districts as kit pieces (same format as pieces(); a piece
-## named "" is collision only). Helios Arcology: the ring habitat over its
-## plaza, the twisting spires, the arch towers, solar trees. The Prism
-## Galleria (walk-in mall) and its forecourts. Nova Terrace: pod homes in two
-## rings round a plaza. Kasei Skyport: pads, shuttles, the tower, hangars.
+
+## The districts as kit pieces (same format as pieces(); a piece named ""
+## is collision only). Each district is laid on streets that the roads
+## run into: Helios a cross of avenues round the Ring, the Galleria a
+## boulevard along the mall, Nova Terrace rings of homes round a plaza with
+## a street in from each road, the Skyport a street between the terminal
+## buildings and the apron.
 static func district_pieces() -> Array:
 	if not _district_pieces.is_empty():
 		return _district_pieces
@@ -564,27 +616,41 @@ static func district_pieces() -> Array:
 		return rad_to_deg(atan2(-dx, -dz))
 	# --- Helios Arcology
 	var h := HELIOS
-	at.call(h, "districts/ring_hab", 0, 0, 0.0, 1.0, Vector3(9.5, 30, 9.5))
-	for sa: Array in [[-62.0, -58.0, 1.0], [-92.0, 30.0, 0.8]]:
-		var sc: float = sa[2]
-		at.call(h, "districts/spire_a", sa[0], sa[1], facing.call(sa[0], sa[1]), sc, Vector3(34, 8.5, 34) * sc)
-		at.call(h, "", sa[0], sa[1], facing.call(sa[0], sa[1]), sc, Vector3(24, 100, 24) * sc)
-	at.call(h, "districts/spire_b", 66.0, -54.0, facing.call(66.0, -54.0), 1.0, Vector3(30, 6, 20))
-	at.call(h, "", 66.0, -54.0, facing.call(66.0, -54.0), 1.0, Vector3(26, 75, 15))
-	at.call(h, "districts/arc_towers", 0.0, -92.0, 0.0, 1.0, Vector3.ZERO)
-	for sx in [-1.0, 1.0]:
-		at.call(h, "", sx * 17.0, -92.0, 0.0, 1.0, Vector3(20, 66, 16))
-	at.call(h, "", 0.0, -92.0, 0.0, 1.0, Vector3(24, 8, 12) + Vector3(0, 0, 0))
-	for i in 10:
-		var a := i * TAU / 10.0 + 0.3
-		at.call(h, "districts/solar_tree", cos(a) * 54.0, sin(a) * 54.0, 0.0, 1.0, Vector3(0.8, 7, 0.8))
-	for q: Vector2 in [Vector2(40, 70), Vector2(-40, 70), Vector2(80, 20), Vector2(-80, -20)]:
+	for b: Array in HELIOS_BUILDINGS:
+		var sc: float = b[5]
+		match b[1]:
+			"districts/spire_a":
+				at.call(h, b[1], b[2], b[3], b[4], sc, Vector3(34, 8.5, 34) * sc)
+				at.call(h, "", b[2], b[3], b[4], sc, Vector3(24, 100, 24) * sc)
+			"districts/spire_b":
+				at.call(h, b[1], b[2], b[3], b[4], sc, Vector3(30, 6, 20) * sc)
+				at.call(h, "", b[2], b[3], b[4], sc, Vector3(26, 75, 15) * sc)
+			"districts/arc_towers":
+				at.call(h, b[1], b[2], b[3], b[4], sc, Vector3.ZERO)
+				for sx in [-1.0, 1.0]:
+					at.call(h, "", b[2] + sx * 17.0, b[3], 0.0, 1.0, Vector3(20, 66, 16))
+				at.call(h, "", b[2], b[3], 0.0, 1.0, Vector3(24, 8, 12))
+			"districts/ring_hab":
+				at.call(h, b[1], b[2], b[3], b[4], sc, Vector3(9.5, 30, 9.5))
+	# The avenue (east-west) and the cross street (north-south): solar trees
+	# and lamps along both kerbs, signs at the corners.
+	for x in [-100.0, -80.0, -40.0, 40.0, 80.0, 100.0]:
+		for side in [-1.0, 1.0]:
+			at.call(h, "districts/solar_tree", x, side * 13.0, 0.0, 1.0, Vector3(0.8, 7, 0.8))
+	for z in [-60.0, -36.0, 36.0, 60.0]:
+		for side in [-1.0, 1.0]:
+			at.call(h, "districts/lamp_neo", side * 11.0, z, -90.0 * side, 1.0, Vector3(0.3, 6, 0.3))
+	for q: Vector2 in [Vector2(24, 18), Vector2(-24, 18), Vector2(24, -18), Vector2(-24, -18)]:
 		at.call(h, "districts/holo_sign", q.x, q.y, facing.call(q.x, q.y), 1.0, Vector3(0.7, 8, 0.7))
-	for q: Vector2 in [Vector2(88, 52), Vector2(100, 18), Vector2(64, 92), Vector2(30, 104)]:
-		at.call(h, "districts/pod_" + ["a", "b", "c"][int(q.x) % 3], q.x, q.y, facing.call(q.x, q.y), 1.0, Vector3.ZERO)
-	for i in 6:
-		at.call(h, "districts/planter", -30.0 + i * 12.0, 46.0, 0.0, 1.0, Vector3(4.4, 1, 2.4))
-	# --- The Prism Galleria (long along x; doors at x = ±50)
+	# Homes down the south street (the road from the Galleria), doors on it.
+	for k in 4:
+		var z := 70.0 + (k % 2) * 26.0
+		var side := -1.0 if k < 2 else 1.0
+		at.call(h, "districts/pod_" + ["a", "b", "c"][k % 3], side * 26.0, z, -90.0 * side, 1.0, Vector3.ZERO)
+	for q: Vector2 in [Vector2(-18, 30), Vector2(18, 30), Vector2(-18, -30), Vector2(18, -30)]:
+		at.call(h, "districts/planter", q.x, q.y, 0.0, 1.0, Vector3(4.4, 1, 2.4))
+	# --- The Prism Galleria (long along x; doors at x = ±50): the boulevard
+	# runs in from the east forecourt; lamps line the north and south walks.
 	var g := GALLERIA
 	at.call(g, "districts/galleria", 0, 0, 0.0, 1.0, Vector3.ZERO)
 	for e in [-1.0, 1.0]:
@@ -598,7 +664,8 @@ static func district_pieces() -> Array:
 	for k in 5:
 		at.call(g, "districts/lamp_neo", -40.0 + k * 20.0, 26.0, 0.0, 1.0, Vector3(0.3, 6, 0.3))
 		at.call(g, "districts/lamp_neo", -40.0 + k * 20.0, -26.0, 180.0, 1.0, Vector3(0.3, 6, 0.3))
-	# --- Nova Terrace: two rings of homes round a plaza (gaps where the roads come in)
+	# --- Nova Terrace: two rings of homes round a plaza, a street in from
+	# each road (north, east, west); the tower closes the south.
 	var ter := TERRACE
 	var n := 0
 	for ring: Array in [[42.0, 10], [74.0, 16]]:
@@ -606,57 +673,65 @@ static func district_pieces() -> Array:
 			var a := i * TAU / float(ring[1]) + 0.2
 			var dx: float = cos(a) * float(ring[0])
 			var dz: float = sin(a) * float(ring[0])
-			# Keep the west and north approaches open.
-			if absf(wrapf(a - PI, -PI, PI)) < 0.32 or absf(wrapf(a - PI * 1.5, -PI, PI)) < 0.38:
+			# The streets: west (a = PI), north (1.5 PI), east (0).
+			var gap := false
+			for street in [PI, PI * 1.5, 0.0]:
+				if absf(wrapf(a - street, -PI, PI)) < 0.36:
+					gap = true
+			if gap:
 				continue
 			at.call(ter, "districts/pod_" + ["a", "b", "c"][n % 3], dx, dz, facing.call(dx, dz), 1.0, Vector3.ZERO)
 			n += 1
-	at.call(ter, "districts/spire_b", 0.0, 100.0, 180.0, 0.7, Vector3(30, 6, 20) * 0.7)
-	at.call(ter, "", 0.0, 100.0, 180.0, 0.7, Vector3(26, 75, 15) * 0.7)
+	at.call(ter, "districts/spire_b", TERRACE_TOWER.x, TERRACE_TOWER.y, 180.0, 0.7, Vector3(30, 6, 20) * 0.7)
+	at.call(ter, "", TERRACE_TOWER.x, TERRACE_TOWER.y, 180.0, 0.7, Vector3(26, 75, 15) * 0.7)
 	at.call(ter, "districts/holo_sign", 0.0, 0.0, 0.0, 1.0, Vector3(0.7, 8, 0.7))
 	for i in 6:
 		var a := i * TAU / 6.0
 		at.call(ter, "districts/solar_tree", cos(a) * 16.0, sin(a) * 16.0, 0.0, 1.0, Vector3(0.8, 7, 0.8))
 		at.call(ter, "districts/planter", cos(a + 0.5) * 24.0, sin(a + 0.5) * 24.0, rad_to_deg(-a), 1.0, Vector3.ZERO)
-	# --- Kasei Skyport
+	# --- Kasei Skyport: the street (east-west, z = 25) between the terminal
+	# side (tower, hangars, tanks, south) and the apron (three pads, north).
 	var sp := SKYPORT
-	for pad: Array in [[-20.0, -50.0, 30.0], [45.0, -30.0, -40.0], [55.0, 42.0, 200.0]]:
-		at.call(sp, "districts/landing_pad", pad[0], pad[1], 0.0, 1.0, Vector3.ZERO)
-	at.call(sp, "districts/shuttle", -20.0, -50.0, 30.0, 1.0, Vector3(8, 9, 24))
-	at.call(sp, "districts/shuttle", 55.0, 42.0, 200.0, 1.0, Vector3(8, 9, 24))
-	at.call(sp, "districts/control_tower", -62.0, -8.0, 0.0, 1.0, Vector3(5, 38, 5))
-	at.call(sp, "hangar", -30.0, 62.0, 90.0, 1.7, Vector3.ZERO)
-	at.call(sp, "hangar", 0.0, 82.0, 90.0, 1.7, Vector3.ZERO)
-	at.call(sp, "tank_cluster", -78.0, 40.0, 0.0, 1.3, Vector3(11, 9, 6))
-	at.call(sp, "crate_stack", -50.0, 30.0, 20.0, 1.0, Vector3(3.6, 3, 2))
-	at.call(sp, "crate_stack", -44.0, 36.0, -15.0, 1.0, Vector3(3.6, 3, 2))
-	at.call(sp, "districts/holo_sign", -50.0, 60.0, 135.0, 1.0, Vector3(0.7, 8, 0.7))
+	for x in [-60.0, 0.0, 60.0]:
+		at.call(sp, "districts/landing_pad", x, SKYPORT_APRON.y, 0.0, 1.0, Vector3.ZERO)
+	at.call(sp, "districts/shuttle", -60.0, SKYPORT_APRON.y, 90.0, 1.0, Vector3(8, 9, 24))
+	at.call(sp, "districts/shuttle", 60.0, SKYPORT_APRON.y, 90.0, 1.0, Vector3(8, 9, 24))
+	at.call(sp, "districts/control_tower", SKYPORT_TOWER.x, SKYPORT_TOWER.y, 0.0, 1.0, Vector3(5, 38, 5))
+	at.call(sp, "hangar", -55.0, 62.0, 90.0, 1.7, Vector3.ZERO)
+	at.call(sp, "hangar", 5.0, 62.0, 90.0, 1.7, Vector3.ZERO)
+	at.call(sp, "tank_cluster", 62.0, 58.0, 0.0, 1.3, Vector3(11, 9, 6))
+	at.call(sp, "crate_stack", 40.0, 44.0, 20.0, 1.0, Vector3(3.6, 3, 2))
+	at.call(sp, "crate_stack", 46.0, 50.0, -15.0, 1.0, Vector3(3.6, 3, 2))
+	at.call(sp, "districts/holo_sign", -80.0, 36.0, 180.0, 1.0, Vector3(0.7, 8, 0.7))
 	for k in 6:
-		at.call(sp, "districts/lamp_neo", -40.0 + k * 18.0, 12.0, 0.0, 1.0, Vector3(0.3, 6, 0.3))
+		var x := -75.0 + k * 30.0
+		at.call(sp, "districts/lamp_neo", x, 14.0, 0.0, 1.0, Vector3(0.3, 6, 0.3))
+		at.call(sp, "districts/lamp_neo", x, 36.0, 180.0, 1.0, Vector3(0.3, 6, 0.3))
 	_district_pieces = out
 	return out
 
 
-## The monorail: from the Galleria past Tharsis Gate's west wall to Helios.
+## The monorail: round Tharsis Gate's west side, from the Skyport past
+## Helios's avenue and the Galleria's forecourt to Nova Terrace.
 ## A polyline (x, z); the track rides MONO_HEIGHT above the ground.
 const MONO_HEIGHT := 10.0
 
 
 static func monorail() -> Array:
-	return [Vector2(-560, 158), Vector2(-470, 110), Vector2(-380, 60), Vector2(-312, 20), Vector2(-330, -80),
-			Vector2(-390, -200), Vector2(-440, -300), Vector2(-470, -368)]
+	return [SKYPORT + Vector2(-50, 95), Vector2(-280, -335), Vector2(-300, -250), Vector2(-310, -150), Vector2(-350, -60),
+			Vector2(-370, 20), Vector2(-320, 120), Vector2(-260, 170), TERRACE + Vector2(-40, -90)]
 
 
 ## Districts' walkers: [district centre, loops of local points].
 static func district_walks() -> Array:
 	return [
-		[HELIOS, [[Vector2(-30, 40), Vector2(30, 40), Vector2(48, -10)], [Vector2(50, 50), Vector2(-50, 50)],
-				[Vector2(-40, -20), Vector2(-45, 30), Vector2(10, 46)]]],
+		[HELIOS, [[Vector2(-90, 8), Vector2(90, 8)], [Vector2(6, -70), Vector2(6, 90)],
+				[Vector2(-40, -16), Vector2(40, -16), Vector2(40, 16), Vector2(-40, 16)]]],
 		[GALLERIA, [[Vector2(-44, 0), Vector2(44, 0)], [Vector2(40, 2), Vector2(-40, 2), Vector2(-40, -3)],
 				[Vector2(-8, 4), Vector2(8, -4), Vector2(30, -4)], [Vector2(70, 10), Vector2(56, -12)]]],
-		[TERRACE, [[Vector2(-30, 0), Vector2(0, 30), Vector2(30, 0), Vector2(0, -30)], [Vector2(-58, 10), Vector2(-58, -40)],
-				[Vector2(20, 58), Vector2(-20, 58)]]],
-		[SKYPORT, [[Vector2(-40, 20), Vector2(20, 12), Vector2(30, 60)], [Vector2(-60, 0), Vector2(-40, -40)]]],
+		[TERRACE, [[Vector2(-30, 0), Vector2(0, 30), Vector2(30, 0), Vector2(0, -30)], [Vector2(-90, 4), Vector2(-30, 4)],
+				[Vector2(4, -90), Vector2(4, -30)], [Vector2(30, -4), Vector2(90, -4)]]],
+		[SKYPORT, [[Vector2(-90, 25), Vector2(90, 25)], [Vector2(-70, -12), Vector2(70, -12)]]],
 	]
 
 
@@ -707,15 +782,10 @@ static func _build_property_doors() -> Array:
 		var b := Basis(Vector3.UP, deg_to_rad(yaw_deg))
 		var p := b * (local * sc)
 		out.append([id, WorldTerrain.at(c.x + dx + p.x, c.y + dz + p.z) + Vector3(0, 0.1, 0), kind])
-	var face := func(dx: float, dz: float) -> float:
-		return rad_to_deg(atan2(-dx, -dz))
-	door.call("helios_spire", h, -62.0, -58.0, face.call(-62.0, -58.0), Vector3(0, 0, 19.5), 1.0, "apartment")
-	door.call("helios_spire_2", h, -92.0, 30.0, face.call(-92.0, 30.0), Vector3(0, 0, 19.5), 0.8, "apartment")
-	door.call("helios_lens", h, 66.0, -54.0, face.call(66.0, -54.0), Vector3(0, 0, 11.6), 1.0, "apartment")
-	door.call("helios_arc", h, 0.0, -92.0, 0.0, Vector3(-20, 0, 9.6), 1.0, "apartment")
-	door.call("helios_ring", h, 0.0, 0.0, 0.0, Vector3(0, 0, 5.6), 1.0, "apartment")
-	door.call("terrace_tower", TERRACE, 0.0, 100.0, 180.0, Vector3(0, 0, 11.6), 0.7, "apartment")
-	door.call("skyport_office", SKYPORT, -62.0, -8.0, 0.0, Vector3(0, 0, 3.2), 1.0, "office")
+	for b: Array in HELIOS_BUILDINGS:
+		door.call(b[0], h, b[2], b[3], b[4], b[6], b[5], "apartment")
+	door.call("terrace_tower", TERRACE, TERRACE_TOWER.x, TERRACE_TOWER.y, 180.0, Vector3(0, 0, 11.6), 0.7, "apartment")
+	door.call("skyport_office", SKYPORT, SKYPORT_TOWER.x, SKYPORT_TOWER.y, 0.0, Vector3(0, 0, 3.2), 1.0, "office")
 	var g := WorldTerrain.at(GALLERIA.x, GALLERIA.y)
 	out.append(["galleria_unit_a", g + Vector3(-35, 0.1, 8.9), ""])
 	out.append(["galleria_unit_b", g + Vector3(35, 0.1, 8.9), ""])
@@ -729,17 +799,17 @@ static func visa_office() -> Vector3:
 
 
 static func aero_counter() -> Vector3:
-	return WorldTerrain.at(SKYPORT.x - 40, SKYPORT.y + 20) + Vector3(0, 0.1, 0)
+	return WorldTerrain.at(SKYPORT.x + SKYPORT_TOWER.x - 12.0, SKYPORT.y + 22.0) + Vector3(0, 0.1, 0)
 
 
 static func aircraft_spot() -> Array:
-	return [WorldTerrain.at(SKYPORT.x + 45, SKYPORT.y - 30) + Vector3(0, 0.6, 0), PI * 0.5]
+	return [WorldTerrain.at(SKYPORT.x + SKYPORT_APRON.x, SKYPORT.y + SKYPORT_APRON.y) + Vector3(0, 0.6, 0), PI * 0.5]
 
 
 ## Trees you can cut (a plasma saw): the city's park trees (protected: it's
 ## vandalism) and the outland groves of rust pine (timber, no questions).
 ## [id, position, protected].
-const GROVES := [Vector2(-250, 300), Vector2(225, -390), Vector2(-60, 430), Vector2(560, 120)]
+const GROVES := [Vector2(-370, 250), Vector2(225, -390), Vector2(-60, 430), Vector2(280, 330)]
 const TREE_REGROW := 900  ## seconds before a felled tree stands again
 
 
@@ -776,9 +846,9 @@ static func bounty_board() -> Vector3:
 
 ## Where each outlaw holes up (x, z): spread over the valley and outlands.
 const BOUNTY_HIDEOUTS := {
-	"kroll": Vector2(-282, 342), "orlov": Vector2(500, -360), "amos": Vector2(-392, -108),
-	"vance": Vector2(528, 384), "hex": Vector2(-640, 228), "marrow": Vector2(612, -38),
-	"brandt": Vector2(578, -398), "jonah": Vector2(232, -372),
+	"kroll": Vector2(-380, 250), "orlov": Vector2(330, -330), "amos": Vector2(-470, -100),
+	"vance": Vector2(300, 420), "hex": Vector2(-480, 210), "marrow": Vector2(450, -40),
+	"brandt": Vector2(-260, -470), "jonah": Vector2(232, -372),
 }
 
 

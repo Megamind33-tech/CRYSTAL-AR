@@ -15,6 +15,19 @@ func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var path: String = args[0] if args.size() > 0 else "user://world_layout.json"
 	var d := {}
+	# The ground every 10 m: [half size, step, rows of heights].
+	var hs := []
+	var half := WorldTerrain.SIZE * 0.5
+	var z := -half
+	while z <= half:
+		var row := []
+		var x := -half
+		while x <= half:
+			row.append(snappedf(WorldTerrain.height(x, z), 0.1))
+			x += 10.0
+		hs.append(row)
+		z += 10.0
+	d["terrain"] = [half, 10.0, hs]
 	d["roads"] = WorldLayout.roads().map(func(r): return r.map(func(p): return _v(p)))
 	d["regions"] = WorldLayout.REGIONS.map(func(r): return [r[0], _v(r[1]), r[2]])
 	d["landmarks"] = WorldLayout.LANDMARKS.map(func(r): return [r[0], _v(r[1]), r[2]])

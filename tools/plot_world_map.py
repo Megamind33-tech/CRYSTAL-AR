@@ -3,20 +3,17 @@ and CityLayout place. Dump the layout first, then plot:
   godot --headless -s tools/dump_world_layout.gd -- layout.json
   python3 tools/plot_world_map.py layout.json map.png
 """
-import json, os, sys
+import json, sys
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "blender"))
-import world_terrain as W  # noqa: E402
-
 src, out = sys.argv[1], sys.argv[2]
 d = json.load(open(src))
-half = W.SIZE / 2
-xs = np.arange(-half, half, 8.0)
-H = np.array([[W.height(x, z) for x in xs] for z in xs])
+half, step, rows = d["terrain"]
+H = np.array(rows)
+xs = -half + np.arange(H.shape[0]) * step
 fig, ax = plt.subplots(figsize=(16, 16), dpi=90)
 ax.imshow(H, extent=(-half, half, half, -half), cmap="copper", alpha=0.85)
 ax.contour(xs, xs, H, levels=20, colors="k", linewidths=0.25, alpha=0.4)
@@ -48,6 +45,6 @@ for k, pts in d["misc"].items():
 ax.set_xlim(-half, half); ax.set_ylim(half, -half)
 ax.set_xlabel("x (m, east)"); ax.set_ylabel("z (m, south; up is north)")
 ax.grid(alpha=0.2); ax.legend(loc="lower left", fontsize=9)
-ax.set_title("Kasei Valley — current layout")
+ax.set_title(sys.argv[3] if len(sys.argv) > 3 else "Kasei Valley")
 fig.savefig(out, bbox_inches="tight")
 print("wrote", out)

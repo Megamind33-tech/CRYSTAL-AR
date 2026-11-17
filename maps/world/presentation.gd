@@ -11,12 +11,11 @@ const TERRAIN_SHADER := preload("res://presentation/comic/comic_terrain.gdshader
 
 
 func _ready() -> void:
-	var terrain_scene: Node = (load("res://art/environment/world/terrain.glb") as PackedScene).instantiate()
 	var mat := ShaderMaterial.new()
 	mat.shader = TERRAIN_SHADER
 	mat.set_shader_parameter("sand_tex", load(TEX % ["red_sand", "diff"]))
 	mat.set_shader_parameter("rock_tex", load(TEX % ["terrain_red_01", "diff"]))
-	_merge_terrain(terrain_scene, mat)
+	_terrain(mat)
 	batches = StaticBatches.new()
 	batches.name = "Batches"
 	add_child(batches)
@@ -476,30 +475,19 @@ func _footing(at: Vector3, size: Vector2, yaw_deg: float) -> void:
 	batches.add_mesh(CityMode._tinted(box, Color(0.36, 0.32, 0.3)), Transform3D(b, at + Vector3(0, -depth * 0.5 + 0.06, 0)), 380.0)
 
 
-## The terrain's 160 m tiles merged into TERRAIN_TILE squares (fewer
-## draws), each with its own detail levels.
+## The ground (TerrainMesh) in TERRAIN_TILE squares, each with its own
+## detail levels.
 const TERRAIN_TILE := 320.0
 ## Coarser detail levels sooner: smooth dunes lose little, and the ground was
 ## a third of a frame's triangles.
 const TERRAIN_LOD_BIAS := 0.35
 
 
-func _merge_terrain(terrain_scene: Node, mat: Material) -> void:
-	var groups := {}
-	for mi: MeshInstance3D in terrain_scene.find_children("*", "MeshInstance3D", true, false):
-		var c := Comic._transform_to(terrain_scene, mi) * mi.mesh.get_aabb().get_center()
-		var key := Vector2i(floori((c.x + WorldTerrain.SIZE * 0.5) / TERRAIN_TILE), floori((c.z + WorldTerrain.SIZE * 0.5) / TERRAIN_TILE))
-		var list: Array = groups.get(key, [])
-		list.append(mi)
-		groups[key] = list
-	for key: Vector2i in groups:
-		var st := SurfaceTool.new()
-		for mi: MeshInstance3D in groups[key]:
-			st.append_from(mi.mesh, 0, Comic._transform_to(terrain_scene, mi))
+func _terrain(mat: Material) -> void:
+	for t: Array in TerrainMesh.build(TERRAIN_TILE):
 		var out := MeshInstance3D.new()
-		out.name = "Terrain_%d_%d" % [key.x, key.y]
-		out.mesh = Comic.compact_mesh(st.commit_to_arrays(), true)
+		out.name = t[0]
+		out.mesh = Comic.compact_mesh(t[1], true)
 		out.lod_bias = TERRAIN_LOD_BIAS
 		out.material_override = mat
 		add_child(out)
-	terrain_scene.free()
