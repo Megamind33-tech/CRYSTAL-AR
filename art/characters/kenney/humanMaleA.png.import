@@ -3,15 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ddawronktpvdw"
-path="res://.godot/imported/humanMaleA.png-59200b76c7c339ebdfe11b6cba69c0d7.ctex"
-metadata={
-"vram_texture": false
-}
+valid=false
 
 [deps]
 
 source_file="res://art/characters/kenney/humanMaleA.png"
-dest_files=["res://.godot/imported/humanMaleA.png-59200b76c7c339ebdfe11b6cba69c0d7.ctex"]
 
 [params]
 

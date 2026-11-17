@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cku4jrt3nqtdr"
-path="res://.godot/imported/hab_r14_in.glb-65feb70226402c6615ce2e010ac93046.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/titan/hab_r14_in.glb"
-dest_files=["res://.godot/imported/hab_r14_in.glb-65feb70226402c6615ce2e010ac93046.scn"]
 
 [params]
 

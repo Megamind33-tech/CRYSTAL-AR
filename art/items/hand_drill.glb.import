@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://butxs7e2bb88c"
-path="res://.godot/imported/hand_drill.glb-ff98323b00dc1264642689ec7774a9b2.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/hand_drill.glb"
-dest_files=["res://.godot/imported/hand_drill.glb-ff98323b00dc1264642689ec7774a9b2.scn"]
 
 [params]
 

@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cuvw5bf1nqjs7"
-path.s3tc="res://.godot/imported/operative_normal_1k.png-a8a3ca7576e7fab82c66c6ab689f6ae3.s3tc.ctex"
-path.etc2="res://.godot/imported/operative_normal_1k.png-a8a3ca7576e7fab82c66c6ab689f6ae3.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/characters/meshy/operative/operative_normal_1k.png"
-dest_files=["res://.godot/imported/operative_normal_1k.png-a8a3ca7576e7fab82c66c6ab689f6ae3.s3tc.ctex", "res://.godot/imported/operative_normal_1k.png-a8a3ca7576e7fab82c66c6ab689f6ae3.etc2.ctex"]
 
 [params]
 

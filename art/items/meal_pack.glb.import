@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bj7bx774v6xoo"
-path="res://.godot/imported/meal_pack.glb-9885c65823d11e7044da61fd02247baa.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/meal_pack.glb"
-dest_files=["res://.godot/imported/meal_pack.glb-9885c65823d11e7044da61fd02247baa.scn"]
 
 [params]
 

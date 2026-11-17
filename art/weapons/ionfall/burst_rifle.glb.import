@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bxldycqkmqmbv"
-path="res://.godot/imported/burst_rifle.glb-418aa9837d36820c4232e4464e57e083.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/weapons/ionfall/burst_rifle.glb"
-dest_files=["res://.godot/imported/burst_rifle.glb-418aa9837d36820c4232e4464e57e083.scn"]
 
 [params]
 

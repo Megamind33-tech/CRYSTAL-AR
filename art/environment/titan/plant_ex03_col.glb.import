@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://b6kc0fjo2mh7x"
-path="res://.godot/imported/plant_ex03_col.glb-1e2d8c95265b5f6740856938037a8d35.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/titan/plant_ex03_col.glb"
-dest_files=["res://.godot/imported/plant_ex03_col.glb-1e2d8c95265b5f6740856938037a8d35.scn"]
 
 [params]
 

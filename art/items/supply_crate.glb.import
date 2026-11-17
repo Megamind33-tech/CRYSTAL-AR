@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://f4wgg8wegkha"
-path="res://.godot/imported/supply_crate.glb-0fa08800d9bc50fc8611cceec72ecd0d.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/supply_crate.glb"
-dest_files=["res://.godot/imported/supply_crate.glb-0fa08800d9bc50fc8611cceec72ecd0d.scn"]
 
 [params]
 

@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c5nkceeg06l18"
-path.s3tc="res://.godot/imported/spacer_albedo_1k.png-cdfcfa5285f57172d653218b84175078.s3tc.ctex"
-path.etc2="res://.godot/imported/spacer_albedo_1k.png-cdfcfa5285f57172d653218b84175078.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/characters/meshy/spacer/spacer_albedo_1k.png"
-dest_files=["res://.godot/imported/spacer_albedo_1k.png-cdfcfa5285f57172d653218b84175078.s3tc.ctex", "res://.godot/imported/spacer_albedo_1k.png-cdfcfa5285f57172d653218b84175078.etc2.ctex"]
 
 [params]
 

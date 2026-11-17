@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://car6f4l7yttal"
-path="res://.godot/imported/rail_sniper.glb-90ad3ba25a8fee6a10691985183aab46.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/weapons/ionfall/rail_sniper.glb"
-dest_files=["res://.godot/imported/rail_sniper.glb-90ad3ba25a8fee6a10691985183aab46.scn"]
 
 [params]
 

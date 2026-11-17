@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bdrmpoc2tlsf4"
-path="res://.godot/imported/ammo.glb-fa00de12292af2105dbdaba56544b39f.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/ammo.glb"
-dest_files=["res://.godot/imported/ammo.glb-fa00de12292af2105dbdaba56544b39f.scn"]
 
 [params]
 

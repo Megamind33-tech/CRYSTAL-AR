@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bprb1igaw1l3y"
-path="res://.godot/imported/shopfront.glb-fa78f5ec3bf643dde3582896ca571c6a.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/kit/shopfront.glb"
-dest_files=["res://.godot/imported/shopfront.glb-fa78f5ec3bf643dde3582896ca571c6a.scn"]
 
 [params]
 

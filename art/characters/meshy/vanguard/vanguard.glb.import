@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://btb1ig4xu71uq"
-path="res://.godot/imported/vanguard.glb-477ca9402d0986b02cc5df6a4b5864ce.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/characters/meshy/vanguard/vanguard.glb"
-dest_files=["res://.godot/imported/vanguard.glb-477ca9402d0986b02cc5df6a4b5864ce.scn"]
 
 [params]
 

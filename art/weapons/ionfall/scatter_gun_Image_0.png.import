@@ -3,12 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://nh0k3cw48eeb"
-path.s3tc="res://.godot/imported/scatter_gun_Image_0.png-80e89c5fd8a68496d0a978831f4a47c3.s3tc.ctex"
-path.etc2="res://.godot/imported/scatter_gun_Image_0.png-80e89c5fd8a68496d0a978831f4a47c3.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 generator_parameters={
 "md5": "9fa85434e75ace86e987d1458543b297"
 }
@@ -16,7 +11,6 @@ generator_parameters={
 [deps]
 
 source_file="res://art/weapons/ionfall/scatter_gun_Image_0.png"
-dest_files=["res://.godot/imported/scatter_gun_Image_0.png-80e89c5fd8a68496d0a978831f4a47c3.s3tc.ctex", "res://.godot/imported/scatter_gun_Image_0.png-80e89c5fd8a68496d0a978831f4a47c3.etc2.ctex"]
 
 [params]
 

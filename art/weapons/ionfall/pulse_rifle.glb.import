@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://xk8yy35fy720"
-path="res://.godot/imported/pulse_rifle.glb-75f1116da065e5d3aaad877c2f5e20ea.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/weapons/ionfall/pulse_rifle.glb"
-dest_files=["res://.godot/imported/pulse_rifle.glb-75f1116da065e5d3aaad877c2f5e20ea.scn"]
 
 [params]
 

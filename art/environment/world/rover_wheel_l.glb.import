@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ckce72falca4q"
-path="res://.godot/imported/rover_wheel_l.glb-400b6f26538a88bfa0594cbfa04482b6.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/world/rover_wheel_l.glb"
-dest_files=["res://.godot/imported/rover_wheel_l.glb-400b6f26538a88bfa0594cbfa04482b6.scn"]
 
 [params]
 

@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dhmcwqvn7hhvx"
-path="res://.godot/imported/Prop_Locker.gltf-0367342b1cc0c046252abcf2c8a34943.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/scifi/Prop_Locker.gltf"
-dest_files=["res://.godot/imported/Prop_Locker.gltf-0367342b1cc0c046252abcf2c8a34943.scn"]
 
 [params]
 

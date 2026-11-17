@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://se16hoc6y1hq"
-path="res://.godot/imported/gatehouse_col.glb-3a3f329937b616580a14e8faed16d49b.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/titan/gatehouse_col.glb"
-dest_files=["res://.godot/imported/gatehouse_col.glb-3a3f329937b616580a14e8faed16d49b.scn"]
 
 [params]
 

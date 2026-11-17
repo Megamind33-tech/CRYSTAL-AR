@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cdwwsgstn730d"
-path.s3tc="res://.godot/imported/station_panel_normal.png-b2303a451b3bede1b3b136482ec78b6c.s3tc.ctex"
-path.etc2="res://.godot/imported/station_panel_normal.png-b2303a451b3bede1b3b136482ec78b6c.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/textures/station_panel_normal.png"
-dest_files=["res://.godot/imported/station_panel_normal.png-b2303a451b3bede1b3b136482ec78b6c.s3tc.ctex", "res://.godot/imported/station_panel_normal.png-b2303a451b3bede1b3b136482ec78b6c.etc2.ctex"]
 
 [params]
 

@@ -3,15 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://5keo7hava4l5"
-path="res://.godot/imported/suit.png-f626221c7a4abd841635f0c54baf6b27.ctex"
-metadata={
-"vram_texture": false
-}
+valid=false
 
 [deps]
 
 source_file="res://art/characters/kenney/suit.png"
-dest_files=["res://.godot/imported/suit.png-f626221c7a4abd841635f0c54baf6b27.ctex"]
 
 [params]
 

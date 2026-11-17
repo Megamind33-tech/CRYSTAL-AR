@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dg52mwumubswl"
-path="res://.godot/imported/fresh_food.glb-6f44357fcfa026be81cd0c69b95001ab.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/fresh_food.glb"
-dest_files=["res://.godot/imported/fresh_food.glb-6f44357fcfa026be81cd0c69b95001ab.scn"]
 
 [params]
 

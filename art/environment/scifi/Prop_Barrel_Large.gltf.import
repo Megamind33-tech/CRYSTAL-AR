@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ccayu54hyw3op"
-path="res://.godot/imported/Prop_Barrel_Large.gltf-475be90954e6c7277106ce63c7ae38f1.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/scifi/Prop_Barrel_Large.gltf"
-dest_files=["res://.godot/imported/Prop_Barrel_Large.gltf-475be90954e6c7277106ce63c7ae38f1.scn"]
 
 [params]
 

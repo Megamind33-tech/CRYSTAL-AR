@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cyeq6rw74g6ng"
-path="res://.godot/imported/mono_car.glb-f6376084139d3c89aa6fad5126f7fe55.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/districts/mono_car.glb"
-dest_files=["res://.godot/imported/mono_car.glb-f6376084139d3c89aa6fad5126f7fe55.scn"]
 
 [params]
 

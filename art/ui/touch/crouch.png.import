@@ -3,15 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cprcasyew047f"
-path="res://.godot/imported/crouch.png-c1146dbd7e7eb9477b699eeef16e99c1.ctex"
-metadata={
-"vram_texture": false
-}
+valid=false
 
 [deps]
 
 source_file="res://art/ui/touch/crouch.png"
-dest_files=["res://.godot/imported/crouch.png-c1146dbd7e7eb9477b699eeef16e99c1.ctex"]
 
 [params]
 

@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c6djwqiq1htnl"
-path.s3tc="res://.godot/imported/red_sand_nor_gl_1k.jpg-19f31b92e70fbc2901b3d44466d9ba52.s3tc.ctex"
-path.etc2="res://.godot/imported/red_sand_nor_gl_1k.jpg-19f31b92e70fbc2901b3d44466d9ba52.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/environment/mars/red_sand_nor_gl_1k.jpg"
-dest_files=["res://.godot/imported/red_sand_nor_gl_1k.jpg-19f31b92e70fbc2901b3d44466d9ba52.s3tc.ctex", "res://.godot/imported/red_sand_nor_gl_1k.jpg-19f31b92e70fbc2901b3d44466d9ba52.etc2.ctex"]
 
 [params]
 

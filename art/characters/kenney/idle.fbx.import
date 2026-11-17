@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://7bc1cc234m56"
-path="res://.godot/imported/idle.fbx-5730589e1fd159c1b167c456101a13c0.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/characters/kenney/idle.fbx"
-dest_files=["res://.godot/imported/idle.fbx-5730589e1fd159c1b167c456101a13c0.scn"]
 
 [params]
 

@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cfe7qsfcaym8t"
-path="res://.godot/imported/water_ration.glb-b68755b1a0093d13e5e61f1b135b514b.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/water_ration.glb"
-dest_files=["res://.godot/imported/water_ration.glb-b68755b1a0093d13e5e61f1b135b514b.scn"]
 
 [params]
 

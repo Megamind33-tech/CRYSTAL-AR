@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bhv5b3gkj4pbb"
-path="res://.godot/imported/water_ice.glb-499266953e0d9651dc473cdcdbf6ed35.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/water_ice.glb"
-dest_files=["res://.godot/imported/water_ice.glb-499266953e0d9651dc473cdcdbf6ed35.scn"]
 
 [params]
 

@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dfuppvwtabe33"
-path="res://.godot/imported/cargo_case.glb-1dc2ae755d098756f486858039226332.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/cargo_case.glb"
-dest_files=["res://.godot/imported/cargo_case.glb-1dc2ae755d098756f486858039226332.scn"]
 
 [params]
 

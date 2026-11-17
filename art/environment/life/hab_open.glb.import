@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c3ie08fwv0uvw"
-path="res://.godot/imported/hab_open.glb-091b5cf91c22c23e7d37a55d3a91378e.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/life/hab_open.glb"
-dest_files=["res://.godot/imported/hab_open.glb-091b5cf91c22c23e7d37a55d3a91378e.scn"]
 
 [params]
 

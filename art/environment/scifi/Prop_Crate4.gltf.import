@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://y8x8477n30nv"
-path="res://.godot/imported/Prop_Crate4.gltf-2579307f775a784af1eedee0271aa73d.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/scifi/Prop_Crate4.gltf"
-dest_files=["res://.godot/imported/Prop_Crate4.gltf-2579307f775a784af1eedee0271aa73d.scn"]
 
 [params]
 

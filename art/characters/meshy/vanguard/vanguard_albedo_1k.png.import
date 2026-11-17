@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dkxb80kswmeht"
-path.s3tc="res://.godot/imported/vanguard_albedo_1k.png-b7c2560d5a456157319b3d64b77687f7.s3tc.ctex"
-path.etc2="res://.godot/imported/vanguard_albedo_1k.png-b7c2560d5a456157319b3d64b77687f7.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/characters/meshy/vanguard/vanguard_albedo_1k.png"
-dest_files=["res://.godot/imported/vanguard_albedo_1k.png-b7c2560d5a456157319b3d64b77687f7.s3tc.ctex", "res://.godot/imported/vanguard_albedo_1k.png-b7c2560d5a456157319b3d64b77687f7.etc2.ctex"]
 
 [params]
 

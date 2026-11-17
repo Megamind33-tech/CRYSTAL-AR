@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bokuc8cd7tpht"
-path="res://.godot/imported/merc_rig.glb-d384fb42fb341093ee54a6a1f98a54f9.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/world/merc_rig.glb"
-dest_files=["res://.godot/imported/merc_rig.glb-d384fb42fb341093ee54a6a1f98a54f9.scn"]
 
 [params]
 

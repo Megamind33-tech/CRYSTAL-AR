@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://btxgsmaaqlt80"
-path="res://.godot/imported/comms_tower.glb-171df7e0601a4b012003aca1e2d22cee.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/kit/comms_tower.glb"
-dest_files=["res://.godot/imported/comms_tower.glb-171df7e0601a4b012003aca1e2d22cee.scn"]
 
 [params]
 

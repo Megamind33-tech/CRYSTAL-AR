@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://sud37jusmsnd"
-path="res://.godot/imported/plating.glb-9582bfa36d31366de0f289405be3b67d.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/plating.glb"
-dest_files=["res://.godot/imported/plating.glb-9582bfa36d31366de0f289405be3b67d.scn"]
 
 [params]
 

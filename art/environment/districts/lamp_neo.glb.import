@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://ddjmxw4ih2b1x"
-path="res://.godot/imported/lamp_neo.glb-399ebbc688f573633e974d1e19da8836.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/districts/lamp_neo.glb"
-dest_files=["res://.godot/imported/lamp_neo.glb-399ebbc688f573633e974d1e19da8836.scn"]
 
 [params]
 

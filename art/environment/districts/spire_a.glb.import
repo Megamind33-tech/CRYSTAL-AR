@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://crihegpij80t1"
-path="res://.godot/imported/spire_a.glb-2ddbd56496cc2580b856f77ca28c6985.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/districts/spire_a.glb"
-dest_files=["res://.godot/imported/spire_a.glb-2ddbd56496cc2580b856f77ca28c6985.scn"]
 
 [params]
 

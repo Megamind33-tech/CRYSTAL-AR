@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://brkeo4y02p3ga"
-path="res://.godot/imported/Superhero_Male_FullBody.gltf-d115f7a543a15ecfba93bfb9169f63ea.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/characters/ubc/Superhero_Male_FullBody.gltf"
-dest_files=["res://.godot/imported/Superhero_Male_FullBody.gltf-d115f7a543a15ecfba93bfb9169f63ea.scn"]
 
 [params]
 

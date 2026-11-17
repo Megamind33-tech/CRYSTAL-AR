@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b1kuxt3d6tu3n"
-path.bptc="res://.godot/imported/panel_grid.png-6a33d88d4677826b421bdc3ea7aa6845.bptc.ctex"
-path.astc="res://.godot/imported/panel_grid.png-6a33d88d4677826b421bdc3ea7aa6845.astc.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/textures/panel_grid.png"
-dest_files=["res://.godot/imported/panel_grid.png-6a33d88d4677826b421bdc3ea7aa6845.bptc.ctex", "res://.godot/imported/panel_grid.png-6a33d88d4677826b421bdc3ea7aa6845.astc.ctex"]
 
 [params]
 

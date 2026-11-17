@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cagtv3sov0o85"
-path.s3tc="res://.godot/imported/container_side_diff_1k.jpg-da9d596dec442dea1a39a77fe53fa2c3.s3tc.ctex"
-path.etc2="res://.godot/imported/container_side_diff_1k.jpg-da9d596dec442dea1a39a77fe53fa2c3.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/environment/mars/container_side_diff_1k.jpg"
-dest_files=["res://.godot/imported/container_side_diff_1k.jpg-da9d596dec442dea1a39a77fe53fa2c3.s3tc.ctex", "res://.godot/imported/container_side_diff_1k.jpg-da9d596dec442dea1a39a77fe53fa2c3.etc2.ctex"]
 
 [params]
 

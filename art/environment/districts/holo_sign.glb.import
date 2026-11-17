@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dnko4ajwbx2su"
-path="res://.godot/imported/holo_sign.glb-236a517299f03cefecf3d3b428b074b9.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/districts/holo_sign.glb"
-dest_files=["res://.godot/imported/holo_sign.glb-236a517299f03cefecf3d3b428b074b9.scn"]
 
 [params]
 

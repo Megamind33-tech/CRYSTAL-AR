@@ -2092,6 +2092,7 @@ var _nation_pick: NationPick
 
 
 func _maybe_pick_nation() -> void:
+	_maybe_pick_path()
 	if _nation_pick != null or Profile.career().nation() != Nations.NONE or match_node.server == null \
 			or match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID) == null:
 		return
@@ -2104,11 +2105,35 @@ func _maybe_pick_nation() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_nation_pick.chosen.connect(func(i: int) -> void:
 		Profile.career().choose_nation(i)
+		var me = match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
+		if me != null and not bool(Profile.career().d.arrived):
+			match_node.server.world.teleport(me, Arrival.spawn(i))  # off to the nation's colony
+			Profile.career().d.arrived = true
 		Profile.save()
 		_flash_text(tr("NATION_WELCOME") % Nations.display_name(i), Nations.color(i))
 		_nation_pick.queue_free()
 		match_node.input.enabled = true
 		match_node.touch.visible = _touch_was_visible)
+
+
+## After arrival: government or freelance, asked once.
+var _path_pick: PathPick
+
+
+func _maybe_pick_path() -> void:
+	var c := Profile.career()
+	if _path_pick != null or _nation_pick != null or c.nation() == Nations.NONE or c.path() != "" \
+			or match_node.server == null:
+		return
+	_path_pick = PathPick.new()
+	hud_layer.get_parent().add_child(_path_pick)
+	match_node.input.enabled = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_path_pick.chosen.connect(func(p: String) -> void:
+		Profile.career().choose_path(p)
+		Profile.save()
+		_path_pick.queue_free()
+		match_node.input.enabled = true)
 
 
 ## Through the gate: a deployment to Rustwood Yard (the career's contract

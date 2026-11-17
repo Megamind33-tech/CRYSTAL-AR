@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dl74vp3h5gl1m"
-path="res://.godot/imported/concern_armor.glb-44e1e4de5a2223763008195d0704b773.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/world/concern_armor.glb"
-dest_files=["res://.godot/imported/concern_armor.glb-44e1e4de5a2223763008195d0704b773.scn"]
 
 [params]
 

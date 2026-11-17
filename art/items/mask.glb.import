@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cc7rarg7ufqfh"
-path="res://.godot/imported/mask.glb-b2b1a0525dcd822a3705540c4fff0218.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/items/mask.glb"
-dest_files=["res://.godot/imported/mask.glb-b2b1a0525dcd822a3705540c4fff0218.scn"]
 
 [params]
 

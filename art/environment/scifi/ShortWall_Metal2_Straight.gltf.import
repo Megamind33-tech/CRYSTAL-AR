@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://1u8rkpc3g134"
-path="res://.godot/imported/ShortWall_Metal2_Straight.gltf-02acc868b70e6bd935ad630c9378a258.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/scifi/ShortWall_Metal2_Straight.gltf"
-dest_files=["res://.godot/imported/ShortWall_Metal2_Straight.gltf-02acc868b70e6bd935ad630c9378a258.scn"]
 
 [params]
 

@@ -3,17 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cl0opi37e3ckh"
-path.s3tc="res://.godot/imported/concrete_slab_wall_diff_1k.jpg-82bba1b47ef0311140d83deacbf468c7.s3tc.ctex"
-path.etc2="res://.godot/imported/concrete_slab_wall_diff_1k.jpg-82bba1b47ef0311140d83deacbf468c7.etc2.ctex"
-metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
-}
+valid=false
 
 [deps]
 
 source_file="res://art/environment/mars/concrete_slab_wall_diff_1k.jpg"
-dest_files=["res://.godot/imported/concrete_slab_wall_diff_1k.jpg-82bba1b47ef0311140d83deacbf468c7.s3tc.ctex", "res://.godot/imported/concrete_slab_wall_diff_1k.jpg-82bba1b47ef0311140d83deacbf468c7.etc2.ctex"]
 
 [params]
 

@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dj6i11n46cj7v"
-path="res://.godot/imported/farm_hall.glb-4490905b55bf0ce03242243d68a346e4.scn"
+valid=false
 
 [deps]
 
 source_file="res://art/environment/life/farm_hall.glb"
-dest_files=["res://.godot/imported/farm_hall.glb-4490905b55bf0ce03242243d68a346e4.scn"]
 
 [params]
 
