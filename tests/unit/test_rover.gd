@@ -65,3 +65,25 @@ func test_out_of_reach_does_not_board() -> void:
 	SimHarness.place(p, Vector3(8, 0.05, -15), 0.0)
 	_step(Vector2.ZERO, [PlayerCommand.Action.INTERACT])
 	assert_eq(p.state.vehicle, -1)
+
+
+## Running people down: a rover at speed hits the one in its path (hurt,
+## thrown), not the one off to the side.
+func test_a_rover_at_speed_hits_who_is_in_front() -> void:
+	var ahead := world.add_player(2, SimHarness.loadout(), "ahead", true)
+	var aside := world.add_player(3, SimHarness.loadout(), "aside", true)
+	SimHarness.place(ahead, Vector3(2, 0.05, -15), 0.0)
+	SimHarness.place(aside, Vector3(2, 0.05, -10), 0.0)
+	for q in [ahead, aside]:
+		q.state.spawn_protection_ticks = 0
+	_step(Vector2.ZERO, [PlayerCommand.Action.INTERACT])
+	var hp: float = ahead.state.health + ahead.state.shield
+	world.drain_events()
+	for i in 150:
+		world.step({1: input.cmd(world.tick, Vector2(0, 1), 0, []), 2: SimHarness.CommandScript.new().cmd(world.tick, Vector2.ZERO, 0, []),
+				3: SimHarness.CommandScript.new().cmd(world.tick, Vector2.ZERO, 0, [])})
+	assert_lt(ahead.state.health + ahead.state.shield, hp, "the one in front is hurt")
+	assert_eq(aside.state.health + aside.state.shield, hp, "the one aside isn't")
+	var hits := world.drain_events().filter(func(e: Dictionary) -> bool: return e.type == "hit" and e.target == 2)
+	assert_eq(hits.size(), 1, "one hit, not one per tick")
+	assert_eq(hits[0].attacker, 1, "by the driver")

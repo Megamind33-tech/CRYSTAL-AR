@@ -253,6 +253,13 @@ func _update() -> void:
 		_people = match_node.get_tree().get_first_node_in_group("city_npcs")
 	if _people != null:
 		_people.player_position = me.state.position
+		_people.vehicle = {}
+		if me.state.vehicle >= 0:
+			var vm: Dictionary = VehicleSim.MODELS[clampi(me.state.vehicle_model, 0, VehicleSim.MODELS.size() - 1)]
+			_people.vehicle = {"at": me.state.position, "speed": absf(me.state.vehicle_speed), "half": vm.half,
+					"fwd": Vector3(-sin(me.state.vehicle_yaw), 0, -cos(me.state.vehicle_yaw)) * signf(me.state.vehicle_speed)}
+		if not _people.run_down.is_connected(_on_run_down):
+			_people.run_down.connect(_on_run_down)
 	var pos := me.state.position
 	_near = ""
 	driving_speed = absf(me.state.vehicle_speed) if me.state.vehicle >= 0 else -1.0
@@ -810,6 +817,12 @@ func _draw_distance(n: Node) -> void:
 	if box.get_longest_axis_size() * maxf(absf(gi.scale.x), maxf(absf(gi.scale.y), absf(gi.scale.z))) < SMALL_SIZE:
 		gi.visibility_range_end = SMALL_RANGE
 		gi.visibility_range_end_margin = 10.0
+
+
+## A pedestrian run down: in a lawful district, the SALTS want you.
+func _on_run_down(_at: Vector3) -> void:
+	if region in WorldLayout.LAWFUL:
+		crime("assault")
 
 
 ## A crime the Marshals saw: stars, and officers on the way.

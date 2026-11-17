@@ -1138,3 +1138,4 @@ TITAN_AIR_PROMPT,Fill an air canister · $%d
 TITAN_AIR_FILLED,Air canister filled (%d of %d)
 TITAN_AIR_FULL,You can't carry more canisters
 TITAN_AIR_BROKE,Not enough money: a canister is $%d
+NPC_BARK_RUN_DOWN,Ow! Watch where you're driving!|Hey! Are you blind?|My leg!|Maniac!

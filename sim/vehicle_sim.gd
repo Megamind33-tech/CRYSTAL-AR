@@ -88,6 +88,25 @@ const HOLD_BACK := 2.8       ## the hold's hatch, behind the rover's centre
 const HOLD_REACH := 1.7
 
 
+## Running people down: from RAM_MIN_SPEED (m/s), RAM_DAMAGE per m/s
+## above it (a rover at 12 m/s: about 80), the person thrown up RAM_LIFT;
+## one hit per person per RAM_COOLDOWN ticks (SimWorld._ram).
+const RAM_MIN_SPEED := 3.5
+const RAM_DAMAGE := 8.0
+const RAM_LIFT := 3.0
+const RAM_COOLDOWN := 120
+static var _ram_weapon: WeaponData
+
+
+## The kill feed's "weapon" for a vehicle hit.
+static func ram_weapon() -> WeaponData:
+	if _ram_weapon == null:
+		_ram_weapon = WeaponData.new()
+		_ram_weapon.id = &"vehicle"
+		_ram_weapon.display_name = "Vehicle"
+		_ram_weapon.headshot_multiplier = 1.0
+	return _ram_weapon
+
 ## Whether `pos` stands at `v`'s rear hatch (there you open the hold; you
 ## don't climb in).
 static func at_hold(v: SimVehicle, pos: Vector3) -> bool:

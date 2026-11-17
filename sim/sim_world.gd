@@ -266,6 +266,44 @@ func _step_vehicles(ids: Array, interacting: Dictionary) -> void:
 			v.yaw = d.state.vehicle_yaw
 			if VehicleSim.wear:
 				VehicleSim.wear_and_tear(v, d.state)
+			_ram(v, d)
+
+
+## A vehicle at speed hits whoever is in front of it (VehicleSim.RAM_*):
+## hurt by how fast it was going, thrown forward and up; the vehicle loses
+## speed. Once per person per RAM_COOLDOWN, so one hit is one hit.
+var _rammed: Dictionary = {}  ## "vehicle:person" -> tick of the last hit
+
+
+func _ram(v: SimVehicle, driver: SimPlayer) -> void:
+	var s := driver.state
+	var speed := absf(s.vehicle_speed)
+	if speed < VehicleSim.RAM_MIN_SPEED or not damage_enabled:
+		return
+	var m: Dictionary = VehicleSim.MODELS[clampi(v.model, 0, VehicleSim.MODELS.size() - 1)]
+	if m.has("fly") and not s.is_on_floor():
+		return
+	var half: Vector2 = m.half
+	var fwd := Vector3(-sin(s.vehicle_yaw), 0.0, -cos(s.vehicle_yaw)) * signf(s.vehicle_speed)
+	var side := Vector3(fwd.z, 0.0, -fwd.x)
+	for id: int in players:
+		var o: SimPlayer = players[id]
+		if o == driver or not o.state.alive or o.state.vehicle >= 0:
+			continue
+		var to := o.state.position - s.position
+		if absf(to.y) > 2.0:
+			continue
+		var along := to.dot(fwd)
+		if along < 0.0 or along > half.y + 0.6 or absf(to.dot(side)) > half.x + 0.4:
+			continue
+		var key := "%d:%d" % [v.driver, id]
+		if tick - int(_rammed.get(key, -100000)) < VehicleSim.RAM_COOLDOWN:
+			continue
+		_rammed[key] = tick
+		o.state.velocity = fwd * speed * 0.6 + Vector3.UP * VehicleSim.RAM_LIFT
+		o.state.move_state = PlayerSimState.Move.AIR
+		_damage(o, driver.net_id, (speed - VehicleSim.RAM_MIN_SPEED + 1.0) * VehicleSim.RAM_DAMAGE, false, VehicleSim.ram_weapon(), tick)
+		s.vehicle_speed *= 0.7
 
 
 func _leave_vehicle(p: SimPlayer) -> void:

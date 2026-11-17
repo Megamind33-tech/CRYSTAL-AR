@@ -23,6 +23,13 @@ var _walkers: Array = []  ## [PlayerVisual, PlayerSimState, path, next index]
 var _time: float = 0.0
 ## Where the player stands (set by the match) so vendors can look at them.
 var player_position := Vector3.INF
+## Your vehicle while you drive it ({} on foot): {"at", "fwd", "speed",
+## "half"} (CityMode). People in its path are knocked down.
+var vehicle: Dictionary = {}
+## Someone was run down: CityMode makes it a crime in lawful districts.
+signal run_down(at: Vector3)
+## Tests: animate everyone, not only those near you.
+var everyone_awake := false
 
 
 func _ready() -> void:
@@ -429,7 +436,7 @@ func _process_people(delta: float) -> void:
 		var v: PlayerVisual = w[0]
 		var s: PlayerSimState = w[1]
 		# Far from you, people wait where they are (no animation to run).
-		if player_position != Vector3.INF and s.position.distance_squared_to(player_position) > FAR * FAR:
+		if not everyone_awake and player_position != Vector3.INF and s.position.distance_squared_to(player_position) > FAR * FAR:
 			if v.visible:
 				v.visible = false
 				v.process_mode = Node.PROCESS_MODE_DISABLED
@@ -447,6 +454,19 @@ func _process_people(delta: float) -> void:
 				s.sprinting = false
 				v.face_movement = true
 				mode = "walk"
+		# Your vehicle at speed knocks them down (they get up, shaken).
+		if not vehicle.is_empty() and mode != "down" and float(vehicle.speed) > VehicleSim.RAM_MIN_SPEED:
+			var to := s.position - (vehicle.at as Vector3)
+			var fwd: Vector3 = vehicle.fwd
+			var half: Vector2 = vehicle.half
+			var along := to.dot(fwd)
+			if absf(to.y) < 2.0 and along > 0.0 and along < half.y + 0.6 and absf(to.dot(Vector3(fwd.z, 0, -fwd.x))) < half.x + 0.4:
+				_mood[v] = {"mode": "down", "t": 4.0}
+				s.position += fwd * 1.5
+				s.stance = PlayerSimState.Stance.CROUCH
+				say(v, _line("NPC_BARK_RUN_DOWN"), true)
+				run_down.emit(s.position)
+				mode = "down"
 		# Someone walking into you: they stop, step aside, say so.
 		if mode == "walk" and player_position != Vector3.INF and s.position.distance_to(player_position) < 1.4:
 			var ahead := Vector3(-sin(s.yaw), 0, -cos(s.yaw))
@@ -478,6 +498,8 @@ func _process_people(delta: float) -> void:
 				dir = away.normalized() if away.length() > 0.1 else Vector3.FORWARD
 				speed = RUN_SPEED
 				s.sprinting = true
+			"down":
+				pass  # on the ground, getting their breath back
 			"work":
 				s.yaw = float(m.yaw)  # facing the stove, the desk, the machine
 			"cower":
@@ -501,7 +523,7 @@ func _process_people(delta: float) -> void:
 		if not (v[0] as Node3D).visible:
 			continue
 		var s: PlayerSimState = v[1]
-		if player_position != Vector3.INF and s.position.distance_squared_to(player_position) > FAR * FAR:
+		if not everyone_awake and player_position != Vector3.INF and s.position.distance_squared_to(player_position) > FAR * FAR:
 			continue
 		var yaw: float = v[2]
 		var pv: PlayerVisual = v[0]
