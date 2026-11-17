@@ -1280,6 +1280,25 @@ func confiscate() -> int:
 	return n
 
 
+## The vehicle's hold searched (separately from the pack): its dust is
+## seized, the fine paid. Returns how much was found.
+func confiscate_hold() -> int:
+	var n := 0
+	for variant: String in VARIANTS:
+		n += int(d.rover_cargo.get(variant, 0))
+		d.rover_cargo.erase(variant)
+	if n > 0:
+		d.wallet = maxi(int(d.wallet) - SEARCH_FINE, 0)
+	return n
+
+
+func hold_has_dust() -> bool:
+	for variant: String in VARIANTS:
+		if int(d.rover_cargo.get(variant, 0)) > 0:
+			return true
+	return false
+
+
 func carrying_dust() -> bool:
 	for variant: String in VARIANTS:
 		if int(d.stash.get(variant, 0)) > 0:

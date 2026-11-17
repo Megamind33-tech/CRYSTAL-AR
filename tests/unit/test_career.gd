@@ -319,3 +319,13 @@ func test_a_new_squadmate_each_run() -> void:
 		assert_ne(mate, last, "never the same face twice in a row")
 		c.record_squad_run(mate, "")
 		last = mate
+
+
+func test_the_hold_is_searched_apart_from_the_pack() -> void:
+	var c := Career.new()
+	c.d.stash = {"red_dust": 2}
+	c.d.rover_cargo = {"red_dust": 3, "rare_ore": 1}
+	assert_true(c.hold_has_dust())
+	assert_eq(c.confiscate_hold(), 3, "the hold's dust is found")
+	assert_eq(c.d.rover_cargo, {"rare_ore": 1}, "the rest of the hold stays")
+	assert_eq(c.d.stash, {"red_dust": 2}, "the pack wasn't searched")

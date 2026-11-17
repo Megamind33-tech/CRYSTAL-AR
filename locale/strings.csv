@@ -1143,3 +1143,6 @@ HUNT_STOWED,%s stowed in the hold: out of sight. Drive onto a pad to extract it
 HUNT_SEARCHING,Searching the hold…
 HUNT_UNSTOWED,took %s from the hold
 HUNT_HOLD_ROBBED,searched your vehicle and took %s
+TITAN_INSPECTION,"SALTS checkpoint: stop, your vehicle's hold is being searched"
+TITAN_HOLD_SEIZED,"They found %d dust in the hold: seized, fined $%d"
+TITAN_HOLD_CLEAR,Hold searched: clean. On your way

@@ -107,9 +107,13 @@ func _step_orders(c: Career) -> void:
 			city._people.unmeet(key)
 
 
-## A Marshal on the beat stops you if you're carrying dust in town.
+## Searches, one compartment at a time: a SALTS officer on the beat stops
+## you on foot and searches your pack; the gatehouse inspects a vehicle's
+## hold as it comes through. Neither touches the other compartment.
 func _step_search(me: SimPlayer, c: Career, dt: float) -> void:
 	_stop_cool = maxf(_stop_cool - dt, 0.0)
+	if _step_inspection(me, c, dt):
+		return
 	if not _searcher.is_empty():
 		_search_t -= dt
 		var st: PlayerSimState = _searcher[1]
@@ -138,6 +142,43 @@ func _step_search(me: SimPlayer, c: Career, dt: float) -> void:
 				city._people.say(m[0], CityNpcs._line("TRADE_STOP"), true)
 				city._flash_text(_t("TRADE_STOPPED"), ComicUI.YELLOW)
 			return
+
+
+## The gatehouse's vehicle inspection: driving through the hall with dust
+## in the hold, you're waved down; stay stopped INSPECT_SECONDS while they
+## search the hold (your pack isn't searched); drive off and you're evading.
+const INSPECT_SECONDS := 4.0
+var _inspect_t: float = -1.0
+var _inspected_cool: float = 0.0
+
+
+func _step_inspection(me: SimPlayer, c: Career, dt: float) -> bool:
+	_inspected_cool = maxf(_inspected_cool - dt, 0.0)
+	var gate := TitanSettlement.piece("titan/gatehouse")
+	if gate.is_empty():
+		return false
+	var in_hall := me.state.vehicle >= 0 and absf(me.state.position.x - (gate[1] as Vector3).x) < 4.0 \
+			and absf(me.state.position.z - (gate[1] as Vector3).z) < 5.0
+	if _inspect_t >= 0.0:
+		if me.state.vehicle < 0 or absf(me.state.vehicle_speed) > 3.0 and not in_hall:
+			_inspect_t = -1.0
+			city._flash_text(_t("TRADE_RAN"), ComicUI.RED)
+			city.crime("evading")
+			return true
+		_inspect_t -= dt
+		if _inspect_t <= 0.0:
+			_inspect_t = -1.0
+			_inspected_cool = 90.0
+			var n := c.confiscate_hold()
+			Profile.save()
+			city._flash_text(_t("TITAN_HOLD_SEIZED") % [n, Career.SEARCH_FINE] if n > 0 else _t("TITAN_HOLD_CLEAR"),
+					ComicUI.RED if n > 0 else ComicUI.GREEN)
+		return true
+	if in_hall and _inspected_cool <= 0.0 and c.hold_has_dust():
+		_inspect_t = INSPECT_SECONDS
+		city._flash_text(_t("TITAN_INSPECTION"), ComicUI.YELLOW)
+		return true
+	return false
 
 
 ## Step 3 of Sable's chain: the Blue Line crew holds the Galleria corner.
