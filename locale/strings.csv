@@ -1167,3 +1167,31 @@ REG_NEXT,CONTINUE
 REG_BAD_NAME,A name needs 3 to 16 letters.
 # rubies
 SHELF_BUY_RUBIES,Buy · %d rubies
+# boards and onboarding
+GUIDE_INTRO_TITLE,WHAT YOU CAN DO HERE
+GUIDE_INTRO_1,1. Take a job at the board. It says what to find and what it pays.
+GUIDE_INTRO_2,2. Deploy. Find the cargo out there and carry it to a pad.
+GUIDE_INTRO_3,3. Come back and sell it. Spend the money on gear. Repeat.
+GUIDE_PATH_GOV,GOVERNMENT: safe, steady jobs from the Kraken Concern. Good to start.
+GUIDE_PATH_FREE,FREELANCE: riskier jobs for other crews. Pay more. Rivals will come for you.
+GUIDE_INTRO_OK,GOT IT
+GUIDE_HINT_PICK,Pick the first card: it is the best one for you right now.
+GUIDE_HINT_GOV,Government job: steady pay, low risk. Now press DEPLOY.
+GUIDE_HINT_FREE,Freelance job: more pay, more risk. Now press DEPLOY.
+CARD_TAKE,TAKE IT
+CARD_TAKEN,TAKEN
+CARD_BUSY,FINISH YOUR JOB FIRST
+CARD_BEST,BEST FOR YOU
+CARD_WHERE,WHERE
+CARD_PAYS,PAYS
+CARD_RISK,RISK
+CARD_TIME,TIME
+CARD_MIN,~%d min
+CARD_RISK_1,Low
+CARD_RISK_2,Medium
+CARD_RISK_3,High
+CARD_WHERE_YARD,Rustwood Yard
+CARD_GOV,GOVERNMENT
+CARD_FREE,FREELANCE
+CARD_YOUR_JOB,YOUR JOB
+CARD_NEXT,Next: press DEPLOY. You can drop it any time (small standing cost).

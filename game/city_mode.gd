@@ -2112,8 +2112,11 @@ func _maybe_pick_nation() -> void:
 		Profile.save()
 		_flash_text(tr("NATION_WELCOME") % Nations.display_name(i), Nations.color(i))
 		_nation_pick.queue_free()
-		match_node.input.enabled = true
-		match_node.touch.visible = _touch_was_visible)
+		var intro := GuideIntro.new()
+		hud_layer.get_parent().add_child(intro)
+		intro.done.connect(func() -> void:
+			match_node.input.enabled = true
+			match_node.touch.visible = _touch_was_visible))
 
 
 ## After arrival: government or freelance, asked once.

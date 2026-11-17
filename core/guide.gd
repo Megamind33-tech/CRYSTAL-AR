@@ -87,5 +87,71 @@ static func distance_text(from: Vector3, target: Vector3) -> String:
 	return "  ·  %d m" % roundi(Vector2(from.x - target.x, from.z - target.z).length())
 
 
+## --- Board cards (CityScreen): what / where / reward / risk / time ---
+
+## Plain facts per contract template: icon, risk 1..3 (skulls), minutes.
+const CARDS := {
+	"recover_cargo": {"icon": "crate", "risk": 1, "minutes": 6},
+	"recover_two": {"icon": "crate", "risk": 2, "minutes": 9},
+	"crack_vault": {"icon": "key", "risk": 3, "minutes": 12},
+	"lift_rival": {"icon": "fist", "risk": 3, "minutes": 10},
+	"collect_bounty": {"icon": "target", "risk": 3, "minutes": 12},
+}
+
+
+static func card(contract: Dictionary) -> Dictionary:
+	return CARDS.get(str(contract.get("id", "")), {"icon": "crate", "risk": 2, "minutes": 10})
+
+
+## Which offer to show first, as "recommended for you": a new player gets
+## the safest and quickest job; after that the best pay for the risk.
+static func recommended(offers: Array, runs: int) -> String:
+	var best := ""
+	var best_score := -INF
+	for k: Dictionary in offers:
+		var c := card(k)
+		var score := float(k.pay) / (float(c.risk) * 120.0 + float(c.minutes)) if runs > 0 \
+				else -float(c.risk) * 100.0 - float(c.minutes)
+		if score > best_score:
+			best_score = score
+			best = str(k.id)
+	return best
+
+
+## The offers, the recommended one first.
+static func ordered(offers: Array, runs: int) -> Array:
+	var rec := recommended(offers, runs)
+	var out := []
+	for k: Dictionary in offers:
+		if str(k.id) == rec:
+			out.push_front(k)
+		else:
+			out.append(k)
+	return out
+
+
+## "government" for the Kraken Concern's jobs (steady, safe, sanctioned),
+## "freelance" for everyone else's (riskier, pays more, standing at stake).
+static func path_of(contract: Dictionary) -> String:
+	return "government" if str(contract.get("faction", "")) == "tharsis" else "freelance"
+
+
+## Keys of the short "what you can do here" intro shown after choosing a
+## nation (three lines, then the two paths).
+static func intro_keys() -> PackedStringArray:
+	return PackedStringArray(["GUIDE_INTRO_1", "GUIDE_INTRO_2", "GUIDE_INTRO_3", "GUIDE_PATH_GOV", "GUIDE_PATH_FREE"])
+
+
+## The hint under the board: which path the current choice is on, in words.
+## Empty once the first run is taught.
+static func board_hint(c: Career) -> String:
+	if not teaching(c) and c.d.contract.is_empty():
+		return ""
+	if not c.d.contract.is_empty():
+		var key := "GUIDE_HINT_GOV" if path_of(c.d.contract) == "government" else "GUIDE_HINT_FREE"
+		return tr_(key)
+	return tr_("GUIDE_HINT_PICK")
+
+
 static func tr_(key: String) -> String:
 	return TranslationServer.translate(key)

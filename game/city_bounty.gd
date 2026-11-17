@@ -265,7 +265,10 @@ func _board_options() -> Array:
 	for id: String in Career.BOUNTIES:
 		var b: Dictionary = Career.BOUNTIES[id]
 		var wait := c.bounty_wait(id, _now())
-		var text := TranslationServer.translate("BOUNTY_OFFER") % [b.name, int(b.reward), TranslationServer.translate("BOUNTY_KIND_" + str(b.kind).to_upper())]
+		# Plain words: who, what it pays, how risky ("alone" is low, a crew is high).
+		var risk: String = {"gunman": "CARD_RISK_1", "guarded": "CARD_RISK_2", "crew": "CARD_RISK_3"}.get(str(b.kind), "CARD_RISK_2")
+		var text := TranslationServer.translate("BOUNTY_OFFER") % [b.name, int(b.reward), "%s: %s" % [
+				TranslationServer.translate("CARD_RISK"), TranslationServer.translate(risk)]]
 		if wait > 0:
 			text = TranslationServer.translate("BOUNTY_LATER") % [b.name, ceili(wait / 60.0)]
 		out.append([text, wait <= 0, ComicUI.YELLOW, "bounty:take:" + id])
