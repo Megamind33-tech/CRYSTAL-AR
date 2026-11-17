@@ -330,6 +330,8 @@ func _update() -> void:
 	for bunk: Array in WorldLayout.bunks():
 		if _near.is_empty() and pos.distance_to(bunk[0]) < REACH + 1.0:
 			_near = "bunk"
+	if _near.is_empty() and pos.distance_to(TitanSettlement.air_station()) < REACH + 0.5:
+		_near = "air_refill"
 	var job: Dictionary = Profile.career().d.job
 	if not job.is_empty() and WorldLayout.job_sites().has(job.id):
 		var site: Array = WorldLayout.job_sites()[job.id]
@@ -485,6 +487,17 @@ func _update() -> void:
 			else:
 				_rig = i
 				_rig_t = 0.0
+		elif _near == "air_refill":
+			# EX-03's filling station: a full air canister for your suit.
+			if me.state.o2_spares >= AIR_CANISTERS_MAX:
+				_note(tr("TITAN_AIR_FULL"), ComicUI.YELLOW)
+			elif Profile.career().pay(AIR_CANISTER_PRICE):
+				me.state.o2_spares += 1
+				Profile.save()
+				match_node.audio.play_ui("pickup", -4.0)
+				_note(tr("TITAN_AIR_FILLED") % [me.state.o2_spares, AIR_CANISTERS_MAX], ComicUI.CYAN)
+			else:
+				_note(tr("TITAN_AIR_BROKE") % AIR_CANISTER_PRICE, ComicUI.RED)
 		elif _near == "bunk":
 			Profile.career().rest()
 			me.state.fatigue = 0.0
@@ -771,6 +784,11 @@ static func _tinted(mesh: PrimitiveMesh, c: Color) -> ArrayMesh:
 ## SMALL_RANGE at most: on phones each is a draw call or two, and from 500 m
 ## they're a pixel. The world's own pieces have their view distances
 ## (StaticBatches) and people theirs (CityNpcs), so they're left alone.
+## EX-03's air: a canister for the suit, up to the most you can carry.
+const AIR_CANISTER_PRICE := 20
+const AIR_CANISTERS_MAX := 3
+
+
 ## The settlements' police, the SALTS: their officers' names start so.
 const POLICE := "SALTS·"
 const SMALL_RANGE := 180.0
@@ -1929,6 +1947,8 @@ func prompt() -> String:
 		text = tr("CITY_PROMPT_DEPLOY") % (c.title if not c.is_empty() else tr("CITY_NO_CONTRACT"))
 	elif _near == "bunk":
 		text = tr("CITY_PROMPT_SLEEP")
+	elif _near == "air_refill":
+		text = tr("TITAN_AIR_PROMPT") % AIR_CANISTER_PRICE
 	elif _near.begins_with("loot:"):
 		for spot: Array in WorldLayout.loot_spots():
 			if spot[0] == _near.substr(5):

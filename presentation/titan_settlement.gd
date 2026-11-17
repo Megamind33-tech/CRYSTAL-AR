@@ -48,6 +48,12 @@ const OPEN_REACH_GATE := 9.0  ## the great doors open early for a vehicle
 const SLIDE_SPEED := 2.5      ## of the opening, per second
 
 
+## EX-03's filling station, between the electrolysers in the machine hall.
+static func air_station() -> Vector3:
+	var p := piece("titan/plant_ex03")
+	return to_world(p, 2.5, 2.2) if not p.is_empty() else Vector3.INF
+
+
 ## A point in building `piece`'s Blender coordinates, in the world.
 static func to_world(piece: Array, x: float, y: float) -> Vector3:
 	var b := Basis(Vector3.UP, deg_to_rad(float(piece[2])))

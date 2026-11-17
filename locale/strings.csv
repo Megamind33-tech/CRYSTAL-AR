@@ -1134,3 +1134,7 @@ HUNT_TURNED_GRAND,%s takes the grand prize off you
 HUNT_YOU_TURNED,You turned on %s. Your nation will hear of it
 HUNT_FF_HOLD,Hold your fire! %s is your squadmate
 HUNT_FF_WATCH,%s: watch your fire!
+TITAN_AIR_PROMPT,Fill an air canister · $%d
+TITAN_AIR_FILLED,Air canister filled (%d of %d)
+TITAN_AIR_FULL,You can't carry more canisters
+TITAN_AIR_BROKE,Not enough money: a canister is $%d

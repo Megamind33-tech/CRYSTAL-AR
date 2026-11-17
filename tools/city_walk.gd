@@ -1264,7 +1264,7 @@ func _walk(me: SimPlayer, yaw: float, seconds: float, until: Callable) -> bool:
 
 func _walkin_test(me: SimPlayer) -> void:
 	var fails: Array[String] = []
-	var settlement: TitanSettlement = m.presentation.find_child("Settlement", true, false) if m.get("presentation") != null else get_tree().root.find_child("Settlement", true, false)
+	var settlement: TitanSettlement = get_tree().root.find_child("Settlement", true, false)
 	for b: Array in WALKIN:
 		var bp := TitanSettlement.piece(b[0])
 		var d: float = b[1]
@@ -1273,7 +1273,7 @@ func _walkin_test(me: SimPlayer) -> void:
 		var start := TitanSettlement.to_world(bp, 0.0 if not gate else 2.0, outside) + Vector3(0, 0.3, 0)
 		var inward := TitanSettlement.to_yaw(bp, 0.0)
 		await _pose(me, start, inward, -0.05)
-		var inside_y := -1.0 if not gate else d / 2.0 + 3.0  # the gatehouse: right through to the far side
+		var inside_y := -d / 2.0 + 1.0 if not gate else d / 2.0 + 3.0  # past the inner door; the gatehouse: right through
 		var t0 := Time.get_ticks_msec()
 		var opened := false
 		var got_in: bool = await _walk(me, inward, 14.0, func() -> bool:
@@ -1295,22 +1295,20 @@ func _walkin_test(me: SimPlayer) -> void:
 			fails.append("%s: no door opened" % b[0])
 	# The people: every routine visits its stops.
 	var npcs: CityNpcs = get_tree().get_first_node_in_group("city_npcs")
-	var visits := {}
-	for w: Array in npcs._walkers:
-		if w.size() > 4:
-			visits[w] = {}
-	for f in 900:
+	var routines: Array = npcs._walkers.filter(func(w: Array) -> bool: return w.size() > 4)
+	var visits: Array = []
+	for w in routines:
+		visits.append({})
+	for f in 1800:
 		await get_tree().process_frame
-		for w: Array in visits:
-			visits[w][int(w[3])] = true
-			npcs.player_position = (w[1] as PlayerSimState).position  # keep each one awake (they rest when you're far)
-	var k := 0
-	for w: Array in visits:
-		var stops := (w[2] as Array).size()
-		print("WALKIN person %d: %d of %d stops reached" % [k, (visits[w] as Dictionary).size(), stops])
-		if (visits[w] as Dictionary).size() < mini(stops, 3):
+		for k in routines.size():
+			visits[k][int(routines[k][3])] = true
+		npcs.player_position = (routines[(f / 60) % routines.size()][1] as PlayerSimState).position  # keep them awake
+	for k in routines.size():
+		var stops := (routines[k][2] as Array).size()
+		print("WALKIN person %d: %d of %d stops reached" % [k, (visits[k] as Dictionary).size(), stops])
+		if (visits[k] as Dictionary).size() < mini(stops, 3):
 			fails.append("person %d stuck on their routine" % k)
-		k += 1
 	print("WALKIN: %s" % ("PASS" if fails.is_empty() else "FAIL: " + "; ".join(fails)))
 	get_tree().quit(0 if fails.is_empty() else 1)
 

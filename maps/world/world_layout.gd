@@ -232,7 +232,7 @@ static func bunks() -> Array:
 
 static func _build_bunks() -> Array:
 	return [
-		[CityLayout.ORIGIN + Vector3(-36, 0, -36), "CITY_NAME"],
+		[TitanSettlement.to_world(TitanSettlement.piece("titan/hab_r14"), -5.4, -0.6), "CITY_NAME"],  # R-14's bed
 		[WorldTerrain.at(HOLLOW.x - 26, HOLLOW.z - 16), "WORLD_HOLLOW"],
 		[farm_origin() + Vector3(8, 0, 22), "WORLD_FARM"],
 	]
