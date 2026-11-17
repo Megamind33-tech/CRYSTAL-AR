@@ -241,3 +241,25 @@ func test_roads_drivable() -> void:
 			if tilt > 1.5:
 				bad.append("road %d at %s: %.1f m across" % [ri, a.round(), tilt])
 	assert_true(bad.is_empty(), "roads not drivable:\n" + "\n".join(bad))
+
+
+## The tarmac lies on the ground you walk on (no sinking into it, no ground
+## showing through it): every piece of the road's surface, all along every
+## road, is within a centimetre of WorldTerrain.surface plus its lift.
+func test_tarmac_on_the_walked_ground() -> void:
+	var pres: Node = autofree(load("res://maps/world/presentation.gd").new())
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for road: Array in WorldLayout.roads():
+		var pts := WorldLayout.road_samples(road, 1.5)
+		for i in range(0, pts.size() - 1, 3):
+			var na := Vector2(-(pts[i][1] as Vector2).y, (pts[i][1] as Vector2).x)
+			var nb := Vector2(-(pts[i + 1][1] as Vector2).y, (pts[i + 1][1] as Vector2).x)
+			pres._strip(st, pts[i][0], pts[i + 1][0], na, nb, -4.5, 4.5, 0.06, Color.WHITE)
+	var v: PackedVector3Array = st.commit_to_arrays()[Mesh.ARRAY_VERTEX]
+	var worst := 0.0
+	for k in range(0, v.size(), 3):
+		var c := (v[k] + v[k + 1] + v[k + 2]) / 3.0
+		worst = maxf(worst, absf(c.y - 0.06 - WorldTerrain.surface(c.x, c.z)))
+	assert_gt(v.size(), 1000)
+	assert_lt(worst, 0.01, "the tarmac is off the walked ground by %.2f m" % worst)

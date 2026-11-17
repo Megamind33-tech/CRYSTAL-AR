@@ -99,21 +99,25 @@ static func at(x: float, z: float) -> Vector3:
 
 
 static func surface(x: float, z: float) -> float:
+	# The grid's corners (cached) on the same diagonal as the physics; off
+	# the grid, the height function itself.
 	var half := SIZE * 0.5
 	var gx := (x + half) / STEP
 	var gz := (z + half) / STEP
-	var i := floorf(gx)
-	var j := floorf(gz)
+	var i := floori(gx)
+	var j := floori(gz)
+	var n := cells() + 1
+	if i < 0 or j < 0 or i >= n - 1 or j >= n - 1:
+		return height(x, z)
+	var g := grid()
 	var fx := gx - i
 	var fz := gz - j
-	var x0 := -half + i * STEP
-	var z0 := -half + j * STEP
-	var h10 := height(x0 + STEP, z0)
-	var h01 := height(x0, z0 + STEP)
+	var h10 := g[j * n + i + 1]
+	var h01 := g[(j + 1) * n + i]
 	if fx + fz < 1.0:
-		var h00 := height(x0, z0)
+		var h00 := g[j * n + i]
 		return h00 + (h10 - h00) * fx + (h01 - h00) * fz
-	var h11 := height(x0 + STEP, z0 + STEP)
+	var h11 := g[(j + 1) * n + i + 1]
 	return h11 + (h01 - h11) * (1.0 - fx) + (h10 - h11) * (1.0 - fz)
 
 

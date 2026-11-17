@@ -411,8 +411,7 @@ func _roads() -> void:
 			var db: Vector2 = pts[i + 1][1]
 			var na := Vector2(-da.y, da.x)
 			var nb := Vector2(-db.y, db.x)
-			for k in 3:  # three lanes' worth across, each following the ground under it
-				_strip(st, a, b, na, nb, -ROAD_HALF + k * ROAD_HALF * 2.0 / 3.0, -ROAD_HALF + (k + 1) * ROAD_HALF * 2.0 / 3.0, 0.06, tarmac)
+			_strip(st, a, b, na, nb, -ROAD_HALF, ROAD_HALF, 0.06, tarmac)
 			for side in [-1.0, 1.0]:
 				_strip(st, a, b, na, nb, side * (ROAD_HALF - 0.6) - 0.12, side * (ROAD_HALF - 0.6) + 0.12, 0.08, white)  # edge lines
 				_skirt(st, a, b, na, nb, side * ROAD_HALF, tarmac)  # no gap under the edge, from any angle
@@ -443,15 +442,41 @@ func _skirt(st: SurfaceTool, a: Vector2, b: Vector2, na: Vector2, nb: Vector2, o
 		st.add_vertex(v[idx])
 
 
-## A quad from a to b, between offsets `l` and `r` across, `lift` above the ground.
+## A quad from a to b, between offsets `l` and `r` across, `lift` above the
+## ground, laid exactly on it: cut along the ground's grid (its cells and
+## their diagonals, as WorldTerrain.surface and the physics split them), so
+## each piece lies in one flat triangle of the ground you walk on. (A quad
+## laid corner to corner cuts across the ground's creases: feet sink into
+## the tarmac on one side of a crease, the ground shows through on the other.)
 func _strip(st: SurfaceTool, a: Vector2, b: Vector2, na: Vector2, nb: Vector2, l: float, r: float, lift: float, col: Color) -> void:
-	var p := [a + na * l, a + na * r, b + nb * r, b + nb * l]
-	var v: Array[Vector3] = []
-	for q: Vector2 in p:
-		v.append(WorldTerrain.at(q.x, q.y) + Vector3(0, lift, 0))
+	var quad := PackedVector2Array([a + na * l, a + na * r, b + nb * r, b + nb * l])
+	var lo := Vector2(INF, INF)
+	var hi := -lo
+	for q: Vector2 in quad:
+		lo = lo.min(q)
+		hi = hi.max(q)
+	var step := WorldTerrain.STEP
+	var half := WorldTerrain.SIZE * 0.5
 	st.set_color(col)
-	for idx in [0, 2, 1, 0, 3, 2]:
-		st.add_vertex(v[idx])
+	for j in range(floori((lo.y + half) / step), floori((hi.y + half) / step) + 1):
+		for i in range(floori((lo.x + half) / step), floori((hi.x + half) / step) + 1):
+			var x0 := -half + i * step
+			var z0 := -half + j * step
+			var c00 := Vector2(x0, z0)
+			var c10 := Vector2(x0 + step, z0)
+			var c01 := Vector2(x0, z0 + step)
+			var c11 := Vector2(x0 + step, z0 + step)
+			for tri: PackedVector2Array in [PackedVector2Array([c00, c10, c01]), PackedVector2Array([c10, c11, c01])]:
+				for piece: PackedVector2Array in Geometry2D.intersect_polygons(quad, tri):
+					var v: Array[Vector3] = []
+					for q: Vector2 in piece:
+						v.append(WorldTerrain.at(q.x, q.y) + Vector3(0, lift, 0))
+					for k in range(1, v.size() - 1):
+						# Face up (+Y), whichever way round the piece came.
+						var up := (v[k] - v[0]).cross(v[k + 1] - v[0]).y < 0.0
+						st.add_vertex(v[0])
+						st.add_vertex(v[k] if up else v[k + 1])
+						st.add_vertex(v[k + 1] if up else v[k])
 
 
 ## Buildings on the valley's slopes stand on a concrete footing sunk into

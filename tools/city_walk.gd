@@ -41,6 +41,10 @@ func _run() -> void:
 	m.hud._touch = true
 	var me: SimPlayer = m.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	print("CITY WALK: player at %s, phase %s" % [me.state.position, m.server.phase])
+	if Platform.user_args.has("--ground-probe"):
+		await _ground_probe(me)
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--frisk"):
 		await _frisk_run(me)
 		get_tree().quit(0)
@@ -1659,3 +1663,37 @@ func _tex_mb(t: Texture2D) -> float:
 	if img == null:
 		return 0.0
 	return img.get_data_size() / 1048576.0
+
+
+## Drops the player at spots all over the valley (on roads, their banks and
+## junctions, the districts, the yards), lets them settle, and prints how
+## far their feet are from the ground as drawn (WorldTerrain.surface).
+func _ground_probe(me: SimPlayer) -> void:
+	var spots: Array[Vector2] = []
+	for road: Array in WorldLayout.roads():
+		var smp := WorldLayout.road_samples(road, 37.0)
+		for sm: Array in smp:
+			var q: Vector2 = sm[0]
+			var n := Vector2(-(sm[1] as Vector2).y, (sm[1] as Vector2).x)
+			for off in [0.0, 8.0, 14.0]:
+				spots.append(q + n * off)
+	for c: Vector2 in [WorldLayout.HELIOS, WorldLayout.GALLERIA + Vector2(70, 0), WorldLayout.TERRACE + Vector2(0, -50),
+			WorldLayout.SKYPORT + Vector2(0, 25), Vector2(WorldLayout.HOLLOW.x, WorldLayout.HOLLOW.z), WorldLayout.FACTORY + Vector2(0, 30),
+			WorldLayout.GARAGE, Vector2(WorldLayout.LIFT.x, WorldLayout.LIFT.z) + Vector2(-8, 0)]:
+		spots.append(c)
+	var worst := 0.0
+	var bad := 0
+	var stand := -1.0  # where the player stands above the ground, from the first open spot
+	for q in spots:
+		m.server.world.teleport(me, WorldTerrain.at(q.x, q.y) + Vector3(0, 1.5, 0))
+		await _frames(20)
+		var feet := me.state.position
+		var d := feet.y - WorldTerrain.surface(feet.x, feet.z)
+		if stand < 0.0:
+			stand = d
+		d -= stand
+		worst = maxf(worst, absf(d))
+		if absf(d) > 0.15:
+			bad += 1
+			print("GROUND PROBE: off by %.2f m at %s (asked %s)" % [d, feet.snapped(Vector3.ONE * 0.1), q.round()])
+	print("GROUND PROBE: %d spots, %d off, worst %.2f m" % [spots.size(), bad, worst])
