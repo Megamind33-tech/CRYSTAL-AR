@@ -1227,14 +1227,16 @@ func _dig_run(me: SimPlayer) -> void:
 ## for before/after shots: [name, where (relative to CityLayout.ORIGIN),
 ## yaw, pitch].
 const BLOCK_VIEWS := [
-	["b0_plaza", Vector3(0, 0.05, 30), 0.0, -0.05],
-	["b1_home_door", Vector3(-28, 0.05, -28), PI * 0.75, -0.05],
-	["b2_home_inside", Vector3(-35, 0.05, -35), PI * 0.75, -0.1],
-	["b3_shop_door", Vector3(-26, 0.05, 12), -PI * 0.5, -0.05],
-	["b4_shop_inside", Vector3(-35, 0.05, 12), -PI * 0.5, -0.1],
-	["b5_plant", Vector3(28, 0.05, -26), PI * 0.25, -0.05],
-	["b6_hangar_inside", Vector3(34, 0.05, 2), -PI * 0.5, -0.1],
-	["b7_gate", Vector3(0, 0.05, 30), PI, -0.05],
+	["b0_plaza", Vector3(0, 0.05, 22), 0.0, -0.02],
+	["b1_home_door", Vector3(-24, 0.05, -28), PI * 0.5 - 0.15, -0.05],
+	["b2_home_inside", Vector3(-38.2, 0.05, -31), PI * 0.5, -0.12],
+	["b2b_home_bedroom", Vector3(-37.5, 0.05, -36.5), PI * 0.5 + 0.6, -0.15],
+	["b3_shop_door", Vector3(18, 0.05, -18), 0.1, -0.05],
+	["b4_shop_inside", Vector3(19, 0.05, -29.8), 0.0, -0.12],
+	["b5_plant", Vector3(22, 0.05, -30), -PI * 0.5 + 0.3, -0.04],
+	["b6_plant_inside", Vector3(38.5, 0.05, -34), -PI * 0.5 - 0.3, -0.1],
+	["b7_gate", Vector3(0, 0.05, 24), PI, -0.04],
+	["b8_gate_hall", Vector3(1.5, 0.05, 36), PI, -0.08],
 ]
 
 

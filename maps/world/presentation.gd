@@ -33,6 +33,14 @@ func _ready() -> void:
 			batches.add_piece(p[0], p[1], p[2], p[3], 420.0)  # the city from the outlands: the dome carries it
 		if p[0] == "life/hab_open" or p[0] == "shopfront":
 			_room_light(p[1])
+		if str(p[0]).begins_with("titan/"):
+			# Titan's buildings: the furnished inside is its own piece, drawn
+			# only up close (INTERIOR_RANGE), with a warm light of its own.
+			var inside := Comic.kit_instance(str(p[0]) + "_in", p[1], p[2], p[3])
+			inside.visibility_range_end = INTERIOR_RANGE
+			inside.visibility_range_end_margin = 4.0
+			add_child(inside)
+			_room_light(p[1])
 	for t: Array in CityLayout.terminals():
 		batches.add_piece("kiosk", t[1], t[2], 1.0, 260.0)
 	_city_life()
@@ -110,6 +118,11 @@ func _city_life() -> void:
 	glass.material_override = gm
 	glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(glass)
+
+
+## Interiors are drawn within this of their building (metres): through the
+## windows from across the street, not from across the valley.
+const INTERIOR_RANGE := 45.0
 
 
 ## A walk-in habitat's ceiling lamp (warm, short range: it lights the room).

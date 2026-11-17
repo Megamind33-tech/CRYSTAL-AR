@@ -354,7 +354,8 @@ const SHOP_KINDS := ["exchange", "arms", "store", "salvage", "guns", "bar", "pos
 ## (sealed) are pressurised; Dust Hollow's habitats (their airlocks stand
 ## open), its trading post, the hangars and the lift house are not.
 ## Footprints are squared off around each piece (rotation-proof).
-const ROOM_SIZE := {"shopfront": Vector3(12, 3.6, 12), "life/hab_open": Vector3(12, 3.2, 12), "hangar": Vector3(14, 5.5, 14),
+const ROOM_SIZE := {"titan/hab_r14": Vector3(14, 3.4, 14), "titan/market_hub": Vector3(12, 3.8, 12),
+		"titan/plant_ex03": Vector3(16, 5.5, 16), "titan/gatehouse": Vector3(24, 6.0, 10), "shopfront": Vector3(12, 3.6, 12), "life/hab_open": Vector3(12, 3.2, 12), "hangar": Vector3(14, 5.5, 14),
 		"life/factory": Vector3(26, 11, 44),
 		"life/lift_head": Vector3(5, 4.6, 5), "districts/galleria": Vector3(100, 12, 38),
 		"districts/pod_a": Vector3(9, 3.4, 9), "districts/pod_b": Vector3(9, 3.4, 9), "districts/pod_c": Vector3(9, 3.4, 9)}
@@ -413,7 +414,7 @@ static func _build_residences() -> Array:
 	var out := []
 	var habs := []
 	for p: Array in CityLayout.pieces():
-		if p[0] == "life/hab_open":
+		if p[0] == "life/hab_open" or p[0] == "titan/hab_r14":
 			habs.append([p[1], float(p[2])])
 	var h := HOLLOW
 	habs.append([WorldTerrain.at(h.x - 8, h.z + 28), 170.0])
@@ -467,7 +468,7 @@ static func shops() -> Array:
 static func _build_shops() -> Array:
 	var fronts := []
 	for p: Array in CityLayout.pieces():
-		if p[0] == "shopfront":
+		if p[0] == "shopfront" or p[0] == "titan/market_hub":
 			fronts.append([p[1], p[2], p[3]])
 	for p: Array in pieces():
 		if p[0] == "shopfront":

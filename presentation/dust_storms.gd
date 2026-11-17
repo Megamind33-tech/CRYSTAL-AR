@@ -80,7 +80,7 @@ func _process(delta: float) -> void:
 	RenderingServer.global_shader_parameter_set("night_glow", night)  # lit windows, glowing signs
 	if _env != null:
 		_env.fog_density = lerpf(_base_fog, 0.035, storm)
-		_env.fog_light_color = Color(0.78, 0.5, 0.33).lerp(Color(0.6, 0.33, 0.18), storm).lerp(Color(0.12, 0.1, 0.18), night * 0.8)
+		_env.fog_light_color = MarsLighting.HAZE.lerp(Color(0.6, 0.33, 0.18), storm).lerp(Color(0.12, 0.1, 0.18), night * 0.8)
 		_env.ambient_light_energy = lerpf(_base_ambient, _base_ambient * 0.62, night)  # moonlit, never black
 		if _sky != null:
 			_sky.sky_top_color = _base_top.lerp(Color(0.02, 0.02, 0.06), night)

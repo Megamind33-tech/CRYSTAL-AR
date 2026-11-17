@@ -20,7 +20,8 @@ static func pieces() -> Array:
 		# North: the Kasei office and its neighbours.
 		["shopfront", Vector3(0, 0, -32), 0.0, 1.3, Vector3.ZERO],
 		["shopfront", Vector3(-20, 0, -33), 0.0, 1.0, Vector3.ZERO],
-		["shopfront", Vector3(20, 0, -33), 0.0, 1.0, Vector3.ZERO],
+		# The market hub (the general store): Titan's capsule modules.
+		["titan/market_hub", Vector3(20, 0, -34), 0.0, 1.0, Vector3.ZERO],
 		# West: the market row (stalls face east, into the plaza).
 		["shopfront", Vector3(-36, 0, -8), 90.0, 1.0, Vector3.ZERO],
 		["shopfront", Vector3(-36, 0, 12), 90.0, 1.0, Vector3.ZERO],
@@ -35,17 +36,16 @@ static func pieces() -> Array:
 		["crate_stack", Vector3(26, 0, -10), 30.0, 1.0, Vector3(3.6, 3, 2)],
 		["crate_stack", Vector3(27, 0, 14), -20.0, 1.0, Vector3(3.6, 3, 2)],
 		# Corners: homes, tanks, the mast.
-		["life/hab_open", Vector3(-36, 0, -36), 45.0, 1.0, Vector3.ZERO],
+		# R-14, a family's home.
+		["titan/hab_r14", Vector3(-40, 0, -31), 90.0, 1.0, Vector3.ZERO],
 		["life/hab_open", Vector3(-38, 0, 32), 135.0, 1.0, Vector3.ZERO],
-		["tank_cluster", Vector3(36, 0, -34), 0.0, 1.0, Vector3(8.5, 7, 5)],
+		# EX-03, the settlement's life support (air, heat, water).
+		["titan/plant_ex03", Vector3(40, 0, -36), -90.0, 1.0, Vector3.ZERO],
 		["comms_tower", Vector3(38, 0, 30), 0.0, 1.0, Vector3(2, 18, 2)],
 		["life/hab_open", Vector3(24, 0, 33), -135.0, 1.0, Vector3.ZERO],
-		# South: the gate.
-		["gate_arch", Vector3(0, 0, GATE_Z), 90.0, 1.0, Vector3.ZERO],
+		# South: the gatehouse, the settlement's airlock and checkpoint.
+		["titan/gatehouse", Vector3(0, 0, GATE_Z), 0.0, 1.0, Vector3.ZERO],
 	]
-	# The gate towers' collision (the arch itself is open).
-	out.append(["", Vector3(-7, 0, GATE_Z), 0.0, 1.0, Vector3(3.2, 12, 3.2)])
-	out.append(["", Vector3(7, 0, GATE_Z), 0.0, 1.0, Vector3(3.2, 12, 3.2)])
 	# The city wall: segments around the plaza, a gap at the gate.
 	for i in 10:
 		var x := -HALF + 5.0 + i * 10.0
@@ -75,7 +75,7 @@ static func terminals() -> Array:
 
 ## Pieces whose collision is their own mesh (walk-in): everything else in
 ## pieces() with a ZERO box and a piece name.
-const WALK_IN := ["life/hab_open", "shopfront", "hangar", "life/greenhouse", "life/mining_rig", "life/lift_head", "life/farm_hall",
+const WALK_IN := ["titan/hab_r14", "titan/market_hub", "titan/plant_ex03", "titan/gatehouse", "life/hab_open", "shopfront", "hangar", "life/greenhouse", "life/mining_rig", "life/lift_head", "life/farm_hall",
 		"life/factory", "districts/galleria", "districts/pod_a", "districts/pod_b", "districts/pod_c",
 		"districts/apartment", "districts/office"]
 
