@@ -26,3 +26,4 @@ meshy_output/
 /native/bin/
 /native/src/*.os
 /native/.sconsign.dblite
+/.claude/
