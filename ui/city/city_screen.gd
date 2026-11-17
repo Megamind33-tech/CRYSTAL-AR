@@ -159,14 +159,124 @@ func _report_text(c: Career) -> String:
 
 
 func _fill_contracts(c: Career) -> void:
+	var hint := Guide.board_hint(c)
+	if hint != "":
+		var h := _label(hint, UiStyle.font_hud_bold, 26, ComicUI.YELLOW)
+		h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_list.add_child(h)
 	if not c.d.contract.is_empty():
 		var k: Dictionary = c.d.contract
-		_row("%s\n%s" % [tr("CITY_ACTIVE") % k.title, k.brief], "", false, TAB_COLORS.contracts)
+		_card_row(k, tr("CARD_YOUR_JOB"), ComicUI.GREEN, tr("CARD_TAKEN"), false, Callable())
+		_list.add_child(_label(tr("CARD_NEXT"), UiStyle.font_hud_bold, 20, Color(1, 1, 1, 0.8)))
 		_row(tr("CITY_ABANDON") % [Career.FACTIONS[k.faction].short, Career.FAIL_STANDING], "abandon", true,
 				Color(1, 1, 1, 0.3), func() -> void: c.abandon())
-	for k: Dictionary in c.offers():
-		var text := "%s   $%d\n%s · %s" % [k.title, k.pay, Career.FACTIONS[k.faction].name, k.brief]
-		_row(text, "", c.d.contract.is_empty(), TAB_COLORS.contracts, func() -> void: c.accept(k.id))
+		return
+	var offers := Guide.ordered(c.offers(), int(c.d.runs))
+	for i in offers.size():
+		var k: Dictionary = offers[i]
+		_card_row(k, tr("CARD_BEST") if i == 0 else "", ComicUI.YELLOW if i == 0 else TAB_COLORS.contracts,
+				tr("CARD_TAKE"), true, func() -> void: c.accept(k.id))
+
+
+## One contract as a card: icon, what, where / pays / risk / time, and one
+## big button. `ribbon` is a tag above it ("BEST FOR YOU", "YOUR JOB").
+func _card_row(k: Dictionary, ribbon: String, accent: Color, button_text: String, enabled: bool, action: Callable) -> void:
+	var info := Guide.card(k)
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _card(Color(0, 0, 0, 0.62), accent))
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 2)
+	panel.add_child(col)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 14)
+	col.add_child(head)
+	var icon := _Icon.new()
+	icon.kind = str(info.icon)
+	icon.tint = accent
+	icon.custom_minimum_size = Vector2(64, 64)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(icon)
+	var mid := VBoxContainer.new()
+	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mid.add_theme_constant_override("separation", 0)
+	head.add_child(mid)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 10)
+	mid.add_child(top)
+	if ribbon != "":
+		top.add_child(_label(ribbon, UiStyle.font_hud_big, 22, accent))
+	var path := Guide.path_of(k)
+	top.add_child(_label(tr("CARD_GOV") if path == "government" else tr("CARD_FREE"), UiStyle.font_hud_bold, 18,
+			Color(1, 1, 1, 0.6)))
+	mid.add_child(_label(str(k.title), UiStyle.font_hud_big, 32, Color.WHITE))
+	var brief := _label(str(k.brief), UiStyle.font_hud_bold, 22, Color(1, 1, 1, 0.85))
+	brief.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mid.add_child(brief)
+	var facts := HBoxContainer.new()
+	facts.add_theme_constant_override("separation", 22)
+	mid.add_child(facts)
+	facts.add_child(_fact(tr("CARD_WHERE"), tr("CARD_WHERE_YARD"), Color.WHITE))
+	facts.add_child(_fact(tr("CARD_PAYS"), "$%d" % int(k.pay), CASH))
+	var risk := int(info.risk)
+	facts.add_child(_fact(tr("CARD_RISK"), tr("CARD_RISK_%d" % risk), [CASH, ComicUI.YELLOW, ComicUI.RED][risk - 1]))
+	facts.add_child(_fact(tr("CARD_TIME"), tr("CARD_MIN") % int(info.minutes), Color.WHITE))
+	var go := Button.new()
+	go.text = button_text
+	go.focus_mode = Control.FOCUS_NONE
+	go.custom_minimum_size = Vector2(150, 64)
+	go.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	go.disabled = not enabled or not action.is_valid()
+	ComicUI.style_button(go, accent, 26)
+	if action.is_valid():
+		go.pressed.connect(func() -> void:
+			action.call()
+			Profile.save()
+			refresh())
+	head.add_child(go)
+	_list.add_child(panel)
+
+
+func _fact(title: String, value: String, col: Color) -> Control:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", -4)
+	v.add_child(_label(title, UiStyle.font_hud_bold, 17, Color(1, 1, 1, 0.6)))
+	v.add_child(_label(value, UiStyle.font_hud_bold, 25, col))
+	return v
+
+
+## A flat comic glyph for the card: crate, key, fist or target.
+class _Icon extends Control:
+	var kind := "crate"
+	var tint := ComicUI.YELLOW
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		var c := r.get_center()
+		draw_rect(r, Color(ComicUI.INK, 0.9))
+		draw_rect(r, tint, false, 3.0)
+		var u := minf(size.x, size.y) / 72.0
+		match kind:
+			"crate":
+				var b := Rect2(c - Vector2(22, 18) * u, Vector2(44, 36) * u)
+				draw_rect(b, tint)
+				draw_rect(b, ComicUI.INK, false, 3.0)
+				draw_line(b.position + Vector2(0, 12) * u, b.end - Vector2(0, 24) * u, ComicUI.INK, 3.0)
+				draw_line(c + Vector2(0, -18) * u, c + Vector2(0, 18) * u, ComicUI.INK, 3.0)
+			"key":
+				draw_circle(c + Vector2(-12, 0) * u, 13 * u, tint)
+				draw_circle(c + Vector2(-12, 0) * u, 5 * u, ComicUI.INK)
+				draw_rect(Rect2(c + Vector2(0, -4) * u, Vector2(26, 8) * u), tint)
+				draw_rect(Rect2(c + Vector2(16, 4) * u, Vector2(6, 10) * u), tint)
+			"fist":
+				for i in 4:
+					draw_rect(Rect2(c + Vector2(-20 + i * 10, -18) * u, Vector2(9, 16) * u), tint)
+				draw_rect(Rect2(c + Vector2(-20, -4) * u, Vector2(39, 24) * u), tint)
+				draw_rect(Rect2(c + Vector2(-20, -4) * u, Vector2(39, 24) * u), ComicUI.INK, false, 2.0)
+			_:
+				for rad in [22.0, 14.0, 6.0]:
+					draw_arc(c, rad * u, 0.0, TAU, 28, tint, 4.0)
+				draw_line(c - Vector2(28, 0) * u, c + Vector2(28, 0) * u, tint, 2.0)
+				draw_line(c - Vector2(0, 28) * u, c + Vector2(0, 28) * u, tint, 2.0)
 
 
 func _fill_market(c: Career) -> void:
