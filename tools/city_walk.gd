@@ -1102,6 +1102,10 @@ func _districts_run(me: SimPlayer) -> void:
 	for a: Array in [["a1_helios", h], ["a2_galleria", g], ["a3_terrace", t], ["a4_skyport", p], ["a5_city", city],
 			["a6_hollow", Vector2(WorldLayout.HOLLOW.x + 4, WorldLayout.HOLLOW.z)]]:
 		await _aerial(a[0], a[1], Vector3(0, 150, 130))
+	# The roads where they cut and climb: the canyon's mouth, the lift yard, the gate.
+	for a: Array in [["r1_canyon_mouth", WorldLayout.CANYON_GATE + Vector2(30, 0)], ["r2_lift_road", WorldLayout.LIFT_ROAD],
+			["r3_gate_roads", Vector2(-220, 120)]]:
+		await _aerial(a[0], a[1], Vector3(-60, 70, 90))
 
 
 ## A shot from a camera `offset` from the ground at `target`, looking at it.
