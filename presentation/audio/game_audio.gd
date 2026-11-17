@@ -16,10 +16,20 @@ const MAX_VOICES := 32
 const CAPS := {"Weapons": 8, "Footsteps": 6, "World": 8, "UI": 4}
 const MAX_RAYS_PER_FRAME := 16
 const OCCLUSION_INTERVAL := 0.1
-const STRIDE := {"walk": 1.9, "sprint": 2.6}
 const BELOW_METRES := 2.5  ## sounds this far under the listener get the Below bus
 ## Take-offs faster than any jump (6 m/s) come from a jump pad.
 const PAD_LAUNCH_SPEED := 8.0
+## Footsteps follow the leg cadence of the movement tier: seconds per step,
+## and a volume offset (dB) per tier. Speeds in m/s: below JOG_SPEED is a walk,
+## below RUN_SPEED a jog, and a sprint or faster is a run.
+const STEP_INTERVAL := {"walk": 0.55, "jog": 0.38, "run": 0.3}
+const STEP_DB := {"walk": -4.0, "jog": 0.0, "run": 1.0}
+const JOG_SPEED := 4.5
+const RUN_SPEED := 7.5
+const CROUCH_DB := -10.0  ## crouch-walking is quiet, not silent
+const STEP_JITTER_DB := 1.0  ## each step is a little louder or softer
+const STEP_RANGE := 45.0  ## other players' steps beyond this are not played
+const CEILING_RANGE := 4.5  ## a ceiling this close overhead means indoors (metal floors)
 
 var listener: Node3D  ## the camera: listener position for occlusion
 
@@ -27,8 +37,11 @@ var _streams: Dictionary = {}
 var _voices: Array[AudioStreamPlayer3D] = []
 var _ui: Array[AudioStreamPlayer] = []
 var _meta: Dictionary = {}  ## voice -> {category, priority, started, source, next_check}
-var _steps: Dictionary = {}  ## player id -> {pos, dist, airborne, sliding}
+var _steps: Dictionary = {}  ## player id -> {pos, clock, airborne, sliding}
 var _rays_this_frame: int = 0
+var steps_played: int = 0  ## footsteps started so far (for tests and debugging)
+var _frame_delta: float = 0.0  ## last frame's time, the default for update_player
+var last_step: Dictionary = {}  ## {sound, db} of the latest footstep
 var _music: AudioStreamPlayer
 
 
@@ -103,11 +116,16 @@ func cue(sound: String, caption_key: String) -> void:
 
 ## Footsteps, jumps, landings and slides from movement state (PLAN §3.12).
 ## Call every frame for each visible player; `local` steps are quieter and
-## `ally` (teammate) steps duller, so enemy steps stand out.
-func update_player(id: int, s: PlayerSimState, local: bool, ally: bool = false) -> void:
+## `ally` (teammate) steps duller, so enemy steps stand out. `delta` is the
+## frame time (negative: the engine's last frame time). Steps come on a clock
+## that runs while the player moves on the ground, so their rhythm follows
+## the walk, jog or run tier; a crouch-walk is quieter.
+func update_player(id: int, s: PlayerSimState, local: bool, ally: bool = false, delta: float = -1.0) -> void:
+	if delta < 0.0:
+		delta = _frame_delta
 	var st: Dictionary = _steps.get(id, {})
 	if st.is_empty() or not s.alive:
-		_steps[id] = {"pos": s.position, "dist": 0.0, "airborne": false, "sliding": false}
+		_steps[id] = {"pos": s.position, "clock": 0.0, "fresh": true, "airborne": false, "sliding": false}
 		return
 	var airborne := s.move_state == PlayerSimState.Move.AIR
 	var sliding := s.move_state == PlayerSimState.Move.SLIDE
@@ -120,28 +138,78 @@ func update_player(id: int, s: PlayerSimState, local: bool, ally: bool = false) 
 		play_at("jump", s.position, "Footsteps", priority, vol - 4.0)
 	if not airborne and st.airborne:
 		play_at("land", s.position, "Footsteps", priority, vol)
-		st.dist = 0.0
+		st.clock = 0.0
 	if sliding and not st.sliding:
 		play_at("slide", s.position, "Footsteps", priority, vol - 2.0)
-	# Crouch-walking is silent (sneaking past someone is the point of it).
-	if not airborne and not sliding and s.stance == PlayerSimState.Stance.STAND:
-		var moved := Vector2(s.position.x - st.pos.x, s.position.z - st.pos.z).length()
-		st.dist += moved
-		var stride: float = STRIDE.sprint if s.sprinting else STRIDE.walk
-		if st.dist >= stride and moved > 0.0005:
-			st.dist = 0.0
-			play_at("footstep_%s%d" % ["ally_" if ally else "", randi() % 3 + 1], s.position, "Footsteps", priority, vol)
+	var moved := Vector2(s.position.x - st.pos.x, s.position.z - st.pos.z).length()
+	if not airborne and not sliding and moved > 0.0005 and delta > 0.0:
+		var speed := moved / delta
+		var tier := step_tier(speed, s.sprinting)
+		var interval: float = STEP_INTERVAL[tier]
+		st.clock += delta
+		# The first step after standing still comes at once; then one per interval.
+		if st.fresh or st.clock >= interval:
+			st.clock = 0.0 if st.fresh else maxf(st.clock - interval, 0.0)
+			st.fresh = false
+			var db: float = vol + float(STEP_DB[tier]) + randf_range(-STEP_JITTER_DB, STEP_JITTER_DB)
+			if s.stance == PlayerSimState.Stance.CROUCH:
+				db += CROUCH_DB
+			_play_step(s.position, priority, db, ally, local)
+	else:
+		# Standing still (or in the air or a slide): the next step comes at once.
+		st.clock = 0.0
+		st.fresh = true
 	st.pos = s.position
 	st.airborne = airborne
 	st.sliding = sliding
 	_steps[id] = st
 
 
+## The walk, jog or run tier for a ground speed (m/s).
+static func step_tier(speed: float, sprinting: bool) -> String:
+	if sprinting or speed >= RUN_SPEED:
+		return "run"
+	if speed >= JOG_SPEED:
+		return "jog"
+	return "walk"
+
+
+## Seconds between footsteps at a ground speed (m/s).
+static func step_interval(speed: float, sprinting: bool) -> float:
+	return STEP_INTERVAL[step_tier(speed, sprinting)]
+
+
+## One footstep: metal panels indoors, ground outdoors, the soft teammate
+## set for allies. Other players' steps past STEP_RANGE are not played.
+func _play_step(at: Vector3, priority: int, db: float, ally: bool, local: bool) -> void:
+	if not local and listener != null and listener.global_position.distance_to(at) > STEP_RANGE:
+		return
+	var sound: String
+	if ally:
+		sound = "footstep_ally_%d" % (randi() % 3 + 1)
+	elif _indoors(at):
+		sound = "footstep_%d" % (randi() % 3 + 1)
+	else:
+		sound = "footstep_ground_%d" % (randi() % 3 + 1)
+	steps_played += 1
+	last_step = {"sound": sound, "db": db}
+	play_at(sound, at, "Footsteps", priority, db)
+
+
+## True when a ceiling is close overhead (one ray, only when a step plays).
+func _indoors(at: Vector3) -> bool:
+	if not is_inside_tree():
+		return false
+	var q := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.5, at + Vector3.UP * CEILING_RANGE, Sim.LAYER_WORLD)
+	return not get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+
+
 func forget_player(id: int) -> void:
 	_steps.erase(id)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_frame_delta = delta
 	_rays_this_frame = 0
 	# Re-check occlusion for longer sounds every 100 ms.
 	var now := Time.get_ticks_msec() / 1000.0
