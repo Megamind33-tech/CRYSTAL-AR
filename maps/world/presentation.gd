@@ -48,11 +48,11 @@ func _ready() -> void:
 		if str(p[0]).is_empty():
 			continue  # collision only
 		var base := WorldTerrain.at(p[1], p[2])
-		var sink := 0.15 if FOOTINGS.has(p[0]) else 0.3  # small props bed into the dust
+		var sink := WorldLayout.sink(p[0])  # small props bed into the dust (gameplay's floors match)
 		var reach: float = VIEW_RANGE.get(p[0], 0.0 if LANDMARKS.has(p[0]) else 380.0)
 		batches.add_piece(p[0], base + Vector3(0, -sink, 0), p[3], p[4], reach)
-		if FOOTINGS.has(p[0]):
-			_footing(base, FOOTINGS[p[0]] * float(p[4]), float(p[3]))
+		if WorldLayout.FOOTINGS.has(p[0]):
+			_footing(base, WorldLayout.FOOTINGS[p[0]] * float(p[4]), float(p[3]))
 		if p[0] == "life/hab_open" or p[0] == "shopfront":
 			_room_light(WorldTerrain.at(p[1], p[2]))
 	_deploy_pad(WorldLayout.dig_pad())
@@ -177,10 +177,23 @@ func _districts() -> void:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi)
 	var g := WorldLayout.GALLERIA
+	# The forecourt round the hall (not under it: paving over the hall's deck
+	# hid the boards and stood 2 cm proud of the floor you walk on).
+	# One mesh, four strips (the paving shader maps by world position).
+	var hall := Vector2(50.2, 19.0)  # the Galleria's half footprint
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_normal(Vector3.UP)
+	for r: Rect2 in [Rect2(-78, -32, 78 - hall.x, 64), Rect2(hall.x, -32, 78 - hall.x, 64),
+			Rect2(-hall.x, -32, hall.x * 2, 32 - hall.y), Rect2(-hall.x, hall.y, hall.x * 2, 32 - hall.y)]:
+		var a := Vector3(r.position.x, 0, r.position.y)
+		var b := Vector3(r.end.x, 0, r.position.y)
+		var c := Vector3(r.end.x, 0, r.end.y)
+		var d := Vector3(r.position.x, 0, r.end.y)
+		for v: Vector3 in [a, b, c, a, c, d]:
+			st.add_vertex(v)
 	var fore := MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(156, 64)
-	fore.mesh = pm
+	fore.mesh = st.commit()
 	fore.position = WorldTerrain.at(g.x, g.y) + Vector3(0, 0.04, 0)
 	fore.material_override = paving
 	add_child(fore)
@@ -476,12 +489,6 @@ func _strip(st: SurfaceTool, a: Vector2, b: Vector2, na: Vector2, nb: Vector2, l
 						st.add_vertex(v[k] if up else v[k + 1])
 						st.add_vertex(v[k + 1] if up else v[k])
 
-
-## Buildings on the valley's slopes stand on a concrete footing sunk into
-## the ground, so there's no gap to see under them: footprint (x, z) by piece.
-const FOOTINGS := {"hangar": Vector2(14.4, 10.6), "life/hab_open": Vector2(12.4, 12.4), "shopfront": Vector2(12.6, 8.6),
-		"tank_cluster": Vector2(8.6, 5.6), "life/greenhouse": Vector2(6.4, 4.0), "life/lift_head": Vector2(5.6, 5.6),
-		"life/mining_rig": Vector2(6.4, 6.4), "pipe_run": Vector2(10.0, 2.0)}
 
 
 func _footing(at: Vector3, size: Vector2, yaw_deg: float) -> void:

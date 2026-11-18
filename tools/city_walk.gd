@@ -29,7 +29,7 @@ func _run() -> void:
 	if Platform.user_args.has("--people"):
 		Profile.career().d["body"] = "female"  # play as a woman
 	if Platform.user_args.has("--budget") or Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin") or Platform.user_args.has("--frisk") \
-			or Platform.user_args.has("--districts"):
+			or Platform.user_args.has("--districts") or Platform.user_args.has("--feet"):
 		Profile.career().choose_nation(0)
 		Profile.career().choose_path("freelance")  # no path pick over the shots
 	if Platform.user_args.has("--phase1") and dig:
@@ -43,6 +43,10 @@ func _run() -> void:
 	var me: SimPlayer = m.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	print("CITY WALK: player at %s, phase %s" % [me.state.position, m.server.phase])
 	_set_weather(Platform.user_args.has("--day"), Platform.user_args.has("--squall"))
+	if Platform.user_args.has("--floor-probe") or Platform.user_args.has("--feet"):
+		await _floor_probe(me, Platform.user_args.has("--feet"))
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--ground-probe"):
 		await _ground_probe(me)
 		get_tree().quit(0)
@@ -404,6 +408,8 @@ func _run() -> void:
 	await _pose(me, crater + Vector3(0, 0.1, 0), 0.0, -0.15)
 	await _shot("w5_crater")
 	# Overview from high above the valley.
+	for c: Node in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		(c as CanvasLayer).visible = false
 	var cam := Camera3D.new()
 	add_child(cam)
 	cam.position = Vector3(0, 520, 260)
@@ -1116,6 +1122,8 @@ func _districts_run(me: SimPlayer) -> void:
 
 ## A shot from a camera `offset` from the ground at `target`, looking at it.
 func _aerial(shot: String, target: Vector2, offset: Vector3) -> void:
+	for c: Node in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		(c as CanvasLayer).visible = false
 	var cam := Camera3D.new()
 	add_child(cam)
 	var at := WorldTerrain.at(target.x, target.y)
@@ -1501,6 +1509,7 @@ func _budget_probe(me: SimPlayer) -> void:
 			["galleria_in", WorldTerrain.at(WorldLayout.GALLERIA.x - 34, WorldLayout.GALLERIA.y) + Vector3(0, 0.1, 0), -PI * 0.5],
 			["outlands", WorldTerrain.at(-300, 60) + Vector3(0, 0.1, 0), 1.0]]
 	var only := Platform.get_user_arg("--spot", "")
+	await _frames(240)  # the arrival settles first (a teleport before it is undone)
 	for place: Array in spots:
 		if not only.is_empty() and place[0] != only:
 			continue
@@ -1954,3 +1963,124 @@ func _ground_probe(me: SimPlayer) -> void:
 			bad += 1
 			print("GROUND PROBE: off by %.2f m at %s (asked %s)" % [d, feet.snapped(Vector3.ONE * 0.1), q.round()])
 	print("GROUND PROBE: %d spots, %d off, worst %.2f m" % [spots.size(), bad, worst])
+
+
+## Where people stand vs the floors drawn under them: at each spot, the
+## player's resting height (sim) against the top drawn surface (the render
+## meshes' own triangles) and the collision floor. `feet`: a close render of
+## the feet at each spot as well (feet_<spot>.png).
+func _floor_probe(me: SimPlayer, feet: bool) -> void:
+	var spots := {}
+	for p: Array in CityLayout.pieces():
+		if String(p[0]).begins_with("titan/") and not spots.has(p[0]):
+			spots[String(p[0]).trim_prefix("titan/")] = TitanSettlement.to_world(p, 0.5, 0.0) + Vector3(0, 1.0, 0)
+	spots["galleria"] = WorldTerrain.at(WorldLayout.GALLERIA.x + 10.0, WorldLayout.GALLERIA.y + 3.0) + Vector3(0, 2.0, 0)
+	spots["galleria_east"] = WorldTerrain.at(WorldLayout.GALLERIA.x + 40.0, WorldLayout.GALLERIA.y - 6.0) + Vector3(0, 2.0, 0)
+	spots["plaza"] = CityLayout.ORIGIN + Vector3(0, 1.0, -12)
+	spots["street"] = WorldTerrain.at(CityLayout.ORIGIN.x - 70.0, CityLayout.ORIGIN.z + 2.0) + Vector3(0, 1.0, 0)
+	var only := Platform.get_user_arg("--spot", "")
+	await _frames(240)  # the arrival settles first (a teleport before it is undone)
+	for name: String in spots:
+		if not only.is_empty() and not only.split(",").has(name):
+			continue
+		var at: Vector3 = spots[name]
+		m.server.world.teleport(me, at)
+		await _frames(150)
+		var pos := me.state.position
+		var q := PhysicsRayQueryParameters3D.create(pos + Vector3.UP * 0.5, pos + Vector3.DOWN * 2.0, Sim.LAYER_WORLD)
+		var hit := get_viewport().world_3d.direct_space_state.intersect_ray(q)
+		var col_y: float = (hit.position as Vector3).y if not hit.is_empty() else NAN
+		var drawn := _drawn_floor(pos)
+		print("FLOOR PROBE %s: stands %.3f (asked %.2f, %s), collision %.3f (%s), drawn %.3f (%s) -> feet %+.3f under the drawn floor" % [name,
+				pos.y, at.y, PlayerSimState.Move.keys()[me.state.move_state], col_y, hit.get("collider", null), drawn[0], drawn[1], drawn[0] - pos.y])
+		if feet:
+			await _feet_shot(me, name)
+
+
+## The top drawn surface under `pos` within 0.6 m above and 1 m below:
+## [height, node name] (NAN when nothing is drawn there).
+func _drawn_floor(pos: Vector3) -> Array:
+	var best := -INF
+	var who := ""
+	var top := pos.y + 0.6
+	var low := pos.y - 1.0
+	for n: Node in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
+		var gi := n as GeometryInstance3D
+		if not gi.is_visible_in_tree() or _is_mover(gi):
+			continue
+		var xfs: Array[Transform3D] = []
+		var mesh: Mesh = null
+		if gi is MeshInstance3D:
+			if (gi as MeshInstance3D).skin != null:
+				continue
+			mesh = (gi as MeshInstance3D).mesh
+			xfs.append(gi.global_transform)
+		elif gi is MultiMeshInstance3D and (gi as MultiMeshInstance3D).multimesh != null:
+			var mm := (gi as MultiMeshInstance3D).multimesh
+			mesh = mm.mesh
+			if mm.transform_format != MultiMesh.TRANSFORM_3D:
+				continue
+			for i in mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count:
+				xfs.append(gi.global_transform * mm.get_instance_transform(i))
+		if mesh == null:
+			continue
+		var aabb := mesh.get_aabb()
+		var faces := PackedVector3Array()
+		for xf in xfs:
+			var box := xf * aabb
+			if pos.x < box.position.x or pos.x > box.end.x or pos.z < box.position.z or pos.z > box.end.z \
+					or box.position.y > top or box.end.y < low:
+				continue
+			if faces.is_empty():
+				faces = mesh.get_faces()
+			var inv := xf.affine_inverse()
+			var a := inv * Vector3(pos.x, top, pos.z)
+			var b := inv * Vector3(pos.x, low, pos.z)
+			for i in range(0, faces.size(), 3):
+				var h: Variant = Geometry3D.segment_intersects_triangle(a, b, faces[i], faces[i + 1], faces[i + 2])
+				if h != null:
+					var y := (xf * (h as Vector3)).y
+					if OS.has_environment("FLOOR_PROBE_ALL"):
+						print("  drawn %.3f %s %s %s" % [y, gi.get_path(), mesh, xf * aabb])
+					if y > best:
+						best = y
+						who = String(gi.name) + "/" + String(mesh.resource_name)
+	return [best if best > -INF else NAN, who]
+
+
+func _is_mover(n: Node) -> bool:
+	while n != null:
+		if n.is_in_group("movers"):
+			return true
+		n = n.get_parent()
+	return false
+
+
+## A low close look at the player's boots from the side.
+func _feet_shot(me: SimPlayer, name: String) -> void:
+	for c: Node in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		(c as CanvasLayer).visible = false
+	var cam := Camera3D.new()
+	add_child(cam)
+	var pos := me.state.position
+	# From the side with the most room (walls, tables and doors block some).
+	var space := get_viewport().world_3d.direct_space_state
+	var best := Vector3(1, 0, 0)
+	var room := -1.0
+	for i in 12:
+		var dir := Vector3(cos(i * TAU / 12.0), 0.0, sin(i * TAU / 12.0))
+		var from := pos + Vector3(0, 0.3, 0)
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + dir * 2.4, Sim.LAYER_WORLD))
+		var d := 2.4 if hit.is_empty() else from.distance_to(hit.position)
+		if d > room + 0.05:
+			room = d
+			best = dir
+	cam.fov = 40.0
+	cam.global_position = pos + best * minf(room - 0.2, 1.7) + Vector3(0, 0.3, 0)
+	cam.look_at(pos + Vector3(0, 0.25, 0))
+	for i in 30:
+		cam.make_current()
+		await get_tree().process_frame
+	await _shot("feet_" + name)
+	cam.queue_free()
+	await _frames(2)

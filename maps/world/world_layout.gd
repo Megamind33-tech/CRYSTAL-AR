@@ -784,6 +784,21 @@ static func hollow_walks() -> Array:
 	]
 
 
+## Buildings on the valley's slopes stand on a concrete footing sunk into
+## the ground, so there's no gap to see under them: footprint (x, z) by piece.
+const FOOTINGS := {"hangar": Vector2(14.4, 10.6), "life/hab_open": Vector2(12.4, 12.4), "shopfront": Vector2(12.6, 8.6),
+		"tank_cluster": Vector2(8.6, 5.6), "life/greenhouse": Vector2(6.4, 4.0), "life/lift_head": Vector2(5.6, 5.6),
+		"life/mining_rig": Vector2(6.4, 6.4), "pipe_run": Vector2(10.0, 2.0)}
+
+
+## How far a valley piece is set into the ground under its spot: footed
+## buildings 0.15 m, everything else 0.3 m (props bed into the dust). The
+## drawn piece (presentation) and its collision (gameplay) both use this,
+## so the floors you walk on are where they're drawn.
+static func sink(piece: String) -> float:
+	return 0.15 if FOOTINGS.has(piece) else 0.3
+
+
 # --- Estates: interiors, property doors, the visa office, Kasei Aero, trees ---
 
 ## Interiors deep under the valley (a building's door takes you in): kind

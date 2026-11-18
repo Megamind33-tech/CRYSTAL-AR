@@ -41,13 +41,16 @@ func _ready() -> void:
 		_box(body, (t[1] as Vector3) + Vector3(0, 1.2, 0), Vector3(1.2, 2.4, 1.2), 0.0)
 	for p: Array in WorldLayout.pieces():
 		var size: Vector3 = p[5]
-		var at := WorldTerrain.at(p[1], p[2])
+		# Set into the ground exactly as drawn (WorldLayout.sink): the walk-in
+		# floors were 0.15 m off the drawn ones (the Galleria deck), footed
+		# props' tops 0.15 m under theirs (feet sank into them).
+		var at := WorldTerrain.at(p[1], p[2]) + Vector3(0, -WorldLayout.sink(p[0]), 0)
 		if size != Vector3.ZERO:
-			_box(body, at + Vector3(0, size.y * 0.5 - 0.3, 0), size, p[3])
+			_box(body, at + Vector3(0, size.y * 0.5, 0), size, p[3])
 		elif p[0] in CityLayout.WALK_IN:
-			KitCollision.add(body, p[0], at + Vector3(0, -0.15, 0), p[3], p[4])
+			KitCollision.add(body, p[0], at, p[3], p[4])
 		else:
-			_solid(body, p[0], at + Vector3(0, -0.3, 0), p[3], p[4])
+			_solid(body, p[0], at, p[3], p[4])
 	for s in [-1.0, 1.0]:
 		_box(body, Vector3(0, 60, (half - 4) * s), Vector3(half * 2, 160, 1), 0.0)
 		_box(body, Vector3((half - 4) * s, 60, 0), Vector3(1, 160, half * 2), 0.0)
