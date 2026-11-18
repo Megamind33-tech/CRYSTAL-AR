@@ -1155,3 +1155,7 @@ SEARCH_PACK,Pack: %s
 SEARCH_HOLD,Vehicle hold: %s
 SEARCH_HOME,Home locker: %s
 SCAN_LINE,%s · %d
+# controls and hud
+TOUCH_WALK,Walk
+TOUCH_JOG,Jog
+TOUCH_RUN,Run
