@@ -63,6 +63,44 @@ static func pieces() -> Array:
 	return out
 
 
+## The city's security curtain (collision only, unseen): from the wall's
+## top up to CEILING on all four sides (over the gatehouse too), and a lid
+## at CEILING, so no one jets or flies over the wall: the gatehouse is the
+## only way in. [centre, size] boxes, world coordinates.
+const WALL_TOP := 6.5
+const CEILING := 50.0
+
+
+static func security_curtain() -> Array:
+	var tall := CEILING - WALL_TOP
+	var y := WALL_TOP + tall * 0.5
+	var mid_z := (GATE_Z - HALF) * 0.5
+	var long_z := GATE_Z + HALF
+	var out := [
+		[Vector3(0, y, -HALF), Vector3(HALF * 2.0, tall, 1.2)],
+		[Vector3(0, y, GATE_Z), Vector3(HALF * 2.0, tall, 1.2)],
+		[Vector3(-HALF, y, mid_z), Vector3(1.2, tall, long_z)],
+		[Vector3(HALF, y, mid_z), Vector3(1.2, tall, long_z)],
+		[Vector3(0, CEILING, mid_z), Vector3(HALF * 2.0, 1.0, long_z)],
+	]
+	for b: Array in out:
+		b[0] = (b[0] as Vector3) + ORIGIN
+	return out
+
+
+## The gatehouse's secured doors (SecuredGate), its great doors at both
+## ends: [centre (foot), yaw degrees, width, height].
+static func gate_doors() -> Array:
+	var out := []
+	for p: Array in pieces():
+		if p[0] != "titan/gatehouse":
+			continue
+		var b := Basis(Vector3.UP, deg_to_rad(float(p[2])))
+		for y in [-5.0, 5.0]:  # Blender y: -5 the outer (south) end, +5 the plaza end
+			out.append([(p[1] as Vector3) + b * Vector3(0, 0, -y), float(p[2]), 8.0, 5.4])
+	return out
+
+
 ## The terminals (kiosks) and who stands at them: [id, position, yaw,
 ## vendor name key, the CityScreen tab].
 static func terminals() -> Array:

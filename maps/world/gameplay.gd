@@ -27,6 +27,10 @@ func _ready() -> void:
 			_box(body, (p[1] as Vector3) + Vector3(0, size.y * 0.5, 0), size, p[2])
 		elif p[0] in CityLayout.WALK_IN:
 			KitCollision.add(body, p[0], p[1], p[2], p[3])
+		else:
+			_solid(body, p[0], p[1], p[2], p[3])
+	for c: Array in CityLayout.security_curtain():
+		_box(body, c[0], c[1], 0.0)
 	for p: Array in CityLayout.plants():
 		if p[0] == "life/tree":
 			_box(body, (p[1] as Vector3) + Vector3(0, 1.6, 0), Vector3(0.5, 3.2, 0.5), 0.0)
@@ -42,11 +46,35 @@ func _ready() -> void:
 			_box(body, at + Vector3(0, size.y * 0.5 - 0.3, 0), size, p[3])
 		elif p[0] in CityLayout.WALK_IN:
 			KitCollision.add(body, p[0], at + Vector3(0, -0.15, 0), p[3], p[4])
+		else:
+			_solid(body, p[0], at + Vector3(0, -0.3, 0), p[3], p[4])
 	for s in [-1.0, 1.0]:
 		_box(body, Vector3(0, 60, (half - 4) * s), Vector3(half * 2, 160, 1), 0.0)
 		_box(body, Vector3((half - 4) * s, 60, 0), Vector3(1, 160, half * 2), 0.0)
 
 
+## Pieces drawn with no collision of their own that you drive or walk
+## onto, not into: pads flush with the ground, and the arc towers (their
+## towers and bridge have boxes of their own, the arch between is a street).
+const OPEN_PIECES := ["districts/landing_pad", "districts/arc_towers"]
+
+
+## A solid prop with no box in the layout: a box round what's drawn.
+func _solid(body: StaticBody3D, piece: String, at: Vector3, yaw_deg: float, scale: float) -> void:
+	if piece == "" or piece in OPEN_PIECES:
+		return
+	var a := KitCollision.bounds(piece)
+	if a.size.y < 0.6:
+		return  # flat: walked on
+	var c := Basis(Vector3.UP, deg_to_rad(yaw_deg)) * (a.get_center() * scale)
+	var size := a.size * scale
+	if absf(fmod(yaw_deg, 180.0)) > 0.1 and absf(fmod(yaw_deg, 90.0)) <= 0.1:
+		size = Vector3(size.z, size.y, size.x)  # a quarter turn: the footprint in the world's axes
+	_box(body, at + c, size, yaw_deg)
+
+
+## A box `size` (in the world's axes for a quarter turn: the layouts give
+## their boxes that way; any other turn turns the box) at `at`.
 func _box(body: StaticBody3D, at: Vector3, size: Vector3, yaw_deg: float) -> void:
 	var shape := BoxShape3D.new()
 	shape.size = size
@@ -55,8 +83,6 @@ func _box(body: StaticBody3D, at: Vector3, size: Vector3, yaw_deg: float) -> voi
 	cs.position = at
 	if absf(fmod(yaw_deg, 90.0)) > 0.1:
 		cs.basis = Basis(Vector3.UP, deg_to_rad(yaw_deg))
-	elif absf(fmod(yaw_deg, 180.0)) > 0.1:
-		shape.size = Vector3(size.z, size.y, size.x)  # a quarter turn swaps the footprint
 	body.add_child(cs)
 
 
