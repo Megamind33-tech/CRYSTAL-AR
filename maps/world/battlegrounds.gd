@@ -16,8 +16,10 @@ const SITES := [
 	["outback", Vector2(320, 390), 95.0],
 	["sinlap", Vector2(-445, 330), 90.0],
 	["north_dunes", Vector2(250, -455), 70.0],
+	["anvil", Vector2(-330, -380), 75.0],
+	["wreck_field", Vector2(-500, -60), 80.0],
 ]
-const IDS := ["rustwood", "crater", "far_mesa", "outback", "sinlap", "north_dunes"]
+const IDS := ["rustwood", "crater", "far_mesa", "outback", "sinlap", "north_dunes", "anvil", "wreck_field"]
 ## The site the coming run is fought at (the match sets it before the world
 ## loads: the gameplay scene, the navigation and the spawns read it).
 static var current: String = "rustwood"

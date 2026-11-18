@@ -282,7 +282,7 @@ static func fresh() -> Dictionary:
 			"oxygen": 100.0, "fatigue": 0.0, "water": 100.0, "lab": {}, "job": {}, "jobs_done": {}, "companion": "",
 			"armed": "", "rover_cargo": {},
 			"home": {"locker": {}, "lock": 0, "checked_at": 0, "robbed": {}}, "ride": 0,
-			"aircraft": -1, "team": [], "army": {}, "army_deploy": {}, "war_xp": 0, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
+			"aircraft": -1, "team": [], "army": {}, "army_deploy": {}, "war_xp": 0, "territory": {}, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
 			"trade": {"chain": 0, "sold": 0, "learned": [], "clients": {}, "orders": [], "dealers": {}, "order_at": 0},
 			"heist": {}, "heists_done": {},
 			"feed": [], "fame": 0, "partner": {},
@@ -1885,6 +1885,39 @@ func army_deploy() -> Dictionary:
 		if n > 0:
 			out[id] = [n, unit_level(id)]
 	return out
+
+
+# --- The campaign: the battlegrounds as territory ---
+
+## What each site your nation holds pays you a run.
+const SITE_INCOME := 80
+
+
+## Who holds a battleground (a nation id, "" for nobody).
+func site_holder(site: String) -> String:
+	return str((d.territory as Dictionary).get(site, ""))
+
+
+## After a war at `site` won by `winner_nation` ("" if no nation won):
+## the site changes hands; the AI nations fight over another site
+## elsewhere; your nation's sites pay you. Returns the income.
+func settle_territory(site: String, winner_nation: String, run_seed: int) -> int:
+	if not winner_nation.is_empty():
+		d.territory[site] = winner_nation
+	var r := RandomNumberGenerator.new()
+	r.seed = hash(["campaign", run_seed])
+	var other: String = Battlegrounds.IDS[r.randi_range(0, Battlegrounds.IDS.size() - 1)]
+	if other != site:
+		var mine := nation_id()
+		var rivals := Nations.IDS.filter(func(n: String) -> bool: return n != mine)
+		d.territory[other] = rivals[r.randi_range(0, rivals.size() - 1)]
+	var held := 0
+	for s: String in d.territory:
+		held += 1 if d.territory[s] == nation_id() and not nation_id().is_empty() else 0
+	var income := held * SITE_INCOME
+	d.wallet += income
+	d.earned += income
+	return income
 
 
 ## After a war: units spent or lost leave the roster; war experience.

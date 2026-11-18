@@ -1415,3 +1415,13 @@ WAR_FEED_BETRAYED,%s betrays %s
 WAR_FEED_OFFER,%s offers %s an alliance
 WAR_BANNER_ALLIED,ALLIANCE
 WAR_BANNER_BETRAYED,BETRAYAL
+CAMPAIGN_LINE,The war map (each site your nation holds pays $80 a run): %s
+SITE_RUSTWOOD,Rustwood Dig
+SITE_CRATER,the crater
+SITE_FAR_MESA,the far mesa
+SITE_OUTBACK,the outback
+SITE_SINLAP,Sinlap shore
+SITE_NORTH_DUNES,the north dunes
+SITE_ANVIL,the Anvil's top
+SITE_WRECK_FIELD,the wreck field
+SITE_DEEP_FURROW,Deep Furrow

@@ -1937,6 +1937,10 @@ func _settle_career(result_id: String, me: int) -> void:
 		var hw := server.world.hunt.war
 		career.settle_army(server.world.hunt.army.used.get(me, {}),
 				hw.winner_side >= 0 and hw.winner_side == hw.side_of(server.world.hunt, me))
+		if hw.enabled:  # the campaign: the site changes hands; held sites pay
+			var winner_nation := Nations.id_of(hw.winner_side - 100) if hw.winner_side >= 100 else ""
+			var income := career.settle_territory(Battlegrounds.current, winner_nation, server.world.match_seed)
+			report["territory_income"] = income
 	if report.applied:
 		career.d["last_report"] = report
 		if bool(report.get("ruby_found", false)) and _kill_feed != null:

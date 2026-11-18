@@ -447,3 +447,16 @@ func test_side_alliances() -> void:
 	assert_true(h.request(world, 1, "war_betray"))
 	assert_false(h.friendly(1, 2), "betrayed: fair game again")
 	assert_true(HuntWar.duel_for(1) or not HuntWar.duel_for(1), "the format is drawn per match")
+
+
+func test_campaign_territory_changes_hands_and_pays() -> void:
+	var c := Career.new()
+	var mine := c.nation_id()
+	if mine.is_empty():
+		pass_test("no nation chosen")
+		return
+	var before: int = c.d.wallet
+	var income := c.settle_territory("crater", mine, 7)
+	assert_eq(c.site_holder("crater"), mine, "the winner takes the site")
+	assert_gte(income, Career.SITE_INCOME, "held sites pay")
+	assert_eq(c.d.wallet, before + income)

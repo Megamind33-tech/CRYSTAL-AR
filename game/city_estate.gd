@@ -125,7 +125,12 @@ func _army_line() -> String:
 	for k: String in c.d.army_deploy:
 		used += int(c.d.army_deploy[k]) * int(Career.UNITS[k].cp)
 	var doctrine: String = NationArsenal.ARSENALS.get(c.nation_id(), {}).get("doctrine", "")
+	var held := []
+	for site: String in Battlegrounds.IDS:
+		var who := c.site_holder(site)
+		held.append("%s: %s" % [_t("SITE_" + site.to_upper()), Nations.display_name(Nations.index_of(who)) if not who.is_empty() else "-"])
 	return _t("ARMY_LINE") % [Career.RANKS[r][0], int(c.d.get("war_xp", 0)), next, used, c.command_points()] \
+			+ "\n" + _t("CAMPAIGN_LINE") % ", ".join(held) \
 			+ ("\n" + _t(doctrine) if not doctrine.is_empty() else "")
 
 

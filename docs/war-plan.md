@@ -62,31 +62,23 @@ stays, and grows alongside.
   - **Vesper:** strikes; the Raptor, which strafes twice.
   - **Halden:** armour; the Bastion.
 
-## Next
+## Next (status)
 
-1. **Camps, next:** a rotorcraft pad (fast travel); upgrades (turret range,
-   thicker walls); repairing damage; enemies destroying modules (today
-   only the core can be sabotaged); purpose-made models.
-2. **More rules per match.** King of the vault (the relic scores while you
-   hold it), escort the convoy across the site, a territory war (several
-   points, the most held over time), last squad standing, and a timed
-   resource race.
-3. **Command upgrades.** Several squads per side, orders on the minimap,
-   mark a target by aiming, new plans (raid camp, hold point, gather), and
-   leader abilities (a rotorcraft drop, a supply crate, a scan).
-4. **Match modifiers ("mods").** One or two drawn per match (a lobby vote
-   online): methane storm (low visibility, pads shift), low gravity surge,
-   gold rush, blackout (no minimap), hardcore (no shields, losses stay),
-   mercenary market, fog of war. Later, modifiers as data files players
-   write themselves.
-5. **Four-way wars** with all four nations, alliances and betrayals between
-   sides (HuntSocial).
-6. **Online:** human leaders and squad members.
-7. **Campaign:** the battlegrounds become territory. Nations hold sites
-   between matches, and holding a site pays every run.
-8. **More battlegrounds:** Deep Furrow's halls underground, the Anvil's top,
-   the old freighter wreck, the Skyport's outer apron at night, and new
-   ground past the basin's rim.
+1. Camps: rotorcraft pad, upgrades, module health, repair. **Done.**
+2. More rules per match: king of the vault, convoy, territory, last standing, resource race. **Done.**
+3. Command upgrades: mark target, map orders, more plans, leader abilities. **Done.**
+4. Match modifiers deck, including players' own JSON mods. **Done.**
+5. Four-way wars and duels, with alliances and betrayals. **Done.**
+6. **Online: not done.** HUNT is still offline only: the network layer
+   doesn't carry its mode yet (`NETWORK_MODE_COUNT`). Human leaders and squad
+   members need HUNT's state (war, camps, army, squads) replicated, and
+   requests sent from clients. This is its own netcode project.
+7. Campaign: `Career.d.territory` maps each site to a nation. The winning
+   nation of a war takes the site, an AI nation takes another, and every site
+   your nation holds pays $80 a run. Shown at the army depot. **Done.**
+8. More battlegrounds: the Anvil's top and the wreck field join the rotation
+   (8 sites). **Deep Furrow underground is not done yet:** the halls need
+   their own site data (spots, pads and camps under the farm).
 
 ## Keep and grow (the other ways to play)
 
