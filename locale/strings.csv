@@ -1352,3 +1352,4 @@ DOCTRINE_AURORA,"Aurora · drone doctrine: drones hit harder and last longer, ch
 DOCTRINE_MERIDIAN,"Meridian · shield doctrine: turrets and flak stronger with longer reach; camp building cheaper · strike jets weaker, gunships frailer · own unit: the Aegis battery"
 DOCTRINE_VESPER,"Vesper · strike doctrine: strike jets much stronger and cheaper; crawlers extract faster · turrets and flak weaker, tanks frailer · own unit: the Raptor (strafes twice)"
 DOCTRINE_HALDEN,"Halden · armour doctrine: tanks much tougher and harder hitting, cheaper · drones weaker and dearer, jets dearer · own unit: the Bastion (its gun shoots aircraft)"
+ARMY_FEED_DESTROYED,destroyed a %s

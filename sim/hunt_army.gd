@@ -33,6 +33,12 @@ const UNITS := {
 const AIR := ["scout_drone", "attack_drone", "swarm", "gunship", "strike_jet", "raptor"]
 const JETS := ["strike_jet", "raptor"]
 const LEVEL_BONUS := 0.15
+## War machines' health (the hauler is your rover: it can't be destroyed);
+## a nation's doctrine scales it (NationArsenal "hp").
+const MACHINE_HP := {"crawler": 600.0, "tank": 900.0, "bastion": 1300.0}
+## How big a target each is for a shot (a sphere's radius, metres).
+const HIT_RADIUS := {"scout_drone": 1.0, "attack_drone": 1.3, "swarm": 1.1, "gunship": 3.5, "strike_jet": 4.0,
+		"raptor": 4.0, "machine": 2.6}
 ## Rival AI hunters in a war bring a small army (an attack drone and their
 ## nation's own unit, or a strike jet) and call a unit in on the nearest
 ## enemy now and then.
@@ -65,6 +71,8 @@ var used: Dictionary = {}
 var calls: Array[Call] = []
 ## vehicle index -> [owner, unit, level]: the army's machines in the world
 var machines: Dictionary = {}
+## vehicle index -> health left (war machines)
+var machine_hp: Dictionary = {}
 
 
 func reset() -> void:
@@ -72,6 +80,7 @@ func reset() -> void:
 	used.clear()
 	calls.clear()
 	machines.clear()
+	machine_hp.clear()
 
 
 ## A hunter's army for this run (the match passes Career.army_deploy).
@@ -111,6 +120,8 @@ func call_unit(world: SimWorld, hunt: HuntRules, id: int, unit: String, target: 
 		v.model = VehicleSim.CRAWLER if unit == "crawler" else VehicleSim.TANK
 		v.owner = id
 		machines[world.vehicles.size() - 1] = [id, unit, lv]
+		machine_hp[world.vehicles.size() - 1] = float(MACHINE_HP[unit]) * NationArsenal.mod(NationArsenal.of(hunt, id),
+				"tank" if unit == "bastion" else unit, "hp") * (1.0 + LEVEL_BONUS * lv)
 	else:
 		var c := Call.new()
 		c.unit = unit
@@ -217,11 +228,9 @@ func shoot_air(world: SimWorld, hunt: HuntRules, owner: int, from: Vector3, reac
 			best = c
 	if best == null:
 		return false
-	best.hp -= damage
-	if best.hp <= 0.0:
-		calls.erase(best)
-		world._emit("hd:%d:%s:%d" % [best.owner, best.unit, tick], "hunt", {"action": "unit_downed", "player": owner,
-				"position": position_of(best, tick), "treasure": 0, "kind": -1, "unit": best.unit, "owner": best.owner})
+	world._emit("hf:%d:%d:%d" % [owner, int(from.x), tick], "hunt", {"action": "flak_fire", "player": owner,
+			"position": from, "treasure": 0, "kind": -1, "to": position_of(best, tick)})
+	damage_air(world, owner, best, damage)
 	return true
 
 
@@ -241,6 +250,13 @@ func _strafe(world: SimWorld, hunt: HuntRules, c: Call, info: Dictionary, boost:
 		if Vector2(q.x - o.state.position.x, q.z - o.state.position.z).length() <= float(info.width):
 			world._damage(o, c.owner if world.players.has(c.owner) else 0, float(info.damage) * boost, false,
 					Weapons.by_id(&"pulse_rifle"), world.tick)
+	for vi: int in machine_hp.keys():  # the strafe hits machines on the line too
+		if vi >= world.vehicles.size() or not _enemy(hunt, c.owner, int(machines[vi][0])):
+			continue
+		var vp: Vector3 = world.vehicles[vi].position
+		var q := Geometry3D.get_closest_point_to_segment(vp, a, b)
+		if Vector2(q.x - vp.x, q.z - vp.z).length() <= float(info.width):
+			damage_machine(world, hunt, c.owner, vi, float(info.damage) * boost)
 	world._emit("hj:%d:%d" % [c.owner, world.tick], "hunt", {"action": "jet_strike", "player": c.owner,
 			"position": c.at, "treasure": 0, "kind": -1, "from": a, "to": b})
 
@@ -262,6 +278,18 @@ func _fire(world: SimWorld, hunt: HuntRules, owner: int, from: Vector3, reach: f
 			continue
 		best = o
 		best_d = d
+	# An enemy war machine nearer than any person: the gun takes that.
+	var best_v := -1
+	for vi: int in machine_hp:
+		if vi >= world.vehicles.size() or not _enemy(hunt, owner, int(machines[vi][0])):
+			continue
+		var d := from.distance_to(world.vehicles[vi].position)
+		if d < best_d:
+			best_d = d
+			best_v = vi
+	if best_v >= 0:
+		damage_machine(world, hunt, owner, best_v, damage)
+		return
 	if best != null:
 		world._damage(best, owner if world.players.has(owner) else 0, damage, false, Weapons.by_id(&"pulse_rifle"), world.tick)
 
@@ -314,3 +342,117 @@ func _bots_call(world: SimWorld, hunt: HuntRules) -> void:
 			if left(id, u) > 0:
 				call_unit(world, hunt, id, u, foe.state.position)
 				break
+
+
+# --- Damage to the army: shots, guns and strikes hit aircraft and machines ---
+
+## A hitscan shot from `from` to `to` (where it ended): the first enemy
+## aircraft or war machine on the line takes `damage`.
+func on_shot(world: SimWorld, hunt: HuntRules, shooter: int, from: Vector3, to: Vector3, damage: float) -> void:
+	var best_d := from.distance_to(to)
+	var hit_call: Call = null
+	var hit_machine := -1
+	var tick := world.tick
+	for c in calls:
+		if not (c.unit in AIR) or not _enemy(hunt, shooter, c.owner) or tick < c.start_tick - int(UNITS[c.unit].get("delay", 0)):
+			continue
+		var d := _ray_sphere(from, to, position_of(c, tick), float(HIT_RADIUS[c.unit]))
+		if d >= 0.0 and d < best_d:
+			best_d = d
+			hit_call = c
+	for vi: int in machine_hp:
+		if vi >= world.vehicles.size() or not _enemy(hunt, shooter, int(machines[vi][0])):
+			continue
+		var d := _ray_sphere(from, to, world.vehicles[vi].position + Vector3(0, 1.2, 0), float(HIT_RADIUS.machine))
+		if d >= 0.0 and d < best_d:
+			best_d = d
+			hit_machine = vi
+			hit_call = null
+	if hit_machine >= 0:
+		damage_machine(world, hunt, shooter, hit_machine, damage)
+	elif hit_call != null:
+		damage_air(world, shooter, hit_call, damage)
+
+
+## Where the segment a-b first enters the sphere (distance from a), or -1.
+static func _ray_sphere(a: Vector3, b: Vector3, centre: Vector3, r: float) -> float:
+	var d := b - a
+	var len := d.length()
+	if len < 0.001:
+		return -1.0
+	d /= len
+	var m := a - centre
+	var bq := m.dot(d)
+	var cq := m.dot(m) - r * r
+	if cq > 0.0 and bq > 0.0:
+		return -1.0
+	var disc := bq * bq - cq
+	if disc < 0.0:
+		return -1.0
+	var t := maxf(-bq - sqrt(disc), 0.0)
+	return t if t <= len else -1.0
+
+
+func damage_air(world: SimWorld, by: int, c: Call, damage: float) -> void:
+	c.hp -= damage
+	if c.hp <= 0.0 and c in calls:
+		calls.erase(c)
+		world._emit("hd:%d:%s:%d" % [c.owner, c.unit, world.tick], "hunt", {"action": "unit_downed", "player": by,
+				"position": position_of(c, world.tick), "treasure": 0, "kind": -1, "unit": c.unit, "owner": c.owner})
+
+
+## A war machine hit: destroyed at no health left (its driver thrown out,
+## the vehicle gone from the field, lost from its owner's roster).
+func damage_machine(world: SimWorld, hunt: HuntRules, by: int, vi: int, damage: float) -> void:
+	if not machine_hp.has(vi):
+		return
+	machine_hp[vi] = float(machine_hp[vi]) - damage
+	world.vehicles[vi].condition = clampf(100.0 * float(machine_hp[vi]) / float(MACHINE_HP[machines[vi][1]]), 0.0, 100.0)
+	if float(machine_hp[vi]) > 0.0:
+		return
+	var mm: Array = machines[vi]
+	machine_hp.erase(vi)
+	machines.erase(vi)
+	var v: SimVehicle = world.vehicles[vi]
+	if v.driver != 0 and world.players.has(v.driver):
+		var d: SimPlayer = world.players[v.driver]
+		d.state.vehicle = -1
+		world.teleport(d, v.position + Vector3(2.5, 0.5, 0))
+		v.driver = 0
+	v.position += Vector3(0, -400.0, 0)  # gone from the field (wreck shown by the effect)
+	var u: Dictionary = used.get(int(mm[0]), {})
+	u[mm[1]] = int(u.get(mm[1], 0)) + 1  # lost: off the roster after the run
+	used[int(mm[0])] = u
+	world._emit("hk2:%d:%d" % [vi, world.tick], "hunt", {"action": "machine_destroyed", "player": by,
+			"position": v.position + Vector3(0, 400.0, 0), "treasure": 0, "kind": -1, "unit": mm[1], "owner": mm[0]})
+
+
+## An explosion at `at`: enemy aircraft and war machines within `radius`
+## take `damage`, less with distance.
+func on_blast(world: SimWorld, hunt: HuntRules, owner: int, at: Vector3, radius: float, damage: float) -> void:
+	if radius <= 0.0:
+		return
+	for c in calls.duplicate():
+		if c.unit in AIR and _enemy(hunt, owner, c.owner):
+			var d := position_of(c, world.tick).distance_to(at)
+			if d < radius + float(HIT_RADIUS[c.unit]):
+				damage_air(world, owner, c, damage * clampf(1.0 - d / (radius + 1.0), 0.3, 1.0))
+	for vi: int in machine_hp.keys():
+		if vi < world.vehicles.size() and _enemy(hunt, owner, int(machines[vi][0])):
+			var d := world.vehicles[vi].position.distance_to(at)
+			if d < radius + float(HIT_RADIUS.machine):
+				damage_machine(world, hunt, owner, vi, damage * clampf(1.0 - d / (radius + 1.0), 0.3, 1.0))
+
+
+## The nearest enemy war machine to `from` within `reach` (vehicle index, -1).
+func nearest_enemy_machine(world: SimWorld, hunt: HuntRules, owner: int, from: Vector3, reach: float) -> int:
+	var best := -1
+	var best_d := reach
+	for vi: int in machine_hp:
+		if vi >= world.vehicles.size() or not _enemy(hunt, owner, int(machines[vi][0])):
+			continue
+		var d := from.distance_to(world.vehicles[vi].position)
+		if d < best_d:
+			best_d = d
+			best = vi
+	return best

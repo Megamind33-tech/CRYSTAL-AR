@@ -510,6 +510,8 @@ func _resolve_shot(p: SimPlayer, shot: WeaponSim.Shot) -> void:
 		var t := _trace(targets, shot.origin, dir, w.max_range)
 		if first.is_empty():
 			first = t
+		if hunt != null:  # THE HUNT: enemy aircraft and war machines in the line of fire
+			hunt.army.on_shot(self, hunt, p.net_id, shot.origin, t[2] as Vector3, w.damage_at(1.0))
 		if t[0] != null:
 			var hit: Hitbox.Hit = t[1]
 			var entry: Array = dealt.get(t[0], [0.0, false])
@@ -710,6 +712,8 @@ func _step_thrown(proj: Projectile) -> bool:
 
 
 func _explode(proj: Projectile, at: Vector3, direct: SimPlayer) -> void:
+	if hunt != null:  # THE HUNT: the blast hits enemy aircraft and war machines too
+		hunt.army.on_blast(self, hunt, proj.owner_id, at, proj.weapon.splash_radius, proj.weapon.splash_damage)
 	var w := proj.weapon
 	_emit("x:" + proj.id(), "explosion", {"position": at, "owner": proj.owner_id, "weapon": w.id})
 	if direct != null:

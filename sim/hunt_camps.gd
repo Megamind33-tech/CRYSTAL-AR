@@ -218,9 +218,14 @@ func _turret(world: SimWorld, hunt: HuntRules, c: HuntWar.Camp, at: Vector3, bui
 			continue  # a wall in the way
 		best = p
 		best_d = d
+	var shooter := builder if world.players.has(builder) else 0
+	var vi := hunt.army.nearest_enemy_machine(world, hunt, builder, head, best_d)
+	if vi >= 0:  # an enemy tank or crawler nearer than anyone: the turret takes it on
+		hunt.army.damage_machine(world, hunt, shooter, vi,
+				float(info.damage) * NationArsenal.mod(nation, "turret", "damage"))
+		return
 	if best == null:
 		return
-	var shooter := builder if world.players.has(builder) else 0
 	world._damage(best, shooter, float(info.damage) * NationArsenal.mod(nation, "turret", "damage"), false,
 			Weapons.by_id(&"pulse_rifle"), world.tick)
 	world._emit("ht:%d:%d" % [best.net_id, world.tick], "hunt", {"action": "turret_fire", "player": shooter,

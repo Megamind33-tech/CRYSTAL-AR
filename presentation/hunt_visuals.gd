@@ -57,6 +57,7 @@ func sync(hunt: HuntRules, tick: int, local_id: int, carrier_pos: Callable) -> v
 		_build_static(hunt)
 	_sync_war(hunt, local_id)
 	_sync_army(hunt, tick)
+	_aim_flak(hunt, tick, local_id, get_process_delta_time())
 	var seen := {}
 	for t: HuntRules.Treasure in hunt.treasures:
 		seen[t.id] = true
@@ -518,6 +519,7 @@ func _sync_war(hunt: HuntRules, local_id: int) -> void:
 		_war_nodes.clear()
 		_camp_labels.clear()
 		_camp_drawn.clear()
+		_flak.clear()
 		_point_label = null
 		var before := get_child_count()
 		if w.objective == HuntWar.Objective.HOLD:
@@ -621,31 +623,135 @@ func _sync_buildings(hunt: HuntRules) -> void:
 			drawn[socket] = node
 
 
-## A flak battery: a squat base, four long barrels raised to the sky
-## (the aegis: bigger, a radar dish).
+## A flak battery, in the comic style (outlined, cel-shaded): a sandbagged
+## pit, a mount with an armoured head that turns and lifts to track the
+## nearest enemy aircraft (_aim_flak), four long barrels with flash cones,
+## ammo crates. The Aegis: bigger, armour skirts, a six-tube missile pod and
+## a radar dish turning on its mast.
+var _flak: Array = []  ## [root, head (yaw), cradle (pitch), dish or null, socket position]
+
+
 func _flak_model(at: Vector3, aegis: bool) -> Node3D:
-	var k := 1.3 if aegis else 1.0
+	var k := 1.35 if aegis else 1.0
+	var steel := Comic.kit_material_paint(Color(0.42, 0.44, 0.42))
+	var dark := Comic.kit_material_paint(Color(0.2, 0.21, 0.22))
+	var sand := Comic.kit_material_paint(Color(0.55, 0.47, 0.34))
+	var accent := Comic.kit_material_paint(Color(0.85, 0.62, 0.15) if not aegis else Color(0.25, 0.7, 0.95))
 	var root := Node3D.new()
 	root.position = at
-	var base := MeshInstance3D.new()
-	base.mesh = _box_mesh(Vector3(2.6, 1.6, 2.6) * k)
-	base.position.y = 0.8 * k
-	base.material_override = _metal()
-	root.add_child(base)
-	for q: Vector2 in [Vector2(-0.4, -0.4), Vector2(0.4, -0.4), Vector2(-0.4, 0.4), Vector2(0.4, 0.4)]:
-		var barrel := MeshInstance3D.new()
-		barrel.mesh = _box_mesh(Vector3(0.18, 2.6, 0.18) * k)
-		barrel.position = Vector3(q.x * k, 2.6 * k, q.y * k)
-		barrel.rotation.x = -0.35
-		barrel.material_override = _metal()
-		root.add_child(barrel)
+	var part := func(parent: Node3D, mesh: Mesh, pos: Vector3, mat: Material, rot := Vector3.ZERO) -> MeshInstance3D:
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.position = pos
+		mi.rotation = rot
+		mi.material_override = mat
+		parent.add_child(mi)
+		return mi
+	# The pit: a ring of sandbags round a concrete pad.
+	var pad := CylinderMesh.new()
+	pad.top_radius = 1.7 * k
+	pad.bottom_radius = 1.8 * k
+	pad.height = 0.3
+	pad.radial_segments = 12
+	part.call(root, pad, Vector3(0, 0.15, 0), dark)
+	for b in 10:
+		var a := TAU * b / 10.0
+		var bag := BoxMesh.new()
+		bag.size = Vector3(0.9, 0.45, 0.5) * k
+		part.call(root, bag, Vector3(cos(a), 0.0, sin(a)) * 1.55 * k + Vector3(0, 0.45 * k, 0), sand, Vector3(0, -a, 0))
+	# The mount and the turning head.
+	var col := CylinderMesh.new()
+	col.top_radius = 0.35 * k
+	col.bottom_radius = 0.5 * k
+	col.height = 1.2 * k
+	part.call(root, col, Vector3(0, 0.9 * k, 0), steel)
+	var head := Node3D.new()
+	head.position = Vector3(0, 1.6 * k, 0)
+	root.add_child(head)
+	var body := BoxMesh.new()
+	body.size = Vector3(1.6, 0.9, 1.3) * k
+	part.call(head, body, Vector3.ZERO, steel)
+	var stripe := BoxMesh.new()
+	stripe.size = Vector3(1.62, 0.18, 1.32) * k
+	part.call(head, stripe, Vector3(0, 0.2 * k, 0), accent)
+	var cradle := Node3D.new()
+	cradle.position = Vector3(0, 0.2 * k, -0.2 * k)
+	head.add_child(cradle)
+	for q: Vector2 in [Vector2(-0.45, 0.2), Vector2(0.45, 0.2), Vector2(-0.45, -0.15), Vector2(0.45, -0.15)]:
+		var barrel := CylinderMesh.new()
+		barrel.top_radius = 0.07 * k
+		barrel.bottom_radius = 0.09 * k
+		barrel.height = 2.6 * k
+		barrel.radial_segments = 8
+		part.call(cradle, barrel, Vector3(q.x * k, q.y * k, -1.3 * k), dark, Vector3(-PI * 0.5, 0, 0))
+		var flash := CylinderMesh.new()
+		flash.top_radius = 0.13 * k
+		flash.bottom_radius = 0.08 * k
+		flash.height = 0.3 * k
+		part.call(cradle, flash, Vector3(q.x * k, q.y * k, -2.65 * k), steel, Vector3(-PI * 0.5, 0, 0))
+	# Ammo crates by the pit.
+	for q: Vector3 in [Vector3(1.9, 0, 0.9), Vector3(2.0, 0, -0.3)]:
+		var crate := BoxMesh.new()
+		crate.size = Vector3(0.7, 0.5, 0.5) * k
+		part.call(root, crate, q * k + Vector3(0, 0.25 * k, 0), accent)
+	var dish_pivot: Node3D = null
 	if aegis:
-		var dish := MeshInstance3D.new()
-		dish.mesh = _box_mesh(Vector3(2.2, 1.2, 0.15))
-		dish.position = Vector3(0, 4.4, 1.2)
-		dish.material_override = _glow(OWN, 1.0, 1.0)
-		root.add_child(dish)
+		for side in [-1.0, 1.0]:  # armour skirts
+			var skirt := BoxMesh.new()
+			skirt.size = Vector3(0.12, 0.7, 1.4) * k
+			part.call(head, skirt, Vector3(side * 0.86 * k, -0.15 * k, 0), steel)
+		var pod := BoxMesh.new()
+		pod.size = Vector3(0.9, 0.7, 1.1) * k
+		var pod_mi: MeshInstance3D = part.call(head, pod, Vector3(0, 0.75 * k, 0.1 * k), steel)
+		for t in 6:
+			var tube := CylinderMesh.new()
+			tube.top_radius = 0.1 * k
+			tube.bottom_radius = 0.1 * k
+			tube.height = 0.1 * k
+			part.call(pod_mi, tube, Vector3((float(t % 3) - 1.0) * 0.27 * k, (float(t / 3) - 0.5) * 0.28 * k, -0.56 * k), dark,
+					Vector3(-PI * 0.5, 0, 0))
+		var mast := CylinderMesh.new()
+		mast.top_radius = 0.08
+		mast.bottom_radius = 0.12
+		mast.height = 2.2
+		part.call(root, mast, Vector3(-1.6 * k, 1.1, 1.2 * k), steel)
+		dish_pivot = Node3D.new()
+		dish_pivot.position = Vector3(-1.6 * k, 2.3, 1.2 * k)
+		root.add_child(dish_pivot)
+		var dish := CylinderMesh.new()
+		dish.top_radius = 0.9
+		dish.bottom_radius = 0.2
+		dish.height = 0.35
+		part.call(dish_pivot, dish, Vector3(0, 0.1, 0), accent, Vector3(-1.1, 0, 0))
+	_flak.append([root, head, cradle, dish_pivot, at])
 	return root
+
+
+## The flak heads track the nearest enemy aircraft; the radars turn.
+func _aim_flak(hunt: HuntRules, tick: int, local_id: int, delta: float) -> void:
+	for f: Array in _flak:
+		if not is_instance_valid(f[0]):
+			continue
+		if f[3] != null:
+			(f[3] as Node3D).rotation.y += delta * 1.6
+		var at: Vector3 = f[4]
+		var best := 90.0
+		var aim := Vector3.INF
+		for c in hunt.army.calls:
+			if not (c.unit in HuntArmy.AIR):
+				continue
+			var p := hunt.army.position_of(c, tick)
+			var d := p.distance_to(at)
+			if d < best:
+				best = d
+				aim = p
+		if aim == Vector3.INF:
+			continue
+		var to := aim - (at + Vector3(0, 1.6, 0))
+		var head: Node3D = f[1]
+		var cradle: Node3D = f[2]
+		head.rotation.y = lerp_angle(head.rotation.y, atan2(-to.x, -to.z), minf(delta * 5.0, 1.0))
+		cradle.rotation.x = lerpf(cradle.rotation.x, atan2(to.y, Vector2(to.x, to.z).length()), minf(delta * 5.0, 1.0))
 
 
 ## A turret in the kit's style: a base, a turning head, twin barrels.

@@ -256,3 +256,33 @@ func test_air_defense_and_doctrines() -> void:
 	assert_eq(h.army.calls.size(), 1)
 	_step(600)
 	assert_eq(h.army.calls.size(), 0, "shot down by the flak")
+
+
+## Your own guns hit the army: shots down aircraft, wear tanks down to
+## wrecks (lost from the roster); a tougher doctrine's tank lasts longer.
+func test_guns_down_aircraft_and_destroy_machines() -> void:
+	h.army.rosters[2] = {}
+	h.army.deploy(1, {"attack_drone": [1, 0], "tank": [1, 0]})
+	assert_true(h.request(world, 1, "call_unit", {"unit": "attack_drone", "target": Vector3(12, 0, 10)}))
+	var c: HuntArmy.Call = h.army.calls[0]
+	var at := h.army.position_of(c, world.tick)
+	var from := at + Vector3(0, -10, 0)
+	for k in 10:
+		h.army.on_shot(world, h, 2, from, at + Vector3(0, 5, 0), 12.0)
+	assert_true(h.army.calls.is_empty(), "shot down by a rifle")
+	assert_true(h.request(world, 1, "call_unit", {"unit": "tank", "target": Vector3.ZERO}))
+	var vi: int = h.army.machine_hp.keys()[0]
+	var hp: float = h.army.machine_hp[vi]
+	var tank_at: Vector3 = world.vehicles[vi].position
+	h.army.on_shot(world, h, 2, tank_at + Vector3(20, 1.2, 0), tank_at + Vector3(-20, 1.2, 0), 50.0)
+	assert_eq(h.army.machine_hp[vi], hp - 50.0, "a shot hits the tank")
+	assert_lt(world.vehicles[vi].condition, 100.0, "its condition shows it")
+	h.army.damage_machine(world, h, 2, vi, hp)
+	assert_false(h.army.machine_hp.has(vi), "destroyed")
+	assert_eq(int(h.army.used[1].tank), 1, "lost: off the roster after the run")
+
+
+func test_doctrine_tank_toughness() -> void:
+	var tough := 900.0 * NationArsenal.mod("halden", "tank", "hp")
+	var frail := 900.0 * NationArsenal.mod("aurora", "tank", "hp")
+	assert_gt(tough, frail * 1.8, "Halden's tank takes nearly twice Aurora's punishment")

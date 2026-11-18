@@ -1694,7 +1694,18 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			return
 		"jet_strike":
 			return
+		"flak_fire":
+			effects.tracer(e.position, e.to)
+			return
+		"machine_destroyed":
+			effects.explosion(e.position + Vector3(0, 1.5, 0), 7.0)
+			audio.play_at("explosion", e.position, "World", 3)
+			_kill_feed.add_note(_display_name(int(e.player)), tr("ARMY_FEED_DESTROYED") % tr("UNIT_" + str(e.unit).to_upper()),
+					HuntHud.ALLY if h_side_is_mine(server.world.hunt.war.side_of(server.world.hunt, int(e.player))) else UiStyle.WARN)
+			return
 		"unit_downed":
+			effects.explosion(e.position, 5.0 if str(e.unit) in HuntArmy.JETS or str(e.unit) == "gunship" else 2.5)
+			audio.play_at("explosion", e.position, "World", 3)
 			_kill_feed.add_note(_display_name(int(e.player)), tr("ARMY_FEED_DOWNED") % tr("UNIT_" + str(e.unit).to_upper()),
 					HuntHud.ALLY if h_side_is_mine(server.world.hunt.war.side_of(server.world.hunt, int(e.player))) else UiStyle.WARN)
 			return
