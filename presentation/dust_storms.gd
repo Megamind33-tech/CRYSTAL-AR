@@ -119,7 +119,8 @@ func _process(delta: float) -> void:
 		_wind.stop()
 	_wind.volume_db = linear_to_db(maxf(storm, 0.001)) - 4.0
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
-	_rain.emitting = storm > 0.05 and cam != null
+	# No rain under the dome or indoors: the roof keeps it off.
+	_rain.emitting = storm > 0.05 and cam != null and not Survival.in_air(cam.global_position)
 	if _rain.emitting:
 		_rain.amount_ratio = storm
 		_rain.global_position = cam.global_position + Vector3(0, 14, 0)
