@@ -1288,8 +1288,8 @@ func _dig_run(me: SimPlayer) -> void:
 	await _pose(me, WorldTerrain.at(200.0, 135.0) + Vector3(0, 0.3, 0), 0.0, -0.15)
 	await _shot("d5_rim_extraction")
 	# A canyon extraction site close up (the pad deck, the waiting rotorcraft).
-	var z := WorldLayout.canyon(350.0)
-	await _pose(me, z + Vector3(-16, 0.3, 2), -PI * 0.5 + 0.1, 0.12)
+	var z: Vector3 = WorldLayout.dig_hunt_data().extraction_zones[2]  # on the rim, in the open
+	await _pose(me, z + Vector3(0, 0.3, 18), 0.0, 0.18)
 	await _shot("d6_extraction_site")
 	get_tree().quit(0)
 

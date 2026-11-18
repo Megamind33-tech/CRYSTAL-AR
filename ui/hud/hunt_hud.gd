@@ -609,6 +609,8 @@ func _draw_mission() -> void:
 	for p: Array in parts:
 		total += f.get_string_size(p[0], HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	var y := size.y - 104.0 * _s
+	if touch:  # over the gait chips (TouchControls), which sit over the hotbar
+		y = minf(y, size.y * (1.0 - TouchControls.GAIT_Y - TouchControls.GAIT_RADIUS) - 10.0 * _s)
 	var x := (size.x - total) * 0.5
 	for p: Array in parts:
 		var col: Color = hl if p[1] else Color.WHITE
