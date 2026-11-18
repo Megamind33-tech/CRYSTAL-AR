@@ -22,10 +22,12 @@ var _base_sun: float
 ## clock (`day_cycle` false: runs keep their fixed light).
 var day_cycle: bool = true
 var hour_offset: float = 0.0  ## for screenshots: so many hours later
-var _sky: ProceduralSkyMaterial
+var _sky: ShaderMaterial
 var _base_ambient: float
 var _base_top: Color
+var _base_mid: Color
 var _base_horizon: Color
+var _base_ground: Color
 var daylight: float = 1.0
 var _rain: GPUParticles3D
 
@@ -34,25 +36,27 @@ var _rain: GPUParticles3D
 ## falling round the camera; as many as the squall is strong.
 static func _make_rain() -> GPUParticles3D:
 	var rain := GPUParticles3D.new()
-	rain.amount = 700
+	rain.amount = 520
 	rain.lifetime = 2.2
 	rain.local_coords = false
 	rain.visibility_aabb = AABB(Vector3(-30, -30, -30), Vector3(60, 60, 60))
 	var pm := ParticleProcessMaterial.new()
 	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
 	pm.emission_box_extents = Vector3(24, 1, 24)
-	pm.direction = Vector3(0.15, -1, 0)
-	pm.spread = 3.0
+	pm.direction = Vector3(0.3, -1, 0.1)  # blown slantwise by the squall
+	pm.spread = 4.0
 	pm.initial_velocity_min = 9.0
 	pm.initial_velocity_max = 12.0
 	pm.gravity = Vector3.ZERO
 	rain.process_material = pm
 	var streak := QuadMesh.new()
-	streak.size = Vector2(0.04, 0.9)
+	# Bold comic strokes: wide, pale methane-yellow, nearly opaque (cheap:
+	# one unshaded quad per drop).
+	streak.size = Vector2(0.07, 1.1)
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(0.82, 0.8, 0.72, 0.45)
+	mat.albedo_color = Color(0.9, 0.86, 0.56, 0.75)
 	mat.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
 	streak.material = mat
 	rain.draw_pass_1 = streak
@@ -73,10 +77,12 @@ func _ready() -> void:
 		_base_sun = _sun.light_energy
 	if _env != null:
 		_base_ambient = _env.ambient_light_energy
-		_sky = _env.sky.sky_material as ProceduralSkyMaterial if _env.sky != null else null
+		_sky = _env.sky.sky_material as ShaderMaterial if _env.sky != null else null
 		if _sky != null:
-			_base_top = _sky.sky_top_color
-			_base_horizon = _sky.sky_horizon_color
+			_base_top = _sky.get_shader_parameter("top_color")
+			_base_mid = _sky.get_shader_parameter("mid_color")
+			_base_horizon = _sky.get_shader_parameter("horizon_color")
+			_base_ground = _sky.get_shader_parameter("ground_color")
 	_wind = AudioStreamPlayer.new()
 	_wind.stream = DustStorms.looping("res://audio/generated/storm_wind.wav")
 	_wind.bus = "World" if AudioServer.get_bus_index("World") >= 0 else "Master"
@@ -117,13 +123,19 @@ func _process(delta: float) -> void:
 	daylight = GameClock.daylight(fmod(h, 24.0)) if day_cycle else 1.0
 	var night := 1.0 - daylight
 	RenderingServer.global_shader_parameter_set("night_glow", night)  # lit windows, glowing signs
+	# The night shift is quick (a clear dusk, not a slow fade): the sky bands
+	# step to indigo over the last part of the day.
+	var dusk := smoothstep(0.3, 0.7, night)
 	if _env != null:
 		_env.fog_density = lerpf(_base_fog, 0.035, storm)
-		_env.fog_light_color = TitanLighting.HAZE.lerp(Color(0.42, 0.4, 0.34), storm).lerp(Color(0.12, 0.1, 0.18), night * 0.8)
+		# Squalls turn the haze a sickly methane olive-grey.
+		_env.fog_light_color = TitanLighting.HAZE.lerp(Color(0.5, 0.48, 0.3), storm).lerp(Color(0.12, 0.1, 0.18), dusk * 0.85)
 		_env.ambient_light_energy = lerpf(_base_ambient, _base_ambient * 0.62, night)  # moonlit, never black
-		if _sky != null:
-			_sky.sky_top_color = _base_top.lerp(Color(0.02, 0.02, 0.06), night)
-			_sky.sky_horizon_color = _base_horizon.lerp(Color(0.16, 0.1, 0.16), night)
+	if _sky != null:
+		_sky.set_shader_parameter("top_color", _base_top.lerp(Color(0.02, 0.02, 0.06), dusk))
+		_sky.set_shader_parameter("mid_color", _base_mid.lerp(Color(0.06, 0.05, 0.14), dusk))
+		_sky.set_shader_parameter("horizon_color", _base_horizon.lerp(Color(0.16, 0.1, 0.22), dusk))
+		_sky.set_shader_parameter("ground_color", _base_ground.lerp(Color(0.05, 0.04, 0.08), dusk))
 	if _sun != null:
 		_sun.light_energy = lerpf(_base_sun, _base_sun * 0.35, storm) * lerpf(0.3, 1.0, daylight)
 		_sun.light_color = Color(1.0, 0.9, 0.68).lerp(Color(0.55, 0.62, 0.95), night)
