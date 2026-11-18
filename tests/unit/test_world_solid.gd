@@ -221,3 +221,33 @@ func test_gate_lets_people_and_vehicles_through_and_refuses_the_wanted() -> void
 		reach = _run(outside, north, model, 360)
 		assert_lt(reach, 10.0, "the wanted %s is turned away at the outer door" % ("person" if model < 0 else "rover"))
 	SecuredGate.refused = {}
+
+
+## Wanted while inside the gatehouse's hall: the way out still opens.
+func test_the_wanted_are_never_shut_in_the_gatehouse() -> void:
+	SecuredGate.refused = {WALKER: true}
+	var hall := _city(0, CityLayout.GATE_Z)
+	var reach := _run(hall, Vector3(0, 0, 1), -1, 300)
+	assert_gt(reach, 9.0, "walked out of the hall through the outer door")
+	# And from the city out through both doors.
+	reach = _run(_city(0, CityLayout.GATE_Z - 12), Vector3(0, 0, 1), -1, 400)
+	assert_gt(reach, 20.0, "walked out of the city through the gatehouse")
+	SecuredGate.refused = {}
+
+
+## Each building's doors (TitanSettlement.DOORS): a person walks in
+## through the porch and the inner door; a shut door (on the wanted) holds.
+func test_building_doors_open_and_hold() -> void:
+	for name: String in ["titan/hab_r14", "titan/market_hub", "titan/plant_ex03"]:
+		var p := TitanSettlement.piece(name)
+		var doors: Array = TitanSettlement.DOORS[name]
+		var inner := TitanSettlement.to_world(p, doors[0][0], doors[0][1])
+		var outer := TitanSettlement.to_world(p, doors[1][0], doors[1][1])
+		var inward := (inner - outer).normalized()
+		var start := outer - inward * 4.0 + Vector3(0, 0.1, 0)
+		var past_inner := (inner - start).dot(inward) + 1.0
+		SecuredGate.refused = {}
+		assert_gt(_run(start, inward, -1, 300), past_inner, "%s: walked in through both doors" % name)
+		SecuredGate.refused = {WALKER: true}
+		assert_lt(_run(start, inward, -1, 300), 4.0, "%s: the shut porch door holds" % name)
+	SecuredGate.refused = {}

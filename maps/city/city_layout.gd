@@ -88,16 +88,18 @@ static func security_curtain() -> Array:
 	return out
 
 
-## The gatehouse's secured doors (SecuredGate), its great doors at both
-## ends: [centre (foot), yaw degrees, width, height].
+## The settlement's secured doors (SecuredGate): the gatehouse's great
+## doors at both ends, and each building's inner door and airlock porch
+## door (TitanSettlement.DOORS). [centre (foot), yaw degrees, width,
+## height]; outside is the door's local +Z (towards the building's front).
 static func gate_doors() -> Array:
 	var out := []
 	for p: Array in pieces():
-		if p[0] != "titan/gatehouse":
+		if not TitanSettlement.DOORS.has(p[0]):
 			continue
 		var b := Basis(Vector3.UP, deg_to_rad(float(p[2])))
-		for y in [-5.0, 5.0]:  # Blender y: -5 the outer (south) end, +5 the plaza end
-			out.append([(p[1] as Vector3) + b * Vector3(0, 0, -y), float(p[2]), 8.0, 5.4])
+		for d: Array in TitanSettlement.DOORS[p[0]]:
+			out.append([(p[1] as Vector3) + b * Vector3(d[0], 0, -d[1]), float(p[2]), float(d[2]), float(d[3])])
 	return out
 
 

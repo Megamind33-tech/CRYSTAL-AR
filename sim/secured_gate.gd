@@ -2,9 +2,10 @@ class_name SecuredGate
 extends StaticBody3D
 ## A secured door (simulation; deterministic): a solid leaf on the world
 ## layer that opens for a person or a vehicle it lets through and shuts
-## behind them. The checkpoint's rule: anyone SimWorld.refused names (a
-## wanted player, set by the free-roam game) can't open it; it stays shut
-## in their face. A door never closes on someone standing in its frame.
+## behind them. The checkpoint's rule: anyone `refused` names (a wanted
+## player, set by the free-roam game) can't open it from outside (the
+## door's local +Z, the side a building's front faces); it stays shut in
+## their face. From inside it opens for them too: no one is shut in. A door never closes on someone standing in its frame.
 ## Presentation (TitanSettlement) slides its leaves from `open`.
 
 const THICK := 0.5
@@ -55,8 +56,8 @@ func step(players: Dictionary, refused: Dictionary) -> void:
 		if open and absf(l.x) < width * 0.5 + 0.6 and absf(l.z) < THICK + (3.6 if s.vehicle >= 0 else 0.9):
 			want = true  # in the open frame: never shut on anyone
 			break
-		if refused.get(id, false):
-			continue
+		if refused.get(id, false) and l.z > 0.0:
+			continue  # the refused can't come in from outside (but can always leave)
 		var reach := VEHICLE_REACH if s.vehicle >= 0 else PERSON_REACH
 		if absf(l.x) < width * 0.5 + reach * 0.5 and absf(l.z) < reach:
 			want = true
