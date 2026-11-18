@@ -1217,3 +1217,6 @@ CUTTER_SIGN,RUBY CUTTER
 CUTTER_PROMPT,the ruby cutter
 CUTTER_NOTHING,No raw rubies or relics to work on.
 CUTTER_DONE,"+%d rubies! You hold %d."
+TALK_MISSION_REPORT,"REPORT BACK: %s (+%d)"
+TALK_MISSION_PENDING,"ON IT: %s (go out on a run first)"
+TALK_MISSION_THANKS,"Good work. I won't forget it."

@@ -102,10 +102,13 @@ func refresh() -> void:
 	var line := tr("NPC_%s_%s" % [who.to_upper(), c.mood(who).to_upper()])
 	if who == "foreman" and c.owns_hollow():
 		line = tr("NPC_FOREMAN_BOSS")
+	elif conv != null:
+		line = conv.greeting(who, context())  # who they are, what they remember, the hour
 	_line.text = "“%s”" % (_note if not _note.is_empty() else line)
 	for b in _buttons.get_children():
 		b.queue_free()
 	_conversation_buttons(c)
+	_mission_report(c)
 	var talked := int(c.d.talked.get(who, -1)) == int(c.d.runs)
 	_button(tr("TALK_CHAT") if not talked else tr("TALK_CHATTED"), not talked, ComicUI.CYAN, func() -> void:
 		if c.talk(who):
@@ -191,6 +194,8 @@ func refresh() -> void:
 ## `talk_memory` to it, else a file of our own under user://.
 static func conversation() -> Conversation:
 	var c := Profile.career()
+	if c.d.get("memory") is Dictionary:
+		return Conversation.new(c.d.memory)  # the career keeps what people remember
 	if c.d.get("talk_memory") is Dictionary:
 		return Conversation.new(c.d.talk_memory)
 	return Conversation.load_from()
@@ -225,9 +230,27 @@ func _conversation_buttons(c: Career) -> void:
 				var first: Array = conv.allies()
 				c.set_companion(first[0] if not first.is_empty() else "")
 			if r.has("mission"):
-				c.d["talk_mission"] = {"who": who, "id": r.mission.id, "pay": r.mission.pay, "squad": r.mission.squad}
-			if not c.d.get("talk_memory") is Dictionary:
+				c.d["talk_mission"] = {"who": who, "id": r.mission.id, "title": str(r.mission.get("title", "")),
+						"pay": r.mission.pay, "squad": r.mission.squad, "runs": int(c.d.runs)}
+			if not c.d.get("memory") is Dictionary and not c.d.get("talk_memory") is Dictionary:
 				conv.save_to())
+
+
+## A mission taken in talk is done after a run out (a deploy) and reported
+## back to whoever gave it: pay, a favour remembered, more trust.
+func _mission_report(c: Career) -> void:
+	var m: Dictionary = c.d.get("talk_mission", {})
+	if m.is_empty() or str(m.get("who", "")) != who:
+		return
+	var done := int(c.d.runs) > int(m.get("runs", 0))
+	_button(tr("TALK_MISSION_REPORT") % [str(m.get("title", m.id)), int(m.pay)] if done else tr("TALK_MISSION_PENDING") % str(m.get("title", m.id)),
+			done, ComicUI.GREEN, func() -> void:
+		c.d.wallet = int(c.d.wallet) + int(m.pay)
+		c.d.earned = int(c.d.earned) + int(m.pay)
+		c.d.trust[who] = clampi(c.trust(who) + 6, 0, 100)
+		conv.remember(who, "favour", str(m.id), int(Time.get_unix_time_from_system()))
+		c.d.erase("talk_mission")
+		_note = tr("TALK_MISSION_THANKS"))
 
 
 func _button(text: String, enabled: bool, accent: Color, action: Callable) -> void:

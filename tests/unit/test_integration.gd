@@ -43,3 +43,10 @@ func test_arrival_order() -> void:
 	assert_eq(Arrival.next_step(c), "")
 	c.d.arrived = true
 	assert_eq(Arrival.pending_spawn(c), Vector3.INF, "an arrived career lands nowhere new")
+
+
+func test_talk_memory_lives_in_the_career() -> void:
+	var conv := TalkPanel.conversation()
+	conv.remember("foreman", "favour", "test", 1000)
+	assert_true(Profile.career().d.memory.has("foreman"), "Career.d.memory holds the talk")
+	Profile.career().d.memory.erase("foreman")
