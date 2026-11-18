@@ -991,7 +991,7 @@ func _send_snapshot(c: Client, tick_entities: Dictionary) -> void:
 		snap.owner_state = me.state
 		snap.owner_gen = me.entity_gen & 0xFF
 	for it in world.items:
-		snap.items.append({"id": it.id, "weapon": it.weapon, "position": it.position})
+		snap.items.append({"id": it.id, "weapon": -2 if it.box else it.weapon, "position": it.position})
 	for f in world.flags:
 		snap.flags.append({"team": f.team, "carrier": f.carrier, "position": f.position,
 				"return_ticks": maxi(f.return_tick - world.tick, 0) if f.return_tick > 0 else 0})

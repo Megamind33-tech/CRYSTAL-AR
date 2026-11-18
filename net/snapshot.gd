@@ -43,7 +43,8 @@ func encode(baseline: Dictionary, events_bytes: Array[PackedByteArray]) -> Packe
 	w.u8(mini(items.size(), MAX_ITEMS))
 	for i in mini(items.size(), MAX_ITEMS):
 		var it: Dictionary = items[i]
-		w.u16(it.id).u8(255 if it.weapon < 0 else it.weapon).pos(it.position)
+		# -1 a grenade, -2 an ammo box (Protocol's pickup codes on the wire)
+		w.u16(it.id).u8(Protocol.AMMO_BOX_CODE if it.weapon == -2 else (Protocol.GRENADE_CODE if it.weapon < 0 else it.weapon)).pos(it.position)
 	w.u8(spot_ticks.size())
 	for t in spot_ticks:
 		w.u16(mini(t, 65535))
@@ -101,7 +102,8 @@ static func decode(data: PackedByteArray, baselines: Dictionary) -> Snapshot:
 	for i in ni:
 		var item_id := r.u16()
 		var wi := r.u8()
-		s.items.append({"id": item_id, "weapon": -1 if wi == 255 else wi, "position": r.pos()})
+		s.items.append({"id": item_id, "weapon": -2 if wi == Protocol.AMMO_BOX_CODE else (-1 if wi == Protocol.GRENADE_CODE else wi),
+				"position": r.pos()})
 	var ns := r.u8()
 	if ns > MAX_ITEMS:
 		return null

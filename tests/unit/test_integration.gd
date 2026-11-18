@@ -88,3 +88,33 @@ func test_dig_settle_rolls_once_per_run() -> void:
 			found += 1
 			assert_eq(c.rubies(), 1)
 	assert_between(found, 1, 30, "about 4% of runs turn up a ruby")
+
+
+func test_pickup_events_carry_the_ammo_box() -> void:
+	var e := {"type": "pickup", "id": "p:3:900", "player": 2, "weapon": &"ammo_box", "position": Vector3(1, 0, 2),
+			"kind": &"ammo_box", "item": &"ammo_box", "count": 3}
+	var w := Wire.Writer.new()
+	assert_true(Protocol.write_event(w, e))
+	var back := Protocol.read_event(Wire.Reader.new(w.data()))
+	assert_eq(back.weapon, &"ammo_box")
+	assert_eq(back.kind, &"ammo_box")
+	assert_eq(back.item, &"ammo_box")
+	assert_eq(back.count, 3)
+	var g := {"type": "pickup", "id": "p:4:901", "player": 2, "weapon": &"rail_sniper", "position": Vector3.ZERO,
+			"kind": &"ammo", "item": &"rail_sniper", "count": 12}
+	w = Wire.Writer.new()
+	assert_true(Protocol.write_event(w, g))
+	back = Protocol.read_event(Wire.Reader.new(w.data()))
+	assert_eq(back.kind, &"ammo")
+	assert_eq(back.item, &"rail_sniper")
+	assert_eq(back.count, 12)
+
+
+func test_snapshot_draws_the_ammo_box() -> void:
+	var s := Snapshot.new()
+	s.items = [{"id": 1, "weapon": -2, "position": Vector3(1, 2, 3)}, {"id": 2, "weapon": -1, "position": Vector3.ZERO}]
+	var back := Snapshot.decode(s.encode({}, []), {})
+	assert_not_null(back)
+	if back != null:
+		assert_eq(int(back.items[0].weapon), -2, "an ammo box stays a box")
+		assert_eq(int(back.items[1].weapon), -1, "a grenade stays a grenade")

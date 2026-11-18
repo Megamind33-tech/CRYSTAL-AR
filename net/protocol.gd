@@ -39,6 +39,28 @@ static func weapon_index(id: StringName) -> int:
 	return maxi(Weapons.index_of(id), 0)
 
 
+## Pickup codes on the wire: a weapon's index, GRENADE_CODE, AMMO_BOX_CODE.
+const GRENADE_CODE := 255
+const AMMO_BOX_CODE := 254
+const PICKUP_KINDS: Array[StringName] = [&"weapon", &"ammo", &"grenade", &"ammo_box"]
+
+
+static func pickup_code(weapon: StringName) -> int:
+	if weapon == &"grenade":
+		return GRENADE_CODE
+	if weapon == &"ammo_box":
+		return AMMO_BOX_CODE
+	return weapon_index(weapon)
+
+
+static func pickup_weapon(code: int) -> StringName:
+	if code == GRENADE_CODE:
+		return &"grenade"
+	if code == AMMO_BOX_CODE:
+		return &"ammo_box"
+	return weapon_id(code)
+
+
 static func weapon_id(index: int) -> StringName:
 	return Weapons.ALL[clampi(index, 0, Weapons.ALL.size() - 1)].id
 
@@ -339,7 +361,8 @@ static func write_event(w: Wire.Writer, e: Dictionary) -> bool:
 		"pickup":
 			var parts: PackedStringArray = e.id.substr(2).split(":")
 			w.u8(Event.PICKUP).u16(e.player).u16(int(parts[0])).u32(int(parts[1])) \
-					.u8(255 if e.weapon == &"grenade" else weapon_index(e.weapon)).pos(e.position)
+					.u8(pickup_code(e.weapon)).pos(e.position) \
+					.u8(PICKUP_KINDS.find(StringName(e.get("kind", &"weapon")))).u16(clampi(int(e.get("count", 1)), 0, 65535))
 		"spawn":
 			w.u8(Event.SPAWN).u16(e.player).u8(int(e.id.split(":")[2])).pos(e.position).u16(PlayerCommand.quantize_yaw(e.yaw))
 		"flag":
@@ -411,8 +434,15 @@ static func read_event(r: Wire.Reader) -> Dictionary:
 			var item := r.u16()
 			var tick := r.u32()
 			var wi := r.u8()
+			var weapon := pickup_weapon(wi)
+			var position := r.pos()
+			var ki := r.u8()
+			var kind: StringName = PICKUP_KINDS[ki] if ki < PICKUP_KINDS.size() else &"weapon"
+			var count := r.u16()
+			# item: the weapon id for a weapon or its ammo, else the kind.
+			var it_name: StringName = weapon if kind == &"weapon" or kind == &"ammo" else kind
 			return {"type": "pickup", "id": "p:%d:%d" % [item, tick], "player": player,
-					"weapon": &"grenade" if wi == 255 else weapon_id(wi), "position": r.pos()}
+					"weapon": weapon, "position": position, "kind": kind, "item": it_name, "count": count}
 		Event.SPAWN:
 			var player := r.u16()
 			var life := r.u8()

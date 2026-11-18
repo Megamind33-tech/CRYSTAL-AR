@@ -8,6 +8,7 @@ extends Node3D
 const POWER_COLOR := Color(1.0, 0.6, 0.25)
 const WEAPON_COLOR := Color(0.35, 0.9, 1.0)
 const GRENADE_COLOR := Color(0.45, 1.0, 0.55)
+const AMMO_COLOR := Color(1.0, 0.85, 0.3)
 
 var spots: Array = []  ## the map's pickup spots (SimWorld.pickup_spots)
 var _items: Dictionary = {}  ## item id -> Node3D
@@ -29,7 +30,7 @@ func sync(items: Array, spot_ticks: PackedInt32Array) -> void:
 	var alive := {}
 	for it in items:
 		var id: int = it.id if it is Dictionary else (it as SimWorld.Item).id
-		var weapon: int = it.weapon if it is Dictionary else (it as SimWorld.Item).weapon
+		var weapon: int = it.weapon if it is Dictionary else (-2 if (it as SimWorld.Item).box else (it as SimWorld.Item).weapon)
 		var pos: Vector3 = it.position if it is Dictionary else (it as SimWorld.Item).position
 		alive[id] = true
 		if not _items.has(id):
@@ -86,7 +87,16 @@ func _make(weapon: int) -> Node3D:
 	add_child(root)
 	var data := Weapons.at(weapon)
 	var model: Node3D
-	if data == null:
+	if weapon == -2:  # an ammo box: a stubby olive crate
+		var crate := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.55, 0.32, 0.36)
+		crate.mesh = bm
+		var cm := StandardMaterial3D.new()
+		cm.albedo_color = Color(0.42, 0.45, 0.22)
+		crate.material_override = cm
+		model = crate
+	elif data == null:
 		model = WeaponModels.grenade(0.32)
 	else:
 		model = WeaponModels.instantiate(data.id)
@@ -96,7 +106,7 @@ func _make(weapon: int) -> Node3D:
 	root.add_child(pivot)
 	pivot.add_child(model)
 	model.position = -_center(model)
-	var color := GRENADE_COLOR if data == null else (POWER_COLOR if data.is_power_weapon else WEAPON_COLOR)
+	var color := AMMO_COLOR if weapon == -2 else GRENADE_COLOR if data == null else (POWER_COLOR if data.is_power_weapon else WEAPON_COLOR)
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
 	torus.inner_radius = 0.42
