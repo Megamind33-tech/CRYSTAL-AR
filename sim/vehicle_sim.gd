@@ -49,19 +49,43 @@ const BOARD_RANGE := 3.6
 const EXIT_SIDE := 2.4       ## metres to the driver's left on exit
 ## Something solid where the front (`dir`) of a body `half` (width,
 ## length) is about to be: a box at bumper height, clear of the ground.
+## The body's solid band, metres over the ground (from, to): low walls
+## and planters stop it; kerbs and floors it rolls onto don't.
+const BUMPER := Vector2(0.5, 1.9)
+
+
 static func _blocked(p: SimPlayer, dir: Vector3, half: Vector2) -> bool:
+	var at := p.global_position + dir * (half.y + 0.5)
+	return _hits(p, at, Basis.looking_at(dir, Vector3.UP), Vector3(half.x * 2.0, BUMPER.y - BUMPER.x, 0.8))
+
+
+## The whole body (`half`: width, length) at feet `pos` turned `yaw` would
+## stand in a wall or a building (the ground itself doesn't count: slopes
+## are the floor's business). Sides and tail included, so the body can't
+## be turned or slid into a wall the driver's capsule alone would clear.
+static func _body_blocked(p: SimPlayer, pos: Vector3, yaw: float, half: Vector2) -> bool:
+	return _hits(p, pos, Basis(Vector3.UP, yaw), Vector3(half.x * 2.0, BUMPER.y - BUMPER.x, half.y * 2.0))
+
+
+## A box `size` at bumper height (BUMPER) over `at`, turned
+## `basis`, overlaps something solid on the world layer other than the
+## ground's height map.
+static func _hits(p: SimPlayer, at: Vector3, basis: Basis, size: Vector3) -> bool:
 	if not p.is_inside_tree():
 		return false
 	var space := p.get_world_3d().direct_space_state
 	var box := BoxShape3D.new()
-	box.size = Vector3(half.x * 2.0, 0.9, 0.8)
+	box.size = size
 	var q := PhysicsShapeQueryParameters3D.new()
 	q.shape = box
 	q.collision_mask = Sim.LAYER_WORLD
-	var at := p.global_position + dir * (half.y + 0.5) + Vector3(0, 1.45, 0)
-	q.transform = Transform3D(Basis.looking_at(dir, Vector3.UP), at)
+	q.transform = Transform3D(basis, at + Vector3(0, (BUMPER.x + BUMPER.y) * 0.5, 0))
 	q.exclude = [p.get_rid()]
-	return not space.intersect_shape(q, 1).is_empty()
+	for hit: Dictionary in space.intersect_shape(q, 8):
+		var shape := PhysicsServer3D.body_get_shape(hit.rid, int(hit.shape))
+		if PhysicsServer3D.shape_get_type(shape) != PhysicsServer3D.SHAPE_HEIGHTMAP:
+			return true
+	return false
 
 
 ## Free roam (THE HUNT's valley): rovers burn fuel and take knocks. Off in
@@ -134,6 +158,7 @@ static func drive(p: SimPlayer, cmd: PlayerCommand) -> void:
 	else:
 		s.vehicle_speed = move_toward(s.vehicle_speed, 0.0, DRAG * dt)
 	s.vehicle_speed = clampf(s.vehicle_speed, -float(m.rev), float(m.max))
+	var yaw0 := s.vehicle_yaw
 	# Steering bites with speed; reversing turns the other way, like a car.
 	var bite := clampf(absf(s.vehicle_speed) / 4.0, 0.0, 1.0) * signf(s.vehicle_speed)
 	s.vehicle_yaw = wrapf(s.vehicle_yaw - steer * float(m.turn) * bite * dt, -PI, PI)
@@ -162,10 +187,27 @@ static func drive(p: SimPlayer, cmd: PlayerCommand) -> void:
 			s.position = (hit.position as Vector3) + Vector3(0, 0.02, 0)
 			p.global_position = s.position
 			s.velocity.y = 0.0
+	_keep_body_out(p, before, yaw0, m.half)
 	# A wall or a building takes the speed off.
 	var moved := Vector2(s.position.x - before.x, s.position.z - before.z).length() / dt
 	if moved < absf(s.vehicle_speed) * 0.5 and absf(s.vehicle_speed) > 2.0:
 		s.vehicle_speed *= 0.5
+
+
+## The body went into a wall this tick (turned or slid in where the
+## driver's capsule fit): back to where it was, facing as it was, and the
+## knock takes the speed off. A body that starts the tick in a wall (parked
+## there) is let move, so it can always drive out.
+static func _keep_body_out(p: SimPlayer, before: Vector3, yaw0: float, half: Vector2) -> void:
+	var s := p.state
+	if not _body_blocked(p, s.position, s.vehicle_yaw, half) or _body_blocked(p, before, yaw0, half):
+		return
+	s.position = before
+	p.global_position = before
+	s.vehicle_yaw = yaw0
+	s.vehicle_speed = -s.vehicle_speed * 0.15
+	s.velocity.x = 0.0
+	s.velocity.z = 0.0
 
 
 ## One tick of flying `p`'s aircraft. Gas and brake set the airspeed, the
@@ -188,6 +230,7 @@ static func _fly(p: SimPlayer, cmd: PlayerCommand, m: Dictionary) -> void:
 	else:
 		s.vehicle_speed = move_toward(s.vehicle_speed, 0.0, (DRAG * 0.4 if not on_floor else DRAG) * dt)
 	s.vehicle_speed = clampf(s.vehicle_speed, -float(m.rev), top)
+	var yaw0 := s.vehicle_yaw
 	var grip := 1.0 if not jet else clampf(absf(s.vehicle_speed) / 20.0, 0.25, 1.0)
 	s.vehicle_yaw = wrapf(s.vehicle_yaw - mv.x * float(m.turn) * grip * dt, -PI, PI)
 	var fwd := Vector3(-sin(s.vehicle_yaw), 0.0, -cos(s.vehicle_yaw))
@@ -210,6 +253,7 @@ static func _fly(p: SimPlayer, cmd: PlayerCommand, m: Dictionary) -> void:
 	var before := s.position
 	PlayerMovement._move_and_collide(p)
 	s.position = p.global_position
+	_keep_body_out(p, before, yaw0, m.half)
 	var moved := Vector2(s.position.x - before.x, s.position.z - before.z).length() / dt
 	if moved < absf(s.vehicle_speed) * 0.5 and absf(s.vehicle_speed) > 3.0:
 		s.vehicle_speed *= 0.4  # flew into something

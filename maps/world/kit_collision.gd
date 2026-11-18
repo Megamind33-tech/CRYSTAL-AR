@@ -40,3 +40,31 @@ static func add(body: StaticBody3D, piece: String, at: Vector3, yaw_deg: float, 
 	cs.shape = shape(piece)
 	cs.transform = Transform3D(Basis(Vector3.UP, deg_to_rad(yaw_deg)).scaled(Vector3.ONE * scale), at)
 	body.add_child(cs)
+
+
+static var _bounds: Dictionary = {}
+
+
+## The drawn piece's bounding box (its own coordinates, unscaled): the
+## footprint a solid prop's box collision is made from.
+static func bounds(piece: String) -> AABB:
+	if _bounds.has(piece):
+		return _bounds[piece]
+	var path := ("res://art/environment/%s.glb" % piece) if piece.contains("/") else "res://art/environment/kit/%s.glb" % piece
+	var out := AABB()
+	if ResourceLoader.exists(path):
+		var scene: Node = (load(path) as PackedScene).instantiate()
+		var first := true
+		for mi: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+			var xf := Transform3D.IDENTITY
+			var n: Node = mi
+			while n != null and n != scene:
+				if n is Node3D:
+					xf = (n as Node3D).transform * xf
+				n = n.get_parent()
+			var a: AABB = xf * mi.mesh.get_aabb()
+			out = a if first else out.merge(a)
+			first = false
+		scene.free()
+	_bounds[piece] = out
+	return out
