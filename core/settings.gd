@@ -188,7 +188,8 @@ func apply_video() -> void:
 	root.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if aa.y == 1 else Viewport.SCREEN_SPACE_AA_DISABLED
 	root.anisotropic_filtering_level = preset.aniso
 	root.mesh_lod_threshold = preset.lod
-	RenderingServer.directional_shadow_atlas_set_size(preset.shadow_size, true)
+	# Without sun shadows the atlas is never drawn: keep it tiny (phone memory).
+	RenderingServer.directional_shadow_atlas_set_size(preset.shadow_size if preset.shadows else 256, true)
 	RenderingServer.directional_soft_shadow_filter_set_quality(preset.soft_shadows)
 	RenderingServer.positional_soft_shadow_filter_set_quality(preset.soft_shadows)
 	_apply_fps_cap()
@@ -318,7 +319,7 @@ const QUALITY := {
 	## Phone default: sized to hold 60 fps on the Mi 11X (docs/perf/m2-station.md,
 	## m4.md: FXAA off kept GPU frames under the vsync budget).
 	"medium": {"render_scale": 0.6, "shadows": false, "glow": true, "effects": 0.7, "upscale": "fsr", "msaa": 0,
-			"fxaa": false, "shadow_size": 2048, "soft_shadows": 0, "aniso": 2, "lod": 2.0, "detail": "medium", "probe": true, "lights": false},
+			"fxaa": false, "shadow_size": 1024, "soft_shadows": 0, "aniso": 2, "lod": 2.0, "detail": "medium", "probe": true, "lights": false},
 	"high": {"render_scale": 1.0, "shadows": true, "glow": true, "effects": 1.0, "upscale": "bilinear", "msaa": 1,
 			"fxaa": false, "shadow_size": 4096, "soft_shadows": 2, "aniso": 3, "lod": 1.0, "detail": "high", "ssao": true, "probe": true, "lights": true},
 	"ultra": {"render_scale": 1.0, "shadows": true, "glow": true, "effects": 1.0, "upscale": "bilinear", "msaa": 2,
