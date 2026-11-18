@@ -19,6 +19,9 @@ var _settle_t: float = 0.0
 var _plots_root: Node3D
 var _plots_body: StaticBody3D
 var _placed := {}  ## plot id -> the building node shown
+var allies := {}   ## person id -> net id of their body walking with you
+var _ally_t: float = 0.0
+var _ally_down := {}  ## person id -> unix time they're back on their feet
 
 
 func _init(p_city: CityMode) -> void:
@@ -99,6 +102,10 @@ func update(me: SimPlayer, delta: float, panels_open: bool) -> String:
 			city._note(tr("LAND_RENT") % [int(out.income), int(out.upkeep)], ComicUI.YELLOW)
 			Profile.save()
 		_place_buildings()
+	_ally_t += delta
+	if _ally_t >= 1.0:
+		_ally_t = 0.0
+		step_allies(me)
 	if panels_open or me.state.vehicle >= 0:
 		return ""
 	var pos := me.state.position
@@ -133,6 +140,42 @@ func act(key: String, _me: SimPlayer) -> void:
 			_lock()
 		"venue:cutter":
 			cut_and_sell()
+
+
+## Who walks with you: allies won in talk (Conversation) and your companion.
+func wanted_allies() -> Array:
+	var out: Array = TalkPanel.conversation().allies()
+	var comp := str(Profile.career().d.get("companion", ""))
+	if not comp.is_empty() and not out.has(comp):
+		out.append(comp)
+	return out.slice(0, Conversation.ALLY_MAX)
+
+
+## Allies are bodies in the sim with a MercBrain: they follow a few metres
+## behind and fight whoever hurts you. Dismissed or dead: they're gone.
+func step_allies(me: SimPlayer) -> void:
+	var server: ServerSession = city.match_node.server
+	if server == null or server.bot_nav == null:
+		return
+	var want := wanted_allies() if me.state.alive and city.region != "interior" else []
+	for who: String in allies.keys():
+		var p: SimPlayer = server.world.players.get(allies[who])
+		if not want.has(who) or p == null or not p.state.alive:
+			if p != null and not p.state.alive:
+				_ally_down[who] = _now() + 120  # patched up in a couple of minutes
+			if p != null:
+				server.remove_bot(int(allies[who]))
+			allies.erase(who)
+	for who: String in want:
+		if allies.has(who) or not Career.PEOPLE.has(who) or int(_ally_down.get(who, 0)) > _now():
+			continue
+		var id := 1000 + server._bot_seq
+		var brain := MercBrain.ally(server.world, server.bot_nav, id, server._rng.randi(), me.net_id)
+		var p := server.add_bot(str(Career.PEOPLE[who].name), brain)
+		p.team = me.team
+		var at := me.state.position + Vector3(-2.5 - allies.size() * 1.5, 0.3, 2.5)
+		server.world.teleport(p, at)
+		allies[who] = p.net_id
 
 
 ## The cutter's bench: every raw ruby cut, a vault relic sold for rubies.

@@ -458,6 +458,9 @@ func _physics_process(_delta: float) -> void:
 				var guard: Variant = hunt_mercs.get(world.hunt.economy.contracts[e.target].merc)
 				if guard is BotBrain:
 					guard.on_event(e)  # a mercenary learns who attacks its employer
+			for ally: Variant in bots.values():  # free-roam allies guard their friend
+				if ally is MercBrain and ally.own_contract != null and ally.employer == e.target:
+					ally.on_event(e)
 		elif e.type == "hunt" and e.action == "alarm":
 			for brain: Variant in bots.values():
 				if brain is BotBrain:

@@ -50,3 +50,14 @@ func test_talk_memory_lives_in_the_career() -> void:
 	conv.remember("foreman", "favour", "test", 1000)
 	assert_true(Profile.career().d.memory.has("foreman"), "Career.d.memory holds the talk")
 	Profile.career().d.memory.erase("foreman")
+
+
+func test_free_roam_ally_follows_and_guards() -> void:
+	var w := SimWorld.new()
+	var b := MercBrain.ally(w, null, 1001, 7, 5)
+	assert_not_null(b.own_contract)
+	assert_eq(b.own_contract.employer, 5)
+	b.on_event({"type": "hit", "target": 5, "attacker": 9})
+	assert_true(b._threats.has(9), "whoever shoots the friend is a threat")
+	b.on_event({"type": "hit", "target": 5, "attacker": 5})
+	assert_false(b._threats.has(5))

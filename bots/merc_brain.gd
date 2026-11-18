@@ -19,11 +19,24 @@ const THREAT_TICKS := 300  ## a hunter stays a threat this long after hurting us
 
 var employer: int = 0
 var _threats: Dictionary = {}  ## hunter id -> tick it last hurt the employer or us
+## Outside a hunt (free roam: a friend or ally walking with you) the brain
+## keeps its own standing orders instead of a HuntEconomy contract.
+var own_contract: HuntEconomy.Contract = null
 
 
 func _init(world: SimWorld, nav: BotNavigation, id: int, seed_value: int, p_employer: int) -> void:
 	super(world, nav, id, seed_value, Difficulty.NORMAL)
 	employer = p_employer
+
+
+## An ally outside a hunt: follows `p_employer` and fights whoever hurts them.
+static func ally(world: SimWorld, nav: BotNavigation, id: int, seed_value: int, p_employer: int) -> MercBrain:
+	var b := MercBrain.new(world, nav, id, seed_value, p_employer)
+	b.own_contract = HuntEconomy.Contract.new()
+	b.own_contract.employer = p_employer
+	b.own_contract.merc = id
+	b.own_contract.order = Order.FOLLOW
+	return b
 
 
 ## Damage to the employer or to us marks the attacker as a threat (the
@@ -36,7 +49,9 @@ func on_event(e: Dictionary) -> void:
 
 
 func _choose_goal(tick: int, p: SimPlayer) -> void:
-	var c: HuntEconomy.Contract = _world.hunt.economy.contracts.get(employer) if _world.hunt != null else null
+	var c: HuntEconomy.Contract = own_contract
+	if c == null and _world.hunt != null:
+		c = _world.hunt.economy.contracts.get(employer)
 	var boss: SimPlayer = _world.players.get(employer)
 	if c == null or boss == null:
 		goal = Goal.ROAM  # the server removes us shortly
