@@ -1618,6 +1618,145 @@ func _budget_probe(me: SimPlayer) -> void:
 		get_tree().paused = false
 	_character_report()
 	_texture_report()
+	_rd_report()
+	_cache_report()
+	_mesh_report()
+	if Platform.user_args.has("--vramsplit"):
+		await _vram_split()
+
+
+## Texture memory as the renderer's extras are turned off one at a time.
+func _vram_split() -> void:
+	var tex := func() -> float:
+		for i in 6:
+			await get_tree().process_frame
+		return Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0
+	print("SPLIT base %.1f" % await tex.call())
+	var we := get_tree().root.find_children("*", "WorldEnvironment", true, false)
+	var env: Environment = (we[0] as WorldEnvironment).environment if not we.is_empty() else null
+	if env != null:
+		env.glow_enabled = false
+		print("SPLIT glow off %.1f" % await tex.call())
+		env.background_mode = Environment.BG_COLOR
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+		print("SPLIT sky off %.1f" % await tex.call())
+	for l: DirectionalLight3D in get_tree().root.find_children("*", "DirectionalLight3D", true, false):
+		l.shadow_enabled = false
+	print("SPLIT shadows off %.1f" % await tex.call())
+	get_tree().root.scaling_3d_scale = 0.25
+	print("SPLIT scale 0.25 %.1f" % await tex.call())
+	for c: Node in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		c.queue_free()
+	print("SPLIT canvas freed %.1f" % await tex.call())
+	for c: Node in get_tree().root.find_children("*", "WorldPresentation*", true, false):
+		c.queue_free()
+	print("SPLIT world presentation freed %.1f" % await tex.call())
+
+
+## Every distinct mesh in the scene by approximate GPU size (vertices x
+## stride + indices + LOD indices), grouped by where it comes from.
+func _mesh_report() -> void:
+	var seen := {}
+	var groups := {}
+	for n: Node in get_tree().root.find_children("*", "", true, false):
+		var m: Mesh = null
+		if n is MeshInstance3D:
+			m = (n as MeshInstance3D).mesh
+		elif n is MultiMeshInstance3D and (n as MultiMeshInstance3D).multimesh != null:
+			m = (n as MultiMeshInstance3D).multimesh.mesh
+		if m == null or seen.has(m) or not (m is ArrayMesh):
+			continue
+		seen[m] = true
+		var am := m as ArrayMesh
+		var bytes := 0
+		for si in am.get_surface_count():
+			var vc := am.surface_get_array_len(si)
+			var ic := am.surface_get_array_index_len(si)
+			var fmt := am.surface_get_format(si)
+			var stride := 12 + (8 if fmt & Mesh.ARRAY_FORMAT_NORMAL else 0) + (4 if fmt & Mesh.ARRAY_FORMAT_TANGENT else 0) \
+					+ (4 if fmt & Mesh.ARRAY_FORMAT_COLOR else 0) + (8 if fmt & Mesh.ARRAY_FORMAT_TEX_UV else 0) + (8 if fmt & Mesh.ARRAY_FORMAT_TEX_UV2 else 0) \
+					+ (24 if fmt & Mesh.ARRAY_FORMAT_BONES else 0) + (16 if fmt & Mesh.ARRAY_FORMAT_CUSTOM0 else 0)
+			bytes += vc * stride + ic * (2 if vc < 65536 else 4) * 2  # indices + about as much again in LODs
+		var key := am.resource_path.get_base_dir() if not am.resource_path.is_empty() else str(n.name).rstrip("0123456789_").left(14)
+		if key.is_empty():
+			key = str(n.get_parent().name).left(14)
+		groups[key] = groups.get(key, 0) + bytes
+		if am.shadow_mesh != null and not seen.has(am.shadow_mesh):
+			seen[am.shadow_mesh] = true
+			groups["(shadow meshes)"] = groups.get("(shadow meshes)", 0) + am.shadow_mesh.surface_get_array_len(0) * 12
+	var keys := groups.keys()
+	keys.sort_custom(func(a: String, b: String) -> bool: return groups[a] > groups[b])
+	var total := 0
+	for k: String in keys:
+		total += groups[k]
+	print("MESHES %d, ~%.1f MB" % [seen.size(), total / 1048576.0])
+	for k: String in keys.slice(0, 25):
+		print("MESH %6.2f MB %s" % [groups[k] / 1048576.0, k])
+
+
+## Every imported texture/font the ResourceLoader holds (loaded anywhere,
+## in the scene or not), largest first.
+func _cache_report() -> void:
+	var rows := []
+	var stack := ["res://"]
+	while not stack.is_empty():
+		var dir: String = stack.pop_back()
+		for d in DirAccess.get_directories_at(dir):
+			if not d.begins_with("."):
+				stack.append(dir.path_join(d))
+		for f in DirAccess.get_files_at(dir):
+			if not f.ends_with(".import"):
+				continue
+			var path := dir.path_join(f.trim_suffix(".import"))
+			if not ResourceLoader.has_cached(path):
+				continue
+			var r := ResourceLoader.load(path)
+			var mb := 0.0
+			var info := r.get_class()
+			if r is Texture2D and not (r is ViewportTexture):
+				var img := (r as Texture2D).get_image()
+				if img != null:
+					mb = img.get_data_size() / 1048576.0
+					info = "%dx%d fmt %d mips %s" % [img.get_width(), img.get_height(), img.get_format(), img.has_mipmaps()]
+			elif r is TextureLayered:
+				var tl := r as TextureLayered
+				for i in tl.get_layers():
+					mb += tl.get_layer_data(i).get_data_size() / 1048576.0
+				info = "%dx%d x%d" % [tl.get_width(), tl.get_height(), tl.get_layers()]
+			rows.append([mb, path, info])
+	rows.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
+	var total := 0.0
+	for r: Array in rows:
+		total += r[0]
+	print("CACHED %d, %.1f MB" % [rows.size(), total])
+	for r: Array in rows:
+		var f := ResourceLoader.load(r[1]) as FontFile
+		if f == null:
+			continue
+		var fmb := 0.0
+		var n := 0
+		for ci in f.get_cache_count():
+			for sz: Vector2i in f.get_size_cache_list(ci):
+				for ti in f.get_texture_count(ci, sz):
+					var im := f.get_texture_image(ci, sz, ti)
+					if im != null and r[1].contains("Anton"):
+						print("FONTTEX %s size %s %dx%d fmt %d" % [ci, sz, im.get_width(), im.get_height(), im.get_format()])
+					if im != null:
+						fmb += im.get_data_size() / 1048576.0
+						n += 1
+		print("FONT %6.2f MB in %d glyph textures %s" % [fmb, n, r[1]])
+	for r: Array in rows.slice(0, 50):
+		print("CACHED %6.2f MB %s %s" % [r[0], r[2], r[1]])
+
+
+## Every live viewport (each one owns render targets).
+func _rd_report() -> void:
+	for vp: Node in get_tree().root.find_children("*", "SubViewport", true, false):
+		var v := vp as SubViewport
+		print("VIEWPORT %s %s msaa %d update %d" % [v.get_path(), v.size, v.msaa_3d, v.render_target_update_mode])
+	var root := get_tree().root
+	print("ROOT %s scale %.2f msaa %d ssaa %d" % [root.size, root.scaling_3d_scale, root.msaa_3d, root.screen_space_aa])
 
 
 ## --world: what the in-range world meshes spend, grouped by parent + name

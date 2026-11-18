@@ -36,6 +36,7 @@ static func add(parent: Node) -> void:
 	sky_mat.set_shader_parameter("ground_bottom_color", Color(0.16, 0.13, 0.09))
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
+	sky.radiance_size = Sky.RADIANCE_SIZE_32  # flat comic bands: a tiny cubemap lights them the same
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
@@ -49,7 +50,7 @@ static func add(parent: Node) -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_exposure = 1.2
 	env.tonemap_white = 6.0
-	env.glow_enabled = true
+	env.glow_enabled = false
 	env.glow_intensity = 0.3
 	env.glow_bloom = 0.0
 	env.fog_enabled = true

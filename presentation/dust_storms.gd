@@ -136,6 +136,9 @@ func _process(delta: float) -> void:
 		# Squalls turn the haze a sickly methane olive-grey.
 		_env.fog_light_color = TitanLighting.HAZE.lerp(Color(0.5, 0.48, 0.3), storm).lerp(Color(0.12, 0.1, 0.18), dusk * 0.85)
 		_env.ambient_light_energy = lerpf(_base_ambient, _base_ambient * 0.62, night)  # moonlit, never black
+		# Glow only shows on the lit windows and signs after dusk; by day it
+		# changes nothing on screen but holds ~12 MB of video memory.
+		_env.glow_enabled = night > 0.05 and Settings.video("glow") == true
 	if _sky != null:
 		_sky.set_shader_parameter("top_color", _base_top.lerp(Color(0.02, 0.02, 0.06), dusk))
 		_sky.set_shader_parameter("mid_color", _base_mid.lerp(Color(0.06, 0.05, 0.14), dusk))
