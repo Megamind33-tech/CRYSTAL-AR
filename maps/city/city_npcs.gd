@@ -407,13 +407,55 @@ func _step_crew(delta: float) -> void:
 		var dir := to.normalized() if to.length() > 0.01 else Vector3.ZERO
 		s.sprinting = speed > 4.0
 		s.velocity = dir * speed
-		s.position += s.velocity * delta
+		_move(s, s.velocity * delta)
 		if s.position.y > WorldLayout.FARM_FLOOR + 50.0 or player_position.y < WorldLayout.FARM_FLOOR + 50.0:
 			s.position.y = player_position.y if absf(player_position.y - WorldTerrain.surface(s.position.x, s.position.z)) > 1.5 \
 					else WorldTerrain.surface(s.position.x, s.position.z)
 		if dir != Vector3.ZERO:
 			s.yaw = atan2(-dir.x, -dir.z)
 		v.update_from(null, s, 1.0, _time)
+
+
+## Moves someone by `step` (horizontal) unless a wall is in the way: a ray
+## at waist and at knee height along the step (plus a body's radius) against
+## the world's collision; a wall turns the step to slide along it. Returns
+## whether they moved the whole step.
+const BODY_RADIUS := 0.35
+var _stuck: Dictionary = {}  ## walker -> seconds against a wall
+
+
+func _move(s: PlayerSimState, step: Vector3) -> bool:
+	step.y = 0.0
+	if step.length_squared() < 0.000001:
+		return true
+	if not is_inside_tree():
+		s.position += step
+		return true
+	var space := get_world_3d().direct_space_state
+	for attempt in 2:
+		var hit := _wall(space, s.position, step)
+		if hit.is_empty():
+			s.position += step
+			return attempt == 0
+		var n: Vector3 = hit.normal
+		n.y = 0.0
+		if n.length_squared() < 0.01:
+			return false
+		n = n.normalized()
+		step -= n * step.dot(n)  # slide along the wall
+		if step.length_squared() < 0.000001:
+			return false
+	return false
+
+
+func _wall(space: PhysicsDirectSpaceState3D, from: Vector3, step: Vector3) -> Dictionary:
+	var reach := step + step.normalized() * BODY_RADIUS
+	for h in [1.0, 0.45]:
+		var q := PhysicsRayQueryParameters3D.create(from + Vector3(0, h, 0), from + Vector3(0, h, 0) + reach, Sim.LAYER_WORLD)
+		var hit := space.intersect_ray(q)
+		if not hit.is_empty() and absf((hit.normal as Vector3).y) < 0.7:  # a wall, not a slope
+			return hit
+	return {}
 
 
 func _process(delta: float) -> void:
@@ -464,7 +506,7 @@ func _process_people(delta: float) -> void:
 			var along := to.dot(fwd)
 			if absf(to.y) < 2.0 and along > 0.0 and along < half.y + 0.6 and absf(to.dot(Vector3(fwd.z, 0, -fwd.x))) < half.x + 0.4:
 				_mood[v] = {"mode": "down", "t": 4.0}
-				s.position += fwd * 1.5
+				_move(s, fwd * 1.5)
 				s.stance = PlayerSimState.Stance.CROUCH
 				say(v, _line("NPC_BARK_RUN_DOWN"), true)
 				run_down.emit(s.position)
@@ -474,7 +516,7 @@ func _process_people(delta: float) -> void:
 			var ahead := Vector3(-sin(s.yaw), 0, -cos(s.yaw))
 			if ahead.dot((player_position - s.position).normalized()) > 0.3:
 				_mood[v] = {"mode": "wait", "t": 1.2}
-				s.position += Vector3(ahead.z, 0, -ahead.x) * 0.6
+				_move(s, Vector3(ahead.z, 0, -ahead.x) * 0.6)
 				say(v, _line("NPC_BARK_BUMP"))
 				mode = "wait"
 		var dir := Vector3.ZERO
@@ -511,7 +553,12 @@ func _process_people(delta: float) -> void:
 					dir = Vector3.ZERO
 					s.yaw = atan2(-face.x, -face.z)
 		s.velocity = dir * speed
-		s.position += s.velocity * delta
+		if not _move(s, s.velocity * delta) and mode == "walk":
+			# Against a wall: after a moment, on to the next stop of the round.
+			_stuck[v] = float(_stuck.get(v, 0.0)) + delta
+			if float(_stuck[v]) > 1.5:
+				w[3] = (int(w[3]) + 1) % (w[2] as Array).size()
+				_stuck[v] = 0.0
 		if s.position.y > WorldLayout.FARM_FLOOR + 50.0:
 			s.position.y = WorldTerrain.surface(s.position.x, s.position.z)  # walk the ground (as drawn)
 		if dir != Vector3.ZERO:

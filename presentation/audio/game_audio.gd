@@ -24,11 +24,11 @@ const PAD_LAUNCH_SPEED := 8.0
 ## the cycle, restarting when a player starts off), so each step sounds as
 ## a foot comes down. Tiers set the loudness only: below JOG_SPEED is a
 ## walk, below RUN_SPEED (or sprinting) a jog, else a run.
-const STEP_DB := {"walk": -5.0, "jog": -1.0, "run": 0.0}
+const STEP_DB := {"walk": -7.0, "jog": -3.0, "run": -1.0}
 const JOG_SPEED := 3.0
 const RUN_SPEED := 6.5
 const CROUCH_DB := -10.0  ## crouch-walking is quiet, not silent
-const STEP_JITTER_DB := 1.5  ## each step is a little louder or softer
+const STEP_JITTER_DB := 3.0  ## each step is a little louder or softer (no two alike)
 const STEP_VARIANTS := 6  ## footstep_<surface>_1..6
 ## What's underfoot: the walk-in pieces by name (KitCollision), the rest by
 ## shape: the valley's ground is sand and gravel, the city's paving concrete.
@@ -45,6 +45,7 @@ var _ui: Array[AudioStreamPlayer] = []
 var _meta: Dictionary = {}  ## voice -> {category, priority, started, source, next_check}
 var _steps: Dictionary = {}  ## player id -> {phase, moving, airborne, sliding, last}
 var _rays_this_frame: int = 0
+var _last_voice: AudioStreamPlayer3D = null  ## the voice play_at last started
 var steps_played: int = 0  ## footsteps started so far (for tests and debugging)
 var _frame_delta: float = 0.0  ## last frame's time, the default for update_player
 var last_step: Dictionary = {}  ## {sound, db} of the latest footstep
@@ -79,6 +80,7 @@ func _ready() -> void:
 ## A positional sound. Higher `priority` wins when voices run out: nearby
 ## enemy gunfire/footsteps > own weapon > world > ambience.
 func play_at(sound: String, position: Vector3, category: String, priority: int, volume_db: float = 0.0) -> void:
+	_last_voice = null
 	var stream: AudioStream = _streams.get(sound)
 	if OS.has_environment("HUNT_DEBUG_AUDIO"):
 		print("AUDIO %d %s %s %s" % [Time.get_ticks_msec(), sound, category, position])
@@ -91,6 +93,7 @@ func play_at(sound: String, position: Vector3, category: String, priority: int, 
 	v.global_position = position
 	v.volume_db = volume_db
 	v.pitch_scale = randf_range(0.96, 1.04)
+	_last_voice = v
 	_meta[v] = {"category": category, "priority": priority, "started": Time.get_ticks_msec(), "next_check": 0.0}
 	v.bus = _occluded_bus(category, position)
 	v.play()
@@ -135,7 +138,9 @@ func update_player(id: int, s: PlayerSimState, local: bool, ally: bool = false, 
 		return
 	var airborne := s.move_state == PlayerSimState.Move.AIR
 	var sliding := s.move_state == PlayerSimState.Move.SLIDE
-	var vol := -10.0 if local else (-3.0 if ally else 0.0)
+	# Your own steps sit well back (you hear them through your own suit);
+	# others' stay audible, enemies' most, so you can hear someone coming.
+	var vol := -20.0 if local else (-10.0 if ally else -5.0)
 	var priority := 1 if local else (2 if ally else 3)
 	if airborne and not st.airborne and s.velocity.y > PAD_LAUNCH_SPEED:
 		play_at("jump_pad", s.position, "Footsteps", priority, vol + 2.0)
@@ -199,6 +204,8 @@ func _play_step(st: Dictionary, at: Vector3, priority: int, db: float, ally: boo
 	steps_played += 1
 	last_step = {"sound": sound, "db": db}
 	play_at(sound, at, "Footsteps", priority, db)
+	if _last_voice != null:
+		_last_voice.pitch_scale = randf_range(0.88, 1.1)  # boots don't land the same twice
 
 
 ## What's underfoot at `at`: "wood", "metal", "concrete" or "sand" (one ray,

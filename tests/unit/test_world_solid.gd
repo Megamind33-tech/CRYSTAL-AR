@@ -60,9 +60,12 @@ func _add(out: Array, piece: String, at: Vector3, yaw: float, sc: float, box: Ve
 		centre = at + Basis(Vector3.UP, deg_to_rad(yaw)) * Vector3(a.get_center().x * sc, 0, a.get_center().z * sc)
 	if minf(half.x, half.y) < 0.9:
 		return  # lamps, signs: posts, not buildings
-	# A walk-in's front (+Z) has its door: come at the back and the sides.
-	out.append([piece, centre, yaw, half, [Vector3.FORWARD, Vector3.LEFT, Vector3.RIGHT] if not tight
-			else [Vector3.FORWARD, Vector3.BACK, Vector3.LEFT, Vector3.RIGHT], tight])
+	# A walk-in's front (+Z) has its door: come at the back and the sides. A
+	# hangar is long along X and open at its -X end: you walk in there.
+	var sides := [Vector3.FORWARD, Vector3.LEFT, Vector3.RIGHT] if not tight else [Vector3.FORWARD, Vector3.BACK, Vector3.LEFT, Vector3.RIGHT]
+	if piece == "hangar" and not tight:
+		sides = [Vector3.FORWARD, Vector3.BACK, Vector3.RIGHT]
+	out.append([piece, centre, yaw, half, sides, tight])
 
 
 func _faces_aabb(piece: String) -> AABB:

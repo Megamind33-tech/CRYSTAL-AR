@@ -402,8 +402,8 @@ func _third_person(feet: Vector3, yaw: float, pitch: float, delta: float) -> voi
 					want = side + look * Vector3(0.0, 0.0, distance)
 				else:
 					want = stop
-	if _tp_pos == Vector3.INF or _tp_pos.distance_to(want) > 6.0:
-		_tp_pos = want
+	if _tp_pos == Vector3.INF or _tp_pos.distance_to(want) > 6.0 or pivot.distance_to(want) < pivot.distance_to(_tp_pos) - 0.05:
+		_tp_pos = want  # a wall closer in: snap to it (never sit behind it)
 	else:
 		# Catch up fast sideways and in depth, but never lag behind a wall.
 		_tp_pos = _tp_pos.lerp(want, minf(delta * TP_LAG, 1.0))

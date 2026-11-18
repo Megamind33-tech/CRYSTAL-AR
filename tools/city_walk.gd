@@ -29,7 +29,7 @@ func _run() -> void:
 	if Platform.user_args.has("--people"):
 		Profile.career().d["body"] = "female"  # play as a woman
 	if Platform.user_args.has("--budget") or Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin") or Platform.user_args.has("--frisk") \
-			or Platform.user_args.has("--districts") or Platform.user_args.has("--feet"):
+			or Platform.user_args.has("--districts") or Platform.user_args.has("--feet") or Platform.user_args.has("--gait-strip"):
 		Profile.career().choose_nation(0)
 		Profile.career().choose_path("freelance")  # no path pick over the shots
 	if Platform.user_args.has("--phase1") and dig:
@@ -45,6 +45,10 @@ func _run() -> void:
 	_set_weather(Platform.user_args.has("--day"), Platform.user_args.has("--squall"))
 	if Platform.user_args.has("--floor-probe") or Platform.user_args.has("--feet"):
 		await _floor_probe(me, Platform.user_args.has("--feet"))
+		get_tree().quit(0)
+		return
+	if Platform.user_args.has("--gait-strip"):
+		await _gait_strip(me)
 		get_tree().quit(0)
 		return
 	if Platform.user_args.has("--ground-probe"):
@@ -2084,3 +2088,56 @@ func _feet_shot(me: SimPlayer, name: String) -> void:
 	await _shot("feet_" + name)
 	cam.queue_free()
 	await _frames(2)
+
+
+## The walk on film: the player walking, jogging and running across the
+## plaza, seen side on (frames 0.1 s apart), and how low the boots go
+## against the floor under them. Also an NPC walker for comparison.
+func _gait_strip(me: SimPlayer) -> void:
+	m.view.third_person = true
+	m.hud.visible = false
+	var cam := Camera3D.new()
+	m.view.add_child(cam)  # in the world's own viewport
+	cam.fov = 40.0
+	var v: PlayerVisual = m._visuals.get(me.net_id)
+	for g: int in [InputAdapter.Gait.WALK, InputAdapter.Gait.JOG, InputAdapter.Gait.RUN]:
+		m.input.gait = g
+		# Helios's avenue, heading west: long, straight, clear.
+		var h := WorldLayout.HELIOS
+		m.server.world.teleport(me, WorldTerrain.at(h.x + 100, h.y + 5) + Vector3(0, 0.05, 0))
+		me.state.yaw = PI * 0.5
+		m.input.look_yaw = PI * 0.5
+		m.input.look_pitch = -0.1
+		await _frames(30)
+		m.input.touch_move = Vector2(0, 1)
+		var start := me.state.position
+		await _frames(40)  # up to speed
+		print("GAIT moved %.2f m in 40 frames; touch %s" % [start.distance_to(me.state.position), m.input.touch_move])
+		var low := INF
+		for f in 10:
+			for k in 6:
+				cam.global_position = me.state.position + Vector3(0, 1.0, 6.5)
+				cam.look_at(me.state.position + Vector3(0, 0.9, 0))
+				cam.make_current()
+				m.hud.visible = false
+				await get_tree().process_frame
+			low = minf(low, _lowest_foot(v, me.state.position))
+			await _shot("gait_%d_%02d" % [g, f])
+		var sp := Vector2(me.state.velocity.x, me.state.velocity.z).length()
+		print("GAIT %d: %.2f m/s, lowest boot %.3f m from the floor under it" % [g, sp, low])
+		m.input.touch_move = Vector2.ZERO
+		await _frames(30)
+	cam.current = false
+
+
+## How far the lowest foot/toe bone is above the ground at `feet` (minus: in it).
+func _lowest_foot(v: Node, feet: Vector3) -> float:
+	if v == null:
+		return INF
+	var low := INF
+	for sk: Skeleton3D in v.find_children("*", "Skeleton3D", true, false):
+		for b in sk.get_bone_count():
+			var n := sk.get_bone_name(b).to_lower()
+			if n.contains("toe") or n.contains("foot"):
+				low = minf(low, (sk.global_transform * sk.get_bone_global_pose(b)).origin.y - feet.y)
+	return low

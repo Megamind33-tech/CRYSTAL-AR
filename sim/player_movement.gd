@@ -97,7 +97,12 @@ static func step(p: SimPlayer, cmd: PlayerCommand, executed: int) -> void:
 		Move.GROUND:
 			s.velocity.y = 0.0
 			Jetpack.ground(s, dt)
-			_apply_friction(s, cfg.friction, cfg.stop_speed, dt)
+			# The stop-speed floor (a crisp stop) ate the whole acceleration of a
+			# gentle push: the walk gait (0.3 of the stick) crawled at 0.2 m/s
+			# instead of 1.8. Off for a gentle push; letting go or pushing hard
+			# keeps it (walls and stops feel as they did).
+			var gentle := wish_len > 0.01 and wish_len < 0.6
+			_apply_friction(s, cfg.friction, 0.0 if gentle else cfg.stop_speed, dt)
 			var max_speed := cfg.walk_speed
 			if s.sprinting:
 				max_speed = cfg.sprint_speed

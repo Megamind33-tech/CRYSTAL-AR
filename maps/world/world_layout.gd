@@ -603,7 +603,7 @@ static func _build_pieces() -> Array:
 		# The Rustwood Dig: a field camp on the canyon floor.
 		# The camp's hangar lies along the channel (it runs north-east here).
 		["hangar", DIG_X + 14, WorldTerrain.canyon_center(DIG_X + 14) - 8, 90.0 - _canyon_turn(DIG_X + 14), 1.1,
-				Vector3(12, 7, 16)],
+				Vector3.ZERO],  # walk-in: its own walls and open doors (KitCollision)
 		["tank_cluster", DIG_X - 16, WorldTerrain.canyon_center(DIG_X - 16) - 9, 0.0, 1.0, Vector3(8.5, 7, 5)],
 		["crate_stack", DIG_X - 6, WorldTerrain.canyon_center(DIG_X - 6) + 12, 10.0, 1.0, Vector3(3.6, 3, 2)],
 		["comms_tower", 205.0, 112.0, 0.0, 1.2, Vector3(2.4, 20, 2.4)],
