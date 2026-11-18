@@ -1293,7 +1293,7 @@ func _dig_run(me: SimPlayer) -> void:
 		var c: Vector2 = s[1]
 		await _aerial("w_site_" + Battlegrounds.current, c, Vector3(0, 170, 150))
 		if Platform.user_args.has("--army"):
-			var w := m.server.world
+			var w: SimWorld = m.server.world
 			hr.army.deploy(me.net_id, {"hauler": [1, 2], "tank": [1, 1], "gunship": [1, 0], "attack_drone": [1, 0],
 					"strike_jet": [1, 0]})
 			var ahead := me.state.position + Vector3(-sin(me.state.yaw), 0, -cos(me.state.yaw)) * 30.0
