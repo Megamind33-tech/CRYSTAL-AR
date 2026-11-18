@@ -455,6 +455,10 @@ func settle(run_id: String, haul: Array) -> Dictionary:
 			continue
 		d.stash[item] = int(d.stash.get(item, 0)) + 1
 		out.items[item] = int(out.items.get(item, 0)) + 1
+	var roll := RandomNumberGenerator.new()
+	roll.seed = hash(run_id)  # one roll per run, the same on a re-settle
+	if not out.items.is_empty() and dig_ruby(roll.randf()):  # the dig's rare find
+		out["ruby_found"] = true
 	if not d.contract.is_empty():
 		var c: Dictionary = d.contract
 		if int(out.items.get(c.need, 0)) >= int(c.count):
@@ -785,6 +789,36 @@ func sell_special(item: String) -> int:
 	_set_count(item, int(d.stash[item]) - 1)
 	add_rubies(v)
 	return v
+
+
+## Buys a RUBY_PRICES key for rubies and grants it: licence:pilot (the
+## flight licence), licence:trader (the outlands work visa), upgrade:lock
+## (the home lock's next level), upgrade:plating (the next armour plating).
+func buy_with_rubies(key: String, now: int) -> bool:
+	var cost := price_rubies(key)
+	if cost < 0 or not RUBY_PRICES.has(key):
+		return false
+	match key:
+		"upgrade:lock":
+			if lock_cost() < 0:
+				return false
+		"upgrade:plating":
+			if gear_cost("plating") < 0:
+				return false
+		"land:plot":
+			return false  # the Land Office sells plots (LandOffice.buy_rubies)
+	if not pay_rubies(cost):
+		return false
+	match key:
+		"licence:pilot":
+			d.visas["flight"] = maxi(int(d.visas.get("flight", 0)), now) + int(VISAS.flight.sols * GameClock.DAY_SECONDS)
+		"licence:trader":
+			d.visas["work"] = maxi(int(d.visas.get("work", 0)), now) + int(VISAS.work.sols * GameClock.DAY_SECONDS)
+		"upgrade:lock":
+			d.home.lock = int(d.home.lock) + 1
+		"upgrade:plating":
+			d.gear.plating = int(d.gear.plating) + 1
+	return true
 
 
 ## A rare ruby from a dig (`roll` 0..1); returns whether one was found.

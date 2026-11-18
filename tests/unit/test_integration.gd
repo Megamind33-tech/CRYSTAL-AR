@@ -61,3 +61,30 @@ func test_free_roam_ally_follows_and_guards() -> void:
 	assert_true(b._threats.has(9), "whoever shoots the friend is a threat")
 	b.on_event({"type": "hit", "target": 5, "attacker": 5})
 	assert_false(b._threats.has(5))
+
+
+func test_rubies_buy_what_they_say() -> void:
+	var c := Career.new()
+	c.add_rubies(40)
+	assert_true(c.buy_with_rubies("licence:pilot", 1000))
+	assert_true(c.has_visa("flight", 1000))
+	assert_true(c.buy_with_rubies("licence:trader", 1000))
+	assert_true(c.has_visa("work", 1000))
+	var lock := int(c.d.home.lock)
+	assert_true(c.buy_with_rubies("upgrade:lock", 1000))
+	assert_eq(int(c.d.home.lock), lock + 1)
+	assert_true(c.buy_with_rubies("upgrade:plating", 1000))
+	assert_eq(int(c.d.gear.plating), 1)
+	assert_eq(c.rubies(), 40 - 8 - 5 - 4 - 6)
+	assert_false(c.buy_with_rubies("land:plot", 1000), "plots go through the Land Office")
+
+
+func test_dig_settle_rolls_once_per_run() -> void:
+	var found := 0
+	for i in 200:
+		var c := Career.new()
+		var r := c.settle("run-%d" % i, [{"item": "cargo_case", "value": 1}])
+		if r.get("ruby_found", false):
+			found += 1
+			assert_eq(c.rubies(), 1)
+	assert_between(found, 1, 30, "about 4% of runs turn up a ruby")

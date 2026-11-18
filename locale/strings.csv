@@ -1220,3 +1220,12 @@ CUTTER_DONE,"+%d rubies! You hold %d."
 TALK_MISSION_REPORT,"REPORT BACK: %s (+%d)"
 TALK_MISSION_PENDING,"ON IT: %s (go out on a run first)"
 TALK_MISSION_THANKS,"Good work. I won't forget it."
+RUBY_FOUND,A raw ruby in the dirt!
+CUTTER_LINE,"You hold %d rubies and %d raw stones."
+CUTTER_CUT,CUT RAW RUBIES / SELL A VAULT RELIC
+RUBY_BUY_LICENCE_PILOT,FLIGHT LICENCE (%d RUBIES)
+RUBY_BUY_LICENCE_TRADER,OUTLANDS WORK VISA (%d RUBIES)
+RUBY_BUY_UPGRADE_LOCK,BETTER HOME LOCK (%d RUBIES)
+RUBY_BUY_UPGRADE_PLATING,ARMOUR PLATING (%d RUBIES)
+RUBY_BOUGHT,Done! It's yours.
+RUBY_CANT,Not enough rubies (or nothing left to upgrade).

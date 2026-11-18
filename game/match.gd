@@ -1664,6 +1664,8 @@ func _settle_career(result_id: String, me: int) -> void:
 	var report := career.settle(result_id, server.world.hunt.haul.get(me, []))
 	if report.applied:
 		career.d["last_report"] = report
+		if bool(report.get("ruby_found", false)) and _kill_feed != null:
+			_kill_feed.add_note(tr("RUBY_FOUND"), "", HuntHud.ALLY, true)  # the dig's rare find
 		Profile.save()
 		Log.i("career", "run settled: %s" % report)
 

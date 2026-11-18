@@ -139,7 +139,38 @@ func act(key: String, _me: SimPlayer) -> void:
 			pit_panel.open(club, int(Profile.career().d.wallet))
 			_lock()
 		"venue:cutter":
-			cut_and_sell()
+			city.open_menu(tr("CUTTER_SIGN"), _cutter_line(), _cutter_options())
+
+
+func _cutter_line() -> String:
+	var c := Profile.career()
+	return tr("CUTTER_LINE") % [c.rubies(), int(c.d.stash.get("raw_ruby", 0))]
+
+
+## The cutter's menu: cut, sell a relic, and what rubies buy.
+func _cutter_options() -> Array:
+	var c := Profile.career()
+	var out := [[tr("CUTTER_CUT"), int(c.d.stash.get("raw_ruby", 0)) > 0 or int(c.d.stash.get("vault_relic", 0)) > 0,
+			ComicUI.MAGENTA, "venue:cut"]]
+	for key: String in ["licence:pilot", "licence:trader", "upgrade:lock", "upgrade:plating"]:
+		var cost := c.price_rubies(key)
+		out.append([tr("RUBY_BUY_" + key.replace(":", "_").to_upper()) % cost, c.rubies() >= cost, ComicUI.RED, "venue:buy:" + key])
+	return out
+
+
+## A choice on the cutter's menu ("venue:..." ids from GaragePanel).
+func menu_act(what: String) -> void:
+	var c := Profile.career()
+	if what == "venue:cut":
+		cut_and_sell()
+	elif what.begins_with("venue:buy:"):
+		var key := what.substr(10)
+		if c.buy_with_rubies(key, _now()):
+			city._note(tr("RUBY_BOUGHT"), ComicUI.GREEN)
+			Profile.save()
+		else:
+			city._note(tr("RUBY_CANT"), ComicUI.YELLOW)
+	city.garage.set_menu(_cutter_line(), _cutter_options())
 
 
 ## Who walks with you: allies won in talk (Conversation) and your companion.

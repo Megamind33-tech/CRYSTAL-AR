@@ -1531,6 +1531,9 @@ func _garage_act(what: String) -> void:
 	if what.begins_with("heist:"):
 		heist.menu_act(what.substr(6))
 		return
+	if what.begins_with("venue:"):
+		venues.menu_act(what)
+		return
 	if what.begins_with("trade:"):
 		trade.menu_act(what.substr(6))
 		return
