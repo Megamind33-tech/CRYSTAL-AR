@@ -1229,3 +1229,11 @@ RUBY_BUY_UPGRADE_LOCK,BETTER HOME LOCK (%d RUBIES)
 RUBY_BUY_UPGRADE_PLATING,ARMOUR PLATING (%d RUBIES)
 RUBY_BOUGHT,Done! It's yours.
 RUBY_CANT,Not enough rubies (or nothing left to upgrade).
+PIT_STANDARD,STANDARD SHIFT
+PIT_STANDARD_SUB,The pit runs as usual · a few resource caches to work
+PIT_ORE_SEAM,ORE SEAM OPENED
+PIT_ORE_SEAM_SUB,A new seam is open · resource caches all over the pit
+PIT_ONE_PAD,CAVE-IN
+PIT_ONE_PAD_SUB,Only one extraction pad works this run · find it
+PIT_HOT_VAULT,FAILING VAULT LOCK
+PIT_HOT_VAULT_SUB,The vault opens twice as fast · everyone knows it

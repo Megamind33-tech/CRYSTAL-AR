@@ -250,6 +250,13 @@ const CONTRACTS := [
 			"title": "Lift a rival's cargo", "brief": "Take another hunter's cargo by force and extract it."},
 	{"id": "collect_bounty", "faction": "kasei", "need": "bounty_proof", "count": 1, "pay": 420,
 			"title": "Collect a bounty", "brief": "Take down a Wanted hunter and extract the bounty proof."},
+	# Pit work: the resource caches in the dig (every run has each kind).
+	{"id": "ice_haul", "faction": "tharsis", "need": "water_ice", "count": 2, "pay": 300,
+			"title": "Ice haul", "brief": "Cut two loads of water ice from the pit's caches and get them to a pad."},
+	{"id": "helium_run", "faction": "kasei", "need": "helium3", "count": 1, "pay": 380,
+			"title": "Helium run", "brief": "Tap a helium-3 cache in the pit and extract the canister."},
+	{"id": "ore_prospect", "faction": "tharsis", "need": "rare_ore", "count": 2, "pay": 460,
+			"title": "Prospector's claim", "brief": "Work two rare-ore caches in the pit and extract the ore."},
 ]
 const BOARD_SIZE := 3
 ## Gear bought in the city, applied at the next deployment (HuntRules.gear).

@@ -900,3 +900,34 @@ func test_stow_hide_search_and_drive_out() -> void:
 	SimHarness.place(pl[1], zone, 0.0)
 	_step(HuntRules.EXTRACT_TICKS + 2)
 	assert_true(cargo.banked, "driven onto a pad: extracted")
+
+
+## The pit's conditions (a map that opts in, like the dig): every run rolls
+## one; each lays caches of every resource (the pit-work contracts can always
+## be done); a cave-in keeps one pad; a failing lock halves the vault's time.
+func test_pit_conditions_vary_and_hold() -> void:
+	var seen := {}
+	for seed_value in 40:
+		var hr := HuntRules.new()
+		var map := WorldLayout.dig_hunt_data()
+		assert_true(map.get("pit_rules", false), "the dig opts in")
+		hr.configure(map, seed_value)
+		var w := SimWorld.new()
+		add_child(w)
+		w.match_seed = seed_value
+		hr.reset(w)
+		seen[hr.pit_rule] = true
+		var kinds := {}
+		for c in hr.active_caches():
+			kinds[c.resource] = true
+		for res: String in HuntResources.IDS:
+			assert_true(kinds.has(res), "a %s cache in every pit (rule %d)" % [res, hr.pit_rule])
+		if hr.pit_rule == HuntRules.PitRule.ONE_PAD:
+			var open := 0
+			for i in hr.zones.size():
+				open += 1 if hr.zone_open(i, 0) else 0
+			assert_eq(open, 1, "a cave-in: one pad")
+		if hr.pit_rule == HuntRules.PitRule.HOT_VAULT:
+			assert_eq(hr.vault_ticks(), HuntRules.VAULT_UNLOCK_TICKS / 2)
+		w.queue_free()
+	assert_eq(seen.size(), HuntRules.PitRule.size(), "every condition comes up")

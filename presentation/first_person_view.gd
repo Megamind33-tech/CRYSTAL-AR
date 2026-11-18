@@ -50,7 +50,7 @@ var feet_position := Vector3.INF
 ## player's own PlayerVisual; the viewmodel is hidden). Aim is unchanged: the
 ## crosshair stays on the look ray, which the camera sits just beside.
 var third_person: bool = false
-const TP_SHOULDER := Vector3(0.75, 0.12, 0.0)  ## right of and above the eyes
+const TP_SHOULDER := Vector3(1.0, 0.35, 0.0)  ## right of and above the eyes: you stand lower left of the crosshair, not over it
 const TP_DISTANCE := 3.3
 const TP_SCOPED := Vector3(0.48, 0.18, 1.25)  ## shoulder and distance while scoped
 const TP_LAG := 14.0  ## how fast the camera catches up (1/s)

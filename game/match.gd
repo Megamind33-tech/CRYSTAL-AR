@@ -1354,7 +1354,7 @@ func _update_hunt_objective(h: HuntRules, tick: int) -> void:
 		hud.set_objective(tr("HUNT_ALLIED_WITH") % _display_name(ally), UiStyle.GOOD)
 		return
 	if h.vault_unlocker == me:
-		hud.set_objective(tr("HUNT_UNLOCKING") % ceili((HuntRules.VAULT_UNLOCK_TICKS - h.vault_progress)
+		hud.set_objective(tr("HUNT_UNLOCKING") % ceili((h.vault_ticks() - h.vault_progress)
 				/ float(Sim.TICK_RATE)), UiStyle.GOOD)
 		return
 	var cache := h.cache_of(me)
@@ -1569,6 +1569,11 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			return
 		"vault_open":
 			_kill_feed.add_note("", tr("HUNT_FEED_VAULT_OPEN"), HuntVisuals.GRAND)
+			return
+		"pit_rule":
+			var key: String = ["PIT_STANDARD", "PIT_ORE_SEAM", "PIT_ONE_PAD", "PIT_HOT_VAULT"][clampi(int(e.rule), 0, 3)]
+			_hunt_banner(key, tr(key + "_SUB"), HuntHud.GRAND)
+			_kill_feed.add_note("", tr(key + "_SUB"), UiStyle.WARN)
 			return
 		"vault_interrupted":
 			if e.player == me:

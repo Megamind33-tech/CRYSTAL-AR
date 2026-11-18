@@ -96,6 +96,9 @@ const CARDS := {
 	"crack_vault": {"icon": "key", "risk": 3, "minutes": 12},
 	"lift_rival": {"icon": "fist", "risk": 3, "minutes": 10},
 	"collect_bounty": {"icon": "target", "risk": 3, "minutes": 12},
+	"ice_haul": {"icon": "crate", "risk": 1, "minutes": 8},
+	"helium_run": {"icon": "crate", "risk": 2, "minutes": 8},
+	"ore_prospect": {"icon": "crate", "risk": 2, "minutes": 10},
 }
 
 

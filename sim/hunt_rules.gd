@@ -151,6 +151,16 @@ var vault_progress: int = 0
 var _unlocker_hp: float = 0.0
 var end_tick: int = 0
 var final_zone: int = -1
+## The pit's conditions this run (maps that opt in with "pit_rules": the
+## dig): the same pit doesn't play the same way twice.
+##   STANDARD: as ever, a few resource caches about the pit.
+##   ORE_SEAM: a seam's been opened: many more caches to work.
+##   ONE_PAD: a cave-in: one extraction pad works the whole run.
+##   HOT_VAULT: the vault's lock is failing: it opens twice as fast.
+enum PitRule { STANDARD, ORE_SEAM, ONE_PAD, HOT_VAULT }
+const PIT_CACHES := {PitRule.STANDARD: 3, PitRule.ORE_SEAM: 8, PitRule.ONE_PAD: 3, PitRule.HOT_VAULT: 3}
+var pit_rules: bool = false
+var pit_rule: int = PitRule.STANDARD
 var _announced: int = 0  ## 1 warning, 2 pads closed, 3 the bell
 
 var _rng := RandomNumberGenerator.new()
@@ -164,6 +174,7 @@ func configure(map: Dictionary, seed_value: int) -> void:
 	zones.assign(map.get("extraction_zones", []))
 	vault = map.get("vault", Vector3.ZERO)
 	trap = map.get("trap", Vector3.INF)
+	pit_rules = bool(map.get("pit_rules", false))
 	_rng.seed = seed_value
 	social.reset(seed_value)
 
@@ -202,6 +213,8 @@ func reset(world: SimWorld) -> void:
 			economy.add_hunter(id)
 			_assign(world, id)
 	_seat_nations(world, ids)
+	if pit_rules:
+		_set_pit(world)
 
 
 ## Seats every hunter in a nation and allies each nation's first two (one
@@ -571,7 +584,7 @@ func _step_vault(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 			return
 		_unlocker_hp = hp
 		vault_progress += 1
-		if vault_progress >= VAULT_UNLOCK_TICKS:
+		if vault_progress >= vault_ticks():
 			_unlock_vault(world, g, vault_unlocker)
 		return
 	for id in ids:
@@ -620,12 +633,48 @@ func set_clock(world: SimWorld, p_end_tick: int) -> void:
 		opened_tick = world.tick
 	end_tick = p_end_tick
 	_announced = 0
-	final_zone = _rng.randi_range(0, zones.size() - 1) if not zones.is_empty() else -1
+	var keep := pit_rules and pit_rule == PitRule.ONE_PAD and final_zone >= 0
+	var drawn := _rng.randi_range(0, zones.size() - 1) if not zones.is_empty() else -1
+	final_zone = final_zone if keep else drawn
 	world._emit("hk:%d" % world.tick, "hunt", {"action": "clock", "player": 0, "position": Vector3.ZERO,
 			"treasure": 0, "kind": -1, "end_tick": end_tick})
 
 
+## Rolls this run's pit conditions (from the match seed, on a stream of its
+## own: the other draws stay as they were) and lays out the caches.
+func _set_pit(world: SimWorld) -> void:
+	var r := RandomNumberGenerator.new()
+	r.seed = hash(["pit", world.match_seed])
+	pit_rule = r.randi_range(0, PitRule.size() - 1)
+	if pit_rule == PitRule.ONE_PAD and not zones.is_empty():
+		final_zone = r.randi_range(0, zones.size() - 1)
+	var free: Array[Vector3] = []
+	for sp in spots:
+		var used := false
+		for t in treasures:
+			if _flat(t.home, sp) < 3.0:
+				used = true
+				break
+		if not used:
+			free.append(sp)
+	for k in mini(int(PIT_CACHES[pit_rule]), free.size()):
+		var at: Vector3 = free.pop_at(r.randi_range(0, free.size() - 1))
+		var res: String = HuntResources.IDS[r.randi_range(0, HuntResources.IDS.size() - 1)]
+		if k < HuntResources.IDS.size():
+			res = HuntResources.IDS[k]  # every kind at least once (the contracts ask for each)
+		spawn_cache(world, res, _floor_at(world, at + Vector3.UP * 1.5))
+	world._emit("hp:%d" % world.tick, "hunt", {"action": "pit_rule", "player": 0, "position": Vector3.ZERO,
+			"treasure": 0, "kind": -1, "rule": pit_rule})
+
+
+## Ticks of interacting it takes to open the vault (half on a hot vault).
+func vault_ticks() -> int:
+	return VAULT_UNLOCK_TICKS / 2 if pit_rules and pit_rule == PitRule.HOT_VAULT else VAULT_UNLOCK_TICKS
+
+
 func zone_open(i: int, tick: int) -> bool:
+	if pit_rules and pit_rule == PitRule.ONE_PAD and final_zone >= 0:
+		return i == final_zone  # the cave-in: the one pad that works
 	if end_tick <= 0 or tick < end_tick - LAST_EXTRACTION_TICKS:
 		return true
 	return i == final_zone

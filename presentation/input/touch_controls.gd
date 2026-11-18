@@ -22,7 +22,11 @@ signal selection_changed(id: String)
 
 enum Kind { MOVE, LOOK, FIRE, BUTTON }
 
-const LOOK_RADIANS_PER_PIXEL := 0.0045
+## Look speed: radians for a drag the screen's height (3.2 rad, about 180
+## degrees; 0.0045 a pixel at 720p). Per screen, not per pixel: on a sharp
+## phone the same swipe turned half as far again, and aim jumped.
+const LOOK_RADIANS_PER_SCREEN := 3.24
+const LOOK_RADIANS_PER_PIXEL := 0.0045  ## at 720p (older callers)
 const JOYSTICK_RADIUS := 110.0
 
 var input: InputAdapter
@@ -187,10 +191,11 @@ const LAYOUT_VERSION := 4
 ## Gait selector: a row along the bottom between the stick and the jump
 ## button (walk, jog, run, crouch), GAIT_RADIUS screen heights wide, the first
 ## centre GAIT_X from the left edge and GAIT_DX apart, GAIT_Y up from the
-## bottom (all in screen heights). Not part of the layout editor.
+## bottom (all in screen heights): a row above the weapon hotbar (HuntHud,
+## its top 0.105 up), which it sat on. Not part of the layout editor.
 const GAIT_X := 0.6
 const GAIT_DX := 0.105
-const GAIT_Y := 0.07
+const GAIT_Y := 0.19
 const GAIT_RADIUS := 0.04
 const GAIT_IDS := ["walk", "jog", "run", "crouch"]
 const GAIT_OF := {"walk": InputAdapter.Gait.WALK, "jog": InputAdapter.Gait.JOG, "run": InputAdapter.Gait.RUN}
@@ -431,8 +436,8 @@ func _on_drag(index: int, pos: Vector2, relative: Vector2) -> void:
 			input.touch_move = Vector2(v.x, -v.y)
 		Kind.LOOK, Kind.FIRE:
 			var sens: float = Settings.get_value("input", "touch_sensitivity") * assist_scale * input.look_scale
-			input.add_look(-relative.x * LOOK_RADIANS_PER_PIXEL * sens,
-					-relative.y * LOOK_RADIANS_PER_PIXEL * sens)
+			var per_px := LOOK_RADIANS_PER_SCREEN / maxf(_screen().y, 1.0)
+			input.add_look(-relative.x * per_px * sens, -relative.y * per_px * sens)
 	queue_redraw()
 
 

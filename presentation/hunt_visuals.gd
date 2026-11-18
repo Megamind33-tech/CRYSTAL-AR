@@ -44,6 +44,10 @@ func _process(delta: float) -> void:
 	for r in _rings:  # extraction pads breathe so they read from afar
 		var k := 1.0 + sin(_time * 2.2) * 0.05
 		r.scale = Vector3(k, 1.0, k)
+	for i in _pickups.size():  # the rotorcraft holding over each pad
+		var hop: Node3D = _pickups[i]
+		hop.position.y = _pickup_base[i] + sin(_time * 0.9 + i) * 0.35
+		hop.rotation.y += delta * 0.12
 
 
 ## `local_id`: whose assignments count as "ours". `carrier_pos`:
@@ -279,7 +283,7 @@ func _update_lock_label(node: Node3D, hunt: HuntRules, t: HuntRules.Treasure) ->
 		node.add_child(label)
 	label.visible = t.locked and t.on_ground()
 	if hunt.vault_unlocker != 0:
-		label.text = tr("HUNT_LOCK_PROGRESS") % (100 * hunt.vault_progress / HuntRules.VAULT_UNLOCK_TICKS)
+		label.text = tr("HUNT_LOCK_PROGRESS") % (100 * hunt.vault_progress / hunt.vault_ticks())
 	else:
 		label.text = tr("HUNT_LOCKED")
 
@@ -293,6 +297,50 @@ static func _color_of(t: HuntRules.Treasure, local_id: int) -> Color:
 		HuntRules.Kind.RESOURCE:
 			return CACHE
 	return OWN if t.owner == local_id else RIVAL
+
+
+## An extraction site as a real landing site: a pad deck (the Skyport's,
+## scaled to frame the extraction circle) flush with the ground on a sunk
+## concrete footing, and a Skyhopper holding over it to lift you out.
+## Presentation only: the deck's top is the ground (+PAD_TOP), so feet stand
+## on it as drawn; the rotorcraft hovers out of reach.
+const PAD_SCALE := 0.38  ## the 29 m pad deck to about 11 m
+const PAD_TOP := 0.03
+const PICKUP_HEIGHT := 10.0
+var _pickups: Array[Node3D] = []
+var _pickup_base: Array[float] = []
+
+
+func _landing_site(z: Vector3) -> void:
+	var deck := Comic.kit_instance("districts/landing_pad", Vector3.ZERO, 0.0, PAD_SCALE)
+	var top := 0.55 * PAD_SCALE
+	deck.position = z + Vector3(0, PAD_TOP - top, 0)
+	add_child(deck)
+	# The footing: down to the lowest ground under the deck, so it never floats.
+	var low := z.y
+	var space := get_world_3d().direct_space_state if is_inside_tree() else null
+	for k in 8:
+		var a := k * TAU / 8.0
+		var q := z + Vector3(cos(a), 0, sin(a)) * 5.4
+		if space != null:
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(q + Vector3(0, 6, 0), q + Vector3(0, -20, 0), Sim.LAYER_WORLD))
+			if not hit.is_empty():
+				low = minf(low, (hit.position as Vector3).y)
+	var depth := z.y + PAD_TOP - top - low + 0.6
+	var footing := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 5.2
+	cyl.bottom_radius = 5.6
+	cyl.height = depth
+	cyl.radial_segments = 6
+	footing.mesh = cyl
+	footing.position = Vector3(z.x, z.y + PAD_TOP - top - depth * 0.5, z.z)
+	footing.material_override = _metal()
+	add_child(footing)
+	var hop := Comic.kit_instance("world/skyhopper", z + Vector3(0, PICKUP_HEIGHT, 0), float(_pickups.size()) * 70.0)
+	add_child(hop)
+	_pickups.append(hop)
+	_pickup_base.append(z.y + PICKUP_HEIGHT)
 
 
 func _build_static(hunt: HuntRules) -> void:
@@ -309,7 +357,8 @@ func _build_static(hunt: HuntRules) -> void:
 		torus.inner_radius = HuntRules.EXTRACT_RADIUS - 0.2
 		torus.outer_radius = HuntRules.EXTRACT_RADIUS
 		ring.mesh = torus
-		ring.position = z + Vector3(0, 0.12, 0)
+		ring.position = z + Vector3(0, PAD_TOP + 0.04, 0)
+		_landing_site(z)
 		ring.material_override = _glow(OWN, 1.0, 2.5)
 		add_child(ring)
 		_rings.append(ring)

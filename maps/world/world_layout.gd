@@ -238,6 +238,7 @@ static func dig_hunt_data() -> Dictionary:
 		"treasure_spots": spots,
 		"extraction_zones": [canyon(68.0), canyon(350.0), WorldTerrain.at(200.0, 118.0)],
 		"vault": canyon(300.0),
+		"pit_rules": true,  # the pit's conditions change run to run (HuntRules.PitRule)
 	}
 
 
