@@ -1472,6 +1472,26 @@ func _update_hunt_objective(h: HuntRules, tick: int) -> void:
 					elif c.charges > 0:
 						theirs += 1
 				hud.set_objective(tr("WAR_CAMPS_LINE") % [ours, HuntWar.CAMP_CHARGES, theirs], UiStyle.WARN if ours < HuntWar.CAMP_CHARGES else UiStyle.ACCENT)
+			HuntWar.Objective.KING:
+				var held := int(h.war.king.get(mine, 0)) / Sim.TICK_RATE
+				var best := int(h.war.king.get(lead, 0)) / Sim.TICK_RATE if lead >= 0 else 0
+				hud.set_objective(tr("WAR_KING_LINE") % [held, best, HuntWar.KING_SECONDS], UiStyle.ACCENT)
+			HuntWar.Objective.CONVOY:
+				hud.set_objective(tr("WAR_CONVOY_LINE") % (_side_name(h.war.convoy_pusher) if h.war.convoy_pusher >= 0 else tr("WAR_NOBODY")),
+						UiStyle.GOOD if h.war.convoy_pusher == mine else UiStyle.ACCENT)
+			HuntWar.Objective.TERRITORY:
+				var held := 0
+				for f: Array in h.war.flags:
+					held += 1 if int(f[1]) == mine else 0
+				hud.set_objective(tr("WAR_TERRITORY_LINE") % [held, h.war.flags.size(), int(h.war.territory.get(mine, 0)),
+						int(h.war.territory.get(lead, 0)) if lead >= 0 else 0, HuntWar.TERRITORY_TARGET], UiStyle.ACCENT)
+			HuntWar.Objective.LAST_STANDING:
+				hud.set_objective(tr("WAR_LAST_LINE") % [int(h.war.lives.get(mine, 0)), h.war.lives.size() - h.war.out_sides.size()],
+						UiStyle.WARN)
+			HuntWar.Objective.RACE:
+				var left := maxi(h.war.race_end_tick - tick, 0) / Sim.TICK_RATE
+				hud.set_objective(tr("WAR_RACE_LINE") % [int(h.war.drops.get(mine, 0)), int(h.war.drops.get(lead, 0)) if lead >= 0 else 0,
+						left / 60, left % 60], UiStyle.ACCENT)
 		return
 	if h.final_phase(tick):
 		var secs := ceili(h.ticks_left(tick) / float(Sim.TICK_RATE))
@@ -1749,6 +1769,12 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 		"turret_fire", "squad_rejoined":
 			if e.action == "squad_rejoined" and e.player == me:
 				_kill_feed.add_note("", tr("SQUAD_FEED_REJOINED") % tr("SQUAD_ROLE_" + str(e.role).to_upper()), HuntHud.ALLY, true)
+			return
+		"war_side_out":
+			_kill_feed.add_note("", tr("WAR_FEED_OUT") % _side_name(int(e.side)), UiStyle.WARN)
+			return
+		"war_flag":
+			_kill_feed.add_note("", tr("WAR_FEED_FLAG") % _side_name(int(e.side)), UiStyle.ACCENT)
 			return
 		"war_drop":
 			_kill_feed.add_note("", tr("WAR_FEED_DROP"), HuntVisuals.CACHE)

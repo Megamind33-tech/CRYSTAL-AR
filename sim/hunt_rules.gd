@@ -308,6 +308,7 @@ func on_kill(world: SimWorld, victim: SimPlayer, killer: int, suicide: bool) -> 
 	if squad.is_member(victim.net_id):
 		war.builds.on_teammate_down(world, self, squad.leader_of(victim.net_id), squad.by_id[victim.net_id].role)
 	squad.on_death(world, victim.net_id)
+	war.on_death(self, victim.net_id)
 	if _aux(killer) or _aux(victim.net_id):
 		if _aux(killer) and not suicide and world.scores.has(killer):
 			world.scores[killer] -= 1  # hired guns don't score
@@ -392,6 +393,8 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 			# An extraction machine of yours at the pad (HuntArmy): faster; in a
 			# war a heavy load (the relic, resources) goes out only beside one.
 			var boost := army.extraction_boost(world, self, c.net_id, nearest_zone(c.state.position, tick))
+			if war.blocks_extract(t):
+				continue  # a King war: the relic stays in play
 			if war.enabled and _heavy(t) and boost == 0:
 				extract_progress[c.net_id] = 0
 				continue

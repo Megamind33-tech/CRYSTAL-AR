@@ -492,6 +492,9 @@ func _glow(color: Color, alpha: float, energy: float) -> StandardMaterial3D:
 # --- War (HuntWar): the control point, the camps ---
 
 var _war_key := ""
+var _flag_nodes: Array[Label3D] = []
+var _convoy_node: Node3D
+var _convoy_label: Label3D
 var _war_nodes: Array[Node] = []
 var _point_label: Label3D
 var _camp_labels: Array[Label3D] = []
@@ -525,6 +528,15 @@ func _sync_war(hunt: HuntRules, local_id: int) -> void:
 		if w.objective == HuntWar.Objective.HOLD:
 			_mast(w.point, POINT_GOLD, HuntWar.HOLD_RADIUS)
 			_point_label = _war_label(w.point + Vector3(0, 7.5, 0), POINT_GOLD)
+		_flag_nodes.clear()
+		for f: Array in w.flags:
+			_mast(f[0], POINT_GOLD, HuntWar.HOLD_RADIUS)
+			_flag_nodes.append(_war_label(f[0] + Vector3(0, 7.5, 0), POINT_GOLD))
+		_convoy_node = null
+		if w.objective == HuntWar.Objective.CONVOY:
+			_convoy_node = Comic.kit_instance("world/hauler", w.convoy, 0.0, 1.2)
+			add_child(_convoy_node)
+			_convoy_label = _war_label(w.convoy + Vector3(0, 6, 0), POINT_GOLD)
 		for c in w.camps:
 			var col := _side_color(hunt, c.side, local_id)
 			_mast(c.at + Vector3(0, HuntCamps.CORE_SIZE.y, 0), col, HuntWar.CAMP_RADIUS)
@@ -535,6 +547,20 @@ func _sync_war(hunt: HuntRules, local_id: int) -> void:
 		for i in range(before, get_child_count()):
 			_war_nodes.append(get_child(i))
 	_sync_buildings(hunt)
+	for i in mini(_flag_nodes.size(), w.flags.size()):
+		var f: Array = w.flags[i]
+		var lbl: Label3D = _flag_nodes[i]
+		lbl.text = tr("WAR_FLAG_LABEL") if int(f[3]) == 0 else "%s %d%%" % [tr("WAR_FLAG_LABEL"),
+				100 * int(f[3]) / (HuntWar.CAPTURE_SECONDS * Sim.TICK_RATE)]
+		lbl.modulate = _side_color(hunt, int(f[1]), local_id) if int(f[1]) >= 0 else POINT_GOLD
+	if _convoy_node != null and is_instance_valid(_convoy_node):
+		var to := w.convoy - _convoy_node.position
+		if Vector2(to.x, to.z).length() > 0.01:
+			_convoy_node.rotation.y = atan2(-to.x, -to.z)
+		_convoy_node.position = w.convoy
+		_convoy_label.position = w.convoy + Vector3(0, 6, 0)
+		_convoy_label.text = tr("WAR_CONVOY_LABEL")
+		_convoy_label.modulate = _side_color(hunt, w.convoy_pusher, local_id) if w.convoy_pusher >= 0 else POINT_GOLD
 	if _point_label != null:
 		var held := ""
 		for side: int in w.hold:

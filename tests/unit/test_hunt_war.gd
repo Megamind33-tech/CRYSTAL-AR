@@ -339,3 +339,67 @@ func test_repair_upgrade_and_the_pad() -> void:
 	assert_true(h.request(world, 1, "fly_to_camp"))
 	assert_lt(world.players[1].state.position.distance_to(CAMPS[0]), HuntCamps.SOCKET_RADIUS + 3.0, "home")
 	assert_false(h.request(world, 1, "fly_to_camp"), "not again so soon")
+
+
+func test_king_of_the_vault() -> void:
+	_start(HuntWar.Objective.KING)
+	h.army.rosters[2] = {}
+	var g := h.grand()
+	g.locked = false
+	g.carrier = 1
+	world.teleport(world.players[1], ZONE + Vector3(0, 0.05, 0))
+	_step(HuntRules.EXTRACT_TICKS + 5)
+	assert_false(g.banked, "the relic can't be extracted in a King war")
+	h.war.king[h.war.side_of(h, 1)] = HuntWar.KING_SECONDS * Sim.TICK_RATE - 3
+	_step(5)
+	assert_eq(h.war.winner_side, h.war.side_of(h, 1), "held long enough: won")
+
+
+func test_the_convoy() -> void:
+	_two_camps()
+	h.war.objective = HuntWar.Objective.CONVOY
+	h.war.convoy = POINT
+	world.teleport(world.players[1], POINT + Vector3(1, 0.05, 0))
+	world.teleport(world.players[2], Vector3(-18, 0.05, -18))
+	var start := h.war.convoy
+	_step(120)
+	assert_eq(h.war.convoy_pusher, h.war.side_of(h, 1), "pushed by the side alone beside it")
+	assert_lt(h.war.convoy.distance_to(CAMPS[1]), start.distance_to(CAMPS[1]), "towards the enemy camp")
+	h.war.convoy = CAMPS[1] + Vector3(0, 0, -HuntWar.CONVOY_GOAL + 1)
+	world.teleport(world.players[1], h.war.convoy + Vector3(1, 0.05, 0))
+	_step(2)
+	assert_eq(h.war.winner_side, h.war.side_of(h, 1), "arrived: won")
+
+
+func test_territory_and_last_standing() -> void:
+	_two_camps()
+	h.war.objective = HuntWar.Objective.TERRITORY
+	h.war.flags = [[POINT, -1, -1, 0]]
+	world.teleport(world.players[1], POINT + Vector3(0, 0.05, 0))
+	world.teleport(world.players[2], Vector3(-18, 0.05, -18))
+	_step(HuntWar.CAPTURE_SECONDS * Sim.TICK_RATE + 1)
+	assert_eq(int(h.war.flags[0][1]), h.war.side_of(h, 1), "taken")
+	h.war.territory[h.war.side_of(h, 1)] = HuntWar.TERRITORY_TARGET - 1
+	_step(Sim.TICK_RATE + 1)
+	assert_eq(h.war.winner_side, h.war.side_of(h, 1), "territory target: won")
+	# Last standing: a side out of lives with nobody up is out.
+	h.war.winner_side = -1
+	h.war.objective = HuntWar.Objective.LAST_STANDING
+	h.war.lives = {h.war.side_of(h, 1): 3, h.war.side_of(h, 2): 1}
+	h.war.on_death(h, 2)
+	world.players[2].state.alive = false
+	_step(1)
+	assert_true(h.war.side_of(h, 2) in h.war.out_sides)
+	assert_eq(h.war.winner_side, h.war.side_of(h, 1), "the last side in wins")
+
+
+func test_resource_race() -> void:
+	_start(HuntWar.Objective.RACE)
+	h.army.rosters[2] = {}
+	h.war.race_end_tick = world.tick + 30
+	var t := HuntRules.Treasure.new()
+	t.kind = HuntRules.Kind.RESOURCE
+	h.war.on_banked(world, h, 2, t)
+	assert_eq(h.war.winner_side, -1, "no win before time")
+	_step(31)
+	assert_eq(h.war.winner_side, h.war.side_of(h, 2), "most extracted at the bell wins")

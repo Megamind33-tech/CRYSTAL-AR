@@ -1362,3 +1362,23 @@ CAMP_FEED_DESTROYED,destroyed the %s of %s's camp
 CAMP_FEED_REPAIRED,Camp repaired
 CAMP_FEED_FLEW,Flown back to camp
 CAMP_FEED_UPGRADED,%s upgraded to level %d
+WAR_KING,KING OF THE VAULT
+WAR_KING_SUB,Open the vault and hold the relic · 3 minutes carried wins
+WAR_CONVOY,CONVOY
+WAR_CONVOY_SUB,Stand by the convoy alone to push it · get it to an enemy camp to win
+WAR_TERRITORY,TERRITORY
+WAR_TERRITORY_SUB,Take the three flags (10 s alone on one) · each held scores · 400 wins
+WAR_LAST_STANDING,LAST SIDE STANDING
+WAR_LAST_STANDING_SUB,Each side has 12 lives · the last side with anyone left wins
+WAR_RACE,RESOURCE RACE
+WAR_RACE_SUB,Six minutes of drops · most resources extracted wins
+WAR_KING_LINE,Relic held %d s · leader %d s · %d s wins
+WAR_CONVOY_LINE,Convoy pushed by %s
+WAR_NOBODY,nobody
+WAR_TERRITORY_LINE,Flags %d/%d · %d points · leader %d · %d wins
+WAR_LAST_LINE,Your side's lives %d · %d sides in
+WAR_RACE_LINE,Extracted %d · leader %d · %d:%02d left
+WAR_FEED_OUT,%s is out of the war
+WAR_FEED_FLAG,%s takes a flag
+WAR_FLAG_LABEL,FLAG
+WAR_CONVOY_LABEL,CONVOY
