@@ -143,6 +143,9 @@ var economy := HuntEconomy.new()
 var squad := HuntSquad.new()  ## the hunters' AI teammates
 var war := HuntWar.new()  ## what wins the run: sides, objectives (battlegrounds)
 var army := HuntArmy.new()  ## the hunters' units: drones, gunships, jets, tanks, machines
+var mods := HuntMods.new()  ## this match's modifiers (a war's: storm, low gravity, gold rush...)
+## Tools and tests: these modifiers every match (empty: drawn).
+static var force_mods: Array = []
 ## Recovery Contract: victim id -> {"treasure", "position" (fuzzed), "tick"}.
 var recovery_clues: Dictionary = {}
 ## Last Extraction: the match's end tick (0: no clock, every pad stays open),
@@ -219,6 +222,7 @@ func reset(world: SimWorld) -> void:
 			economy.add_hunter(id)
 			_assign(world, id)
 	_seat_nations(world, ids)
+	mods.start(world, self, force_mods)  # before the pit's caches (gold rush)
 	if pit_rules:
 		_set_pit(world)
 	war.start(world, self)
@@ -295,6 +299,8 @@ func on_spawn(_world: SimWorld, p: SimPlayer) -> void:
 		if w != null:
 			s.reserve[i] = mini(s.reserve[i], w.mag_size * mags)
 	s.shield += float(kit.get("shield_bonus", 0.0))
+	if mods.has("no_shields"):
+		s.shield = 0.0  # hardcore
 
 
 ## Death: the carried treasure falls where the carrier was; a kill is worth
@@ -440,6 +446,7 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 	squad.step(world, self)
 	war.step(world, self, ids, interacting)
 	army.step(world, self)
+	mods.step(world, self)
 	_step_last_extraction(world)
 	# The alarm trap.
 	if trap != Vector3.INF:
@@ -682,7 +689,7 @@ func _set_pit(world: SimWorld) -> void:
 				break
 		if not used:
 			free.append(sp)
-	for k in mini(int(PIT_CACHES[pit_rule]), free.size()):
+	for k in mini(roundi(int(PIT_CACHES[pit_rule]) * mods.value("drops")), free.size()):
 		var at: Vector3 = free.pop_at(r.randi_range(0, free.size() - 1))
 		var res: String = HuntResources.IDS[r.randi_range(0, HuntResources.IDS.size() - 1)]
 		if k < HuntResources.IDS.size():
@@ -1138,7 +1145,7 @@ func _bank(world: SimWorld, p: SimPlayer, t: Treasure) -> void:
 	banked_count[p.net_id] = banked_count.get(p.net_id, 0) + 1
 	var credit := int(points * HuntEconomy.EXTRACT_CREDIT_SHARE)
 	if t.kind == Kind.RESOURCE:
-		credit = HuntResources.credits(t.resource)  # resources are what pays the expedition
+		credit = roundi(HuntResources.credits(t.resource) * mods.value("resource_pay"))  # resources pay the expedition
 	economy.earn(world, p.net_id, credit, "extraction")
 	war.on_banked(world, self, p.net_id, t)
 	economy.end_contract(world, p.net_id, "extracted")  # a contract ends on extraction

@@ -174,7 +174,8 @@ func _draw() -> void:
 	var yaw := float(st.yaw)
 	_radar_r = 78.0 * _s
 	_radar_center = Vector2(size.x - 34.0 * _s - _radar_r, 26.0 * _s + _radar_r)
-	_draw_radar(world, h, me, yaw)
+	if not h.mods.has("no_minimap"):  # a blackout: no minimap
+		_draw_radar(world, h, me, yaw)
 	_draw_status(world, h, me)
 	_draw_compass(h, me, yaw, world.tick)
 	_draw_tracker(h, me)

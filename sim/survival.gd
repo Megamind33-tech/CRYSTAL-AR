@@ -45,6 +45,8 @@ const STORM_WATER := 1.4
 static var enabled: bool = false
 ## Storms on (Kasei Valley); off on maps without weather.
 static var weather: bool = false
+## A match modifier (HuntMods "storm"): a squall the whole match long.
+static var forced_storm: bool = false
 ## Pressurised zones: Vector3(x, z, radius) on the ground plane.
 static var air_zones: Array[Vector3] = []
 ## Pressurised rooms that aren't a dome over open ground (underground halls).
@@ -63,6 +65,8 @@ static func in_air(pos: Vector3) -> bool:
 
 ## 0 (clear) .. 1 (the storm's height) at `tick`.
 static func storm_at(tick: int) -> float:
+	if forced_storm:
+		return 1.0
 	if not weather:
 		return 0.0
 	var t := tick * Sim.TICK_DT - STORM_FIRST

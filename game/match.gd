@@ -321,6 +321,8 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	Platform.set_low_latency_network(false)
+	if server != null and server.world != null and server.world.hunt != null:
+		server.world.hunt.mods.clear(server.world)  # gravity and the storm back as they were
 	if not _online_code.is_empty() and not _to_lobby:
 		Online.stop_hosting()
 	if Diagnostics.net_info == _net_info:
@@ -715,6 +717,7 @@ func _render_host(delta: float) -> void:
 	if _game_mode() == GameMode.CTF:
 		flag_visuals.sync(world.flags, _flag_bases, _flag_carrier_at)
 	if world.hunt != null:
+		hunt_visuals.hunt_local_pos = me.state.position
 		hunt_visuals.sync(world.hunt, world.tick, me.net_id, _flag_carrier_at)
 	_update_pickup_prompt(s, world.items)
 	if world.hunt != null:
@@ -1203,11 +1206,13 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 	var econ := func() -> HuntEconomy:
 		var st: Dictionary = hunt_menu.state.call()
 		return (st.hunt as HuntRules).economy if not st.is_empty() else null
-	hunt_menu.add_row(func() -> String: return tr("HUNT_MENU_HIRE") % HuntEconomy.MERC_COST,
+	hunt_menu.add_row(func() -> String:
+				var e0: HuntEconomy = econ.call()
+				return tr("HUNT_MENU_HIRE") % (e0.merc_cost if e0 != null else HuntEconomy.MERC_COST),
 			func() -> void: hunt_menu.request.call("hire_mercenary"),
 			func() -> bool:
 				var e: HuntEconomy = econ.call()
-				return e != null and not e.contracts.has(local_id()) and e.credits.get(local_id(), 0) >= HuntEconomy.MERC_COST, "crew")
+				return e != null and not e.contracts.has(local_id()) and e.credits.get(local_id(), 0) >= e.merc_cost, "crew")
 	for order: String in HuntEconomy.ORDER_IDS:
 		hunt_menu.add_row(func() -> String: return tr("HUNT_MENU_ORDER_" + order.to_upper()),
 				func() -> void: hunt_menu.request.call("merc_order", {"order": order}),
@@ -1776,6 +1781,18 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 		"turret_fire", "squad_rejoined":
 			if e.action == "squad_rejoined" and e.player == me:
 				_kill_feed.add_note("", tr("SQUAD_FEED_REJOINED") % tr("SQUAD_ROLE_" + str(e.role).to_upper()), HuntHud.ALLY, true)
+			return
+		"mods":
+			var names := []
+			for id: String in e.mods:
+				names.append(tr("MOD_" + id.to_upper()) if not id.begins_with("custom:") else id.substr(7))
+			_hunt_banner("MODS_TITLE", " · ".join(names), UiStyle.WARN)
+			for id: String in e.mods:
+				if not id.begins_with("custom:"):
+					_kill_feed.add_note("", tr("MOD_" + id.to_upper() + "_SUB"), UiStyle.WARN)
+			return
+		"pads_shifted":
+			_kill_feed.add_note("", tr("MOD_FEED_PADS"), UiStyle.WARN)
 			return
 		"war_side_out":
 			_kill_feed.add_note("", tr("WAR_FEED_OUT") % _side_name(int(e.side)), UiStyle.WARN)

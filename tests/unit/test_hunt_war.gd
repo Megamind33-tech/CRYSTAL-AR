@@ -403,3 +403,27 @@ func test_resource_race() -> void:
 	assert_eq(h.war.winner_side, -1, "no win before time")
 	_step(31)
 	assert_eq(h.war.winner_side, h.war.side_of(h, 2), "most extracted at the bell wins")
+
+
+## Match modifiers: drawn per war match, data-driven; they change the rules.
+func test_match_modifiers() -> void:
+	var base := world.movement_config.gravity
+	h.mods.start(world, h, ["low_gravity", "hardcore", "mercenary_market", "methane_storm"])
+	assert_almost_eq(world.movement_config.gravity, base * 0.6, 0.001, "low gravity")
+	assert_true(Survival.storm_at(world.tick) > 0.9, "a squall all match")
+	assert_eq(h.economy.merc_cost, HuntEconomy.MERC_COST / 2, "half-price guns")
+	var p: SimPlayer = world.players[1]
+	p.state.shield = 50.0
+	h.on_spawn(world, p)
+	assert_eq(p.state.shield, 0.0, "hardcore: no shields")
+	var zone_before: Vector3 = h.zones[0]
+	world.tick += HuntMods.DECK.methane_storm.pad_shift * Sim.TICK_RATE + 1
+	h.mods.step(world, h)
+	assert_true(h.zones[0] != zone_before or SPOTS.size() == 1, "the pads moved")
+	h.mods.clear(world)
+	assert_almost_eq(world.movement_config.gravity, base, 0.001, "gravity back after the match")
+	assert_false(Survival.forced_storm, "the storm over")
+	# Drawn per match: a war draws one or two.
+	h.mods.start(world, h)
+	assert_between(h.mods.active.size(), 1, 2)
+	h.mods.clear(world)

@@ -181,7 +181,7 @@ func step(world: SimWorld, hunt: HuntRules, ids: Array, interacting: Dictionary)
 			_step_hold(world, hunt, ids)
 		Objective.DROPS:
 			if world.tick >= next_drop_tick:
-				next_drop_tick = world.tick + DROP_EVERY
+				next_drop_tick = world.tick + roundi(DROP_EVERY / hunt.mods.value("drops"))
 				_drop(world, hunt)
 		Objective.CAMPS:
 			_step_camps(world, hunt, ids, interacting)
@@ -215,7 +215,7 @@ func step(world: SimWorld, hunt: HuntRules, ids: Array, interacting: Dictionary)
 				_win(world, hunt, alive_in[0])
 		Objective.RACE:
 			if world.tick >= next_drop_tick:
-				next_drop_tick = world.tick + RACE_DROP_EVERY
+				next_drop_tick = world.tick + roundi(RACE_DROP_EVERY / hunt.mods.value("drops"))
 				_drop(world, hunt)
 			if world.tick >= race_end_tick:
 				var lead := leader_side()

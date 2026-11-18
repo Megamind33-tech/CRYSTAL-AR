@@ -547,6 +547,7 @@ func _sync_war(hunt: HuntRules, local_id: int) -> void:
 		for i in range(before, get_child_count()):
 			_war_nodes.append(get_child(i))
 	_sync_buildings(hunt)
+	_fog(hunt, local_id)
 	for i in mini(_flag_nodes.size(), w.flags.size()):
 		var f: Array = w.flags[i]
 		var lbl: Label3D = _flag_nodes[i]
@@ -884,3 +885,28 @@ func _unit_model(unit: String) -> Node3D:
 	light.material_override = _glow(RIVAL if unit != "strike_jet" else Color(1.0, 0.5, 0.2), 1.0, 2.5)
 	root.add_child(light)
 	return root
+
+
+## Fog of war (a match modifier): enemy camps aren't drawn till you're near.
+var _camp_nodes_by_camp: Dictionary = {}
+
+
+func _fog(hunt: HuntRules, local_id: int) -> void:
+	var fog := hunt.mods.has("fog")
+	var me: Vector3 = hunt_local_pos
+	for ci in hunt.war.camps.size():
+		var c: HuntWar.Camp = hunt.war.camps[ci]
+		var hidden := fog and c.side != hunt.war.side_of(hunt, local_id) and me.distance_to(c.at) > HuntMods.FOG_RANGE
+		if ci < _camp_labels.size():
+			_camp_labels[ci].visible = not hidden
+		if ci < _camp_drawn.size():
+			for v: Variant in (_camp_drawn[ci] as Dictionary).values():
+				if v is Array:
+					for n: Node3D in v:
+						if is_instance_valid(n):
+							n.visible = not hidden
+				elif v is Node3D and is_instance_valid(v):
+					(v as Node3D).visible = not hidden
+
+
+var hunt_local_pos := Vector3.ZERO  ## where the local player is (the match sets it)

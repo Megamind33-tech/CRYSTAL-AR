@@ -43,6 +43,9 @@ class Contract:
 
 
 var credits: Dictionary = {}  ## hunter id -> credits
+## What a hired gun costs and how many at once (match modifiers change them).
+var merc_cost: int = MERC_COST
+var merc_cap: int = MAX_ACTIVE_MERCS
 var contracts: Dictionary = {}  ## employer id -> Contract
 var mercs: Dictionary = {}  ## mercenary id -> employer id
 ## Server work queues (the simulation can't create bodies itself).
@@ -112,9 +115,9 @@ func active_mercs() -> int:
 func hire(world: SimWorld, employer: int) -> bool:
 	var p: SimPlayer = world.players.get(employer)
 	if p == null or not p.state.alive or is_merc(employer) or contracts.has(employer) \
-			or credits.get(employer, 0) < MERC_COST or active_mercs() >= MAX_ACTIVE_MERCS:
+			or credits.get(employer, 0) < merc_cost or active_mercs() >= merc_cap:
 		return false
-	credits[employer] -= MERC_COST
+	credits[employer] -= merc_cost
 	var c := Contract.new()
 	c.employer = employer
 	c.expires_tick = world.tick + MERC_CONTRACT_TICKS

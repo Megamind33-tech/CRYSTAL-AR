@@ -1392,3 +1392,19 @@ SQUAD_STRATEGY_GATHER_SUB,Hold fire · the squad fetches your cargo out
 SQUAD_ABILITY_DROP,Rotorcraft drop: the squad to where you aim
 SQUAD_ABILITY_SUPPLY,Supply crate: health and ammo here
 SQUAD_ABILITY_SCAN,Scan: show enemies round you
+MODS_TITLE,THIS MATCH
+MOD_METHANE_STORM,Methane storm
+MOD_METHANE_STORM_SUB,Methane storm: a squall all match · the pads move every 5 minutes
+MOD_LOW_GRAVITY,Low gravity surge
+MOD_LOW_GRAVITY_SUB,Low gravity surge: jumps go high · falls last
+MOD_GOLD_RUSH,Gold rush
+MOD_GOLD_RUSH_SUB,Gold rush: twice the drops · resources pay double
+MOD_BLACKOUT,Blackout
+MOD_BLACKOUT_SUB,Blackout: no minimap
+MOD_HARDCORE,Hardcore
+MOD_HARDCORE_SUB,Hardcore: no shields
+MOD_MERCENARY_MARKET,Mercenary market
+MOD_MERCENARY_MARKET_SUB,Mercenary market: hired guns at half price · four at once
+MOD_FOG_OF_WAR,Fog of war
+MOD_FOG_OF_WAR_SUB,Fog of war: enemy camps hidden till you're close
+MOD_FEED_PADS,The extraction pads have moved
