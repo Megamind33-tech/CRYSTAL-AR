@@ -16,6 +16,10 @@ const CELL := 128.0
 ## Cells nearer than this (camera to the cell's box) are drawn with outlines.
 const OUTLINE_RANGE := 50.0
 const CHECK_EVERY := 0.25
+## View distances are rounded up to these (0, always drawn, stays): a cell
+## with a dozen distinct distances was a dozen draws. Small props (160-260 m)
+## show to 260, everything else to 450 or 500.
+const REACH_TIERS := [260.0, 450.0, 500.0]
 
 ## [cell, reach, outline] -> [PackedVector3Array verts, normals, PackedColorArray colors]
 var _parts: Dictionary = {}
@@ -42,6 +46,8 @@ func add_mesh(mesh: Mesh, xf: Transform3D, reach: float, outline: bool = true, a
 ## Surface arrays (as Mesh.surface_get_arrays) placed like add_mesh.
 func add_arrays(arrays: Array, xf: Transform3D, reach: float, outline: bool = true, at: Vector3 = Vector3.INF) -> void:
 	var where := xf.origin if at == Vector3.INF else at
+	if outline:
+		reach = _tier(reach)
 	var cell := Vector2i(floori(where.x / CELL), floori(where.z / CELL))
 	var key := [cell, reach, outline]
 	if not _parts.has(key):
@@ -82,6 +88,15 @@ func add_arrays(arrays: Array, xf: Transform3D, reach: float, outline: bool = tr
 	part[0] = pv
 	part[1] = pn
 	part[2] = pc
+
+
+static func _tier(reach: float) -> float:
+	if reach <= 0.0:
+		return reach
+	for t: float in REACH_TIERS:
+		if reach <= t:
+			return t
+	return reach
 
 
 ## Builds the merged meshes (once, after every piece is added).
