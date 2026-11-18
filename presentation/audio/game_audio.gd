@@ -19,17 +19,23 @@ const OCCLUSION_INTERVAL := 0.1
 const BELOW_METRES := 2.5  ## sounds this far under the listener get the Below bus
 ## Take-offs faster than any jump (6 m/s) come from a jump pad.
 const PAD_LAUNCH_SPEED := 8.0
-## Footsteps follow the leg cadence of the movement tier: seconds per step,
-## and a volume offset (dB) per tier. Speeds in m/s: below JOG_SPEED is a walk,
-## below RUN_SPEED a jog, and a sprint or faster is a run.
-const STEP_INTERVAL := {"walk": 0.55, "jog": 0.38, "run": 0.3}
-const STEP_DB := {"walk": -4.0, "jog": 0.0, "run": 1.0}
-const JOG_SPEED := 4.5
-const RUN_SPEED := 7.5
+## Footsteps land when the boots do: GameAudio runs the same walk cycle as
+## the bodies (Stride: cadence by ground speed, contacts at fixed points of
+## the cycle, restarting when a player starts off), so each step sounds as
+## a foot comes down. Tiers set the loudness only: below JOG_SPEED is a
+## walk, below RUN_SPEED (or sprinting) a jog, else a run.
+const STEP_DB := {"walk": -5.0, "jog": -1.0, "run": 0.0}
+const JOG_SPEED := 3.0
+const RUN_SPEED := 6.5
 const CROUCH_DB := -10.0  ## crouch-walking is quiet, not silent
-const STEP_JITTER_DB := 1.0  ## each step is a little louder or softer
+const STEP_JITTER_DB := 1.5  ## each step is a little louder or softer
+const STEP_VARIANTS := 6  ## footstep_<surface>_1..6
+## What's underfoot: the walk-in pieces by name (KitCollision), the rest by
+## shape: the valley's ground is sand and gravel, the city's paving concrete.
+const PIECE_SURFACE := {"districts/galleria": "wood", "districts/pod_a": "wood", "districts/pod_b": "wood",
+		"districts/pod_c": "wood", "districts/apartment": "wood", "districts/office": "wood", "shopfront": "concrete",
+		"life/greenhouse": "concrete", "life/farm_hall": "concrete"}
 const STEP_RANGE := 45.0  ## other players' steps beyond this are not played
-const CEILING_RANGE := 4.5  ## a ceiling this close overhead means indoors (metal floors)
 
 var listener: Node3D  ## the camera: listener position for occlusion
 
@@ -37,7 +43,7 @@ var _streams: Dictionary = {}
 var _voices: Array[AudioStreamPlayer3D] = []
 var _ui: Array[AudioStreamPlayer] = []
 var _meta: Dictionary = {}  ## voice -> {category, priority, started, source, next_check}
-var _steps: Dictionary = {}  ## player id -> {pos, clock, airborne, sliding}
+var _steps: Dictionary = {}  ## player id -> {phase, moving, airborne, sliding, last}
 var _rays_this_frame: int = 0
 var steps_played: int = 0  ## footsteps started so far (for tests and debugging)
 var _frame_delta: float = 0.0  ## last frame's time, the default for update_player
@@ -117,19 +123,19 @@ func cue(sound: String, caption_key: String) -> void:
 ## Footsteps, jumps, landings and slides from movement state (PLAN §3.12).
 ## Call every frame for each visible player; `local` steps are quieter and
 ## `ally` (teammate) steps duller, so enemy steps stand out. `delta` is the
-## frame time (negative: the engine's last frame time). Steps come on a clock
-## that runs while the player moves on the ground, so their rhythm follows
-## the walk, jog or run tier; a crouch-walk is quieter.
+## frame time (negative: the engine's last frame time). Steps come at the
+## boots' contacts in the walk cycle (Stride) that runs while the player
+## moves on the ground; a crouch-walk is quieter.
 func update_player(id: int, s: PlayerSimState, local: bool, ally: bool = false, delta: float = -1.0) -> void:
 	if delta < 0.0:
 		delta = _frame_delta
 	var st: Dictionary = _steps.get(id, {})
 	if st.is_empty() or not s.alive:
-		_steps[id] = {"pos": s.position, "clock": 0.0, "fresh": true, "airborne": false, "sliding": false}
+		_steps[id] = {"phase": 0.0, "moving": false, "airborne": false, "sliding": false, "last": 0}
 		return
 	var airborne := s.move_state == PlayerSimState.Move.AIR
 	var sliding := s.move_state == PlayerSimState.Move.SLIDE
-	var vol := -8.0 if local else (-3.0 if ally else 0.0)
+	var vol := -10.0 if local else (-3.0 if ally else 0.0)
 	var priority := 1 if local else (2 if ally else 3)
 	if airborne and not st.airborne and s.velocity.y > PAD_LAUNCH_SPEED:
 		play_at("jump_pad", s.position, "Footsteps", priority, vol + 2.0)
@@ -138,28 +144,23 @@ func update_player(id: int, s: PlayerSimState, local: bool, ally: bool = false, 
 		play_at("jump", s.position, "Footsteps", priority, vol - 4.0)
 	if not airborne and st.airborne:
 		play_at("land", s.position, "Footsteps", priority, vol)
-		st.clock = 0.0
 	if sliding and not st.sliding:
 		play_at("slide", s.position, "Footsteps", priority, vol - 2.0)
-	var moved := Vector2(s.position.x - st.pos.x, s.position.z - st.pos.z).length()
-	if not airborne and not sliding and moved > 0.0005 and delta > 0.0:
-		var speed := moved / delta
-		var tier := step_tier(speed, s.sprinting)
-		var interval: float = STEP_INTERVAL[tier]
-		st.clock += delta
-		# The first step after standing still comes at once; then one per interval.
-		if st.fresh or st.clock >= interval:
-			st.clock = 0.0 if st.fresh else maxf(st.clock - interval, 0.0)
-			st.fresh = false
-			var db: float = vol + float(STEP_DB[tier]) + randf_range(-STEP_JITTER_DB, STEP_JITTER_DB)
-			if s.stance == PlayerSimState.Stance.CROUCH:
+	var speed := Vector2(s.velocity.x, s.velocity.z).length()
+	if not airborne and not sliding and speed >= Stride.MOVING and delta > 0.0:
+		if not st.moving:
+			st.phase = 0.0  # starting off: the cycle starts over, as the body's does
+			st.moving = true
+		var crouched := s.stance != PlayerSimState.Stance.STAND
+		var next: float = st.phase + (Stride.crouch_rate(speed) if crouched else Stride.rate(speed)) * delta
+		for side in Stride.contacts_between(st.phase, next):
+			var db: float = vol + float(STEP_DB[step_tier(speed, s.sprinting)]) + randf_range(-STEP_JITTER_DB, STEP_JITTER_DB)
+			if crouched:
 				db += CROUCH_DB
-			_play_step(s.position, priority, db, ally, local)
+			_play_step(st, s.position, priority, db, ally, local)
+		st.phase = fposmod(next, 1.0)
 	else:
-		# Standing still (or in the air or a slide): the next step comes at once.
-		st.clock = 0.0
-		st.fresh = true
-	st.pos = s.position
+		st.moving = false  # standing, in the air or sliding: the next step starts a cycle
 	st.airborne = airborne
 	st.sliding = sliding
 	_steps[id] = st
@@ -174,34 +175,62 @@ static func step_tier(speed: float, sprinting: bool) -> String:
 	return "walk"
 
 
-## Seconds between footsteps at a ground speed (m/s).
-static func step_interval(speed: float, sprinting: bool) -> float:
-	return STEP_INTERVAL[step_tier(speed, sprinting)]
+## Seconds between footsteps at a ground speed (m/s): half a walk cycle.
+static func step_interval(speed: float, _sprinting: bool = false) -> float:
+	var r := Stride.rate(speed)
+	return 0.5 / r if r > 0.0 else INF
 
 
-## One footstep: metal panels indoors, ground outdoors, the soft teammate
-## set for allies. Other players' steps past STEP_RANGE are not played.
-func _play_step(at: Vector3, priority: int, db: float, ally: bool, local: bool) -> void:
+## One footstep: the set for what's underfoot (never the same take twice
+## running), the soft teammate set for allies. Other players' steps past
+## STEP_RANGE are not played.
+func _play_step(st: Dictionary, at: Vector3, priority: int, db: float, ally: bool, local: bool) -> void:
 	if not local and listener != null and listener.global_position.distance_to(at) > STEP_RANGE:
 		return
 	var sound: String
 	if ally:
 		sound = "footstep_ally_%d" % (randi() % 3 + 1)
-	elif _indoors(at):
-		sound = "footstep_%d" % (randi() % 3 + 1)
 	else:
-		sound = "footstep_ground_%d" % (randi() % 3 + 1)
+		var take := randi() % (STEP_VARIANTS - 1) + 1
+		if take >= int(st.get("last", 0)):
+			take += 1  # skips the last take: 1..6 without a repeat
+		st.last = take
+		sound = "footstep_%s_%d" % [surface_at(at), take]
 	steps_played += 1
 	last_step = {"sound": sound, "db": db}
 	play_at(sound, at, "Footsteps", priority, db)
 
 
-## True when a ceiling is close overhead (one ray, only when a step plays).
-func _indoors(at: Vector3) -> bool:
+## What's underfoot at `at`: "wood", "metal", "concrete" or "sand" (one ray,
+## only when a step plays).
+func surface_at(at: Vector3) -> String:
 	if not is_inside_tree():
-		return false
-	var q := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.5, at + Vector3.UP * CEILING_RANGE, Sim.LAYER_WORLD)
-	return not get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+		return surface_of(null, at)
+	var q := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.3, at + Vector3.DOWN * 0.6, Sim.LAYER_WORLD)
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	var shape: Shape3D = null
+	if not hit.is_empty() and hit.collider is CollisionObject3D:
+		var body := hit.collider as CollisionObject3D
+		var cs := body.shape_owner_get_owner(body.shape_find_owner(int(hit.shape))) as CollisionShape3D
+		if cs != null:
+			shape = cs.shape
+	return surface_of(shape, at)
+
+
+## The surface a collision `shape` at `at` is (null: nothing under, the
+## valley's ground).
+static func surface_of(shape: Shape3D, at: Vector3) -> String:
+	if shape is ConcavePolygonShape3D:
+		# Titan's modules, hangars, rigs: deck plate.
+		return PIECE_SURFACE.get(KitCollision.piece_of(shape), "metal")
+	if shape is BoxShape3D:
+		return "metal"  # crates, tanks, kiosks
+	var o := CityLayout.ORIGIN
+	var g := WorldLayout.GALLERIA
+	if (absf(at.x - o.x) < CityLayout.HALF and absf(at.z - o.z) < CityLayout.HALF) \
+			or (absf(at.x - g.x) < 78.0 and absf(at.z - g.y) < 32.0):
+		return "concrete"  # the city's paving, the Galleria's forecourt
+	return "sand"
 
 
 func forget_player(id: int) -> void:

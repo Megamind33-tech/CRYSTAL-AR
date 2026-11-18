@@ -68,3 +68,12 @@ static func bounds(piece: String) -> AABB:
 		scene.free()
 	_bounds[piece] = out
 	return out
+
+
+## The piece a collision shape was made for ("" if none): footsteps pick
+## their sound by it (GameAudio).
+static func piece_of(s: Shape3D) -> String:
+	for piece: String in _shapes:
+		if _shapes[piece] == s:
+			return piece
+	return ""
