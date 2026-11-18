@@ -117,6 +117,8 @@ var _color := Color.WHITE
 var _glow: float = 0.0
 var _flash: float = 0.0
 var _state_name: String = ""
+var _moving := false
+var _move_w := 0.0  ## idle (0) to the walk cycle (1)
 var _emotes: Array = []  ## the EMOTES this body's library has
 var _look_pitch: float = 0.0
 var _head_yaw: float = 0.0
@@ -331,20 +333,38 @@ func _build_tree(library: AnimationLibrary, upper_bones: Array) -> void:
 	_model.add_child(player)
 	player.add_animation_library("", library)
 	var bt := AnimationNodeBlendTree.new()
-	var loco := AnimationNodeBlendSpace1D.new()
-	for pt in [["Idle", 0.0], ["Walk", 1.8], ["Jog_Fwd", 4.6], ["Sprint", 7.5]]:
-		loco.add_blend_point(_clip(pt[0]), pt[1], -1, pt[0])
-	loco.min_space = 0.0
-	loco.max_space = 8.0
-	bt.add_node("loco", loco)
-	var loco_ts := AnimationNodeTimeScale.new()
-	bt.add_node("loco_ts", loco_ts)
-	bt.connect_node("loco_ts", 0, "loco")
+	# Standing: the idle clip. Moving: Walk, Jog_Fwd and Sprint on one
+	# shared cycle, blended in step and played at the cadence (Stride).
+	var gait := AnimationNodeBlendSpace1D.new()
+	for i in 3:
+		var clip: AnimationNodeAnimation = _clip(["Walk", "Jog_Fwd", "Sprint"][i])
+		clip.use_custom_timeline = true
+		clip.timeline_length = 1.0
+		clip.stretch_time_scale = true
+		clip.loop_mode = Animation.LOOP_LINEAR
+		gait.add_blend_point(clip, float(i), -1, clip.animation)
+	gait.min_space = 0.0
+	gait.max_space = 2.0
+	gait.sync = true  # every clip keeps the shared cycle's time
+	bt.add_node("gait", gait)
+	var gait_ts := AnimationNodeTimeScale.new()
+	bt.add_node("gait_ts", gait_ts)
+	bt.connect_node("gait_ts", 0, "gait")
+	bt.add_node("gait_seek", AnimationNodeTimeSeek.new())
+	bt.connect_node("gait_seek", 0, "gait_ts")
+	bt.add_node("idle", _clip("Idle"))
+	var loco := AnimationNodeBlend2.new()
+	bt.add_node("loco_ts", loco)  # (named for the state input it feeds)
+	bt.connect_node("loco_ts", 0, "idle")
+	bt.connect_node("loco_ts", 1, "gait_seek")
+	var crouch_ts := AnimationNodeTimeScale.new()
 	var crouch := AnimationNodeBlendSpace1D.new()
 	crouch.add_blend_point(_clip("Crouch_Idle"), 0.0, -1, "idle")
-	crouch.add_blend_point(_clip("Crouch_Fwd"), 2.5, -1, "fwd")
-	crouch.max_space = 3.0
-	bt.add_node("crouch", crouch)
+	crouch.add_blend_point(_clip("Crouch_Fwd"), 1.0, -1, "fwd")
+	crouch.max_space = 1.0
+	bt.add_node("crouch_bs", crouch)
+	bt.add_node("crouch", crouch_ts)
+	bt.connect_node("crouch", 0, "crouch_bs")
 	bt.add_node("air", _clip("Jump"))
 	_emotes = EMOTES.filter(func(e: String) -> bool: return library.has_animation(e))
 	var emote := AnimationNodeTransition.new()
@@ -521,9 +541,7 @@ func animate(state: PlayerSimState, delta: float, _height: float) -> void:
 	# Empty hands (city residents): the arms swing with the walk instead of
 	# holding the pistol-aim pose.
 	_tree.set("parameters/upper/blend_amount", 0.0 if _weapon_node == null else 1.0)
-	_tree.set("parameters/loco/blend_position", speed)
-	_tree.set("parameters/loco_ts/scale", -1.0 if backwards else 1.0)
-	_tree.set("parameters/crouch/blend_position", speed)
+	_drive_gait(speed, backwards, target == "ground", delta)
 	# Relaxed (open world, not fighting): the weapon held low across the body.
 	var pitch := RELAXED_PITCH if relaxed else state.pitch
 	_tree.set("parameters/aim/blend_position", clampf(pitch / 1.2, -1.0, _aim_up))
@@ -538,6 +556,31 @@ func animate(state: PlayerSimState, delta: float, _height: float) -> void:
 		_flash = maxf(_flash - delta * 8.0, 0.0)
 		_apply_emission()
 	_advance(delta)
+
+
+## The walk cycle (Stride): standing blends to the idle clip; moving plays
+## the in-step Walk/Jog/Sprint blend at the cadence for `speed`, so the
+## planted boot keeps pace with the ground; starting off begins the cycle
+## where GameAudio's footsteps begin theirs.
+func _drive_gait(speed: float, backwards: bool, ground: bool, delta: float) -> void:
+	var moving := speed >= Stride.MOVING
+	if moving and not _moving and ground:
+		_tree.set("parameters/gait_seek/seek_request", 0.0)
+	_moving = moving
+	_move_w = move_toward(_move_w, 1.0 if moving else 0.0, delta * 6.0)
+	_tree.set("parameters/loco_ts/blend_amount", _move_w)
+	var size := absf(global_transform.basis.get_scale().y) if is_inside_tree() else 1.0
+	_tree.set("parameters/gait/blend_position", Stride.blend(speed, _strides(), size))
+	_tree.set("parameters/gait_ts/scale", Stride.rate(speed) * (-1.0 if backwards else 1.0))
+	# Crouch_Fwd covers CROUCH_STRIDE a 2 s cycle: past that pace it plays faster.
+	var crouch_native := Stride.CROUCH_STRIDE / 2.0
+	_tree.set("parameters/crouch_bs/blend_position", clampf(speed / crouch_native, 0.0, 1.0))
+	_tree.set("parameters/crouch/scale", maxf(speed / crouch_native, 1.0) * (-1.0 if backwards else 1.0))
+
+
+## Metres one walk cycle of Walk, Jog_Fwd, Sprint covers on this body.
+func _strides() -> Array:
+	return Stride.ARMORED
 
 
 ## Keeps the head upright after the animation: the library's pistol-aim

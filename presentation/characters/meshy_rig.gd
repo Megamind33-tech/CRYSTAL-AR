@@ -172,6 +172,10 @@ func setup(color: Color) -> void:
 	_build_tree(_retarget_to(character, _skeleton, String(_model.get_path_to(_skeleton))), MESHY_UPPER)
 
 
+func _strides() -> Array:
+	return Stride.MESHY
+
+
 ## The animations don't move the fingers, so the curl goes into the finger
 ## bones' rests: the tree's pose resets then leave them curled, with nothing
 ## to redo each frame. Again for first person (its left-hand curl).
