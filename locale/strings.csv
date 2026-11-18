@@ -1237,3 +1237,49 @@ PIT_ONE_PAD,CAVE-IN
 PIT_ONE_PAD_SUB,Only one extraction pad works this run · find it
 PIT_HOT_VAULT,FAILING VAULT LOCK
 PIT_HOT_VAULT_SUB,The vault opens twice as fast · everyone knows it
+HUNT_TAB_SQUAD,SQUAD
+SQUAD_SIGN,SQUAD OFFICE
+SQUAD_TITLE,Squad office
+ESTATE_PROMPT_SQUAD,Squad office · pick who deploys with you
+SQUAD_NONE,nobody yet
+SQUAD_LINE,"Your squad: %s (%d/%d) · $%d each per run, paid when you deploy. Command them from your phone's SQUAD app."
+SQUAD_ADD,Add a %s · %s
+SQUAD_REMOVE,Stand down the %s
+SQUAD_FEED_DEPLOYS,Your squad deploys with you (%d)
+SQUAD_ROLE_GUNNER,Gunner
+SQUAD_ROLE_GUNNER_SUB,opens fire from furthest out
+SQUAD_ROLE_SCOUT,Scout
+SQUAD_ROLE_SCOUT_SUB,marks the nearest rival every so often
+SQUAD_ROLE_MEDIC,Medic
+SQUAD_ROLE_MEDIC_SUB,patches you and the squad up when close
+SQUAD_ROLE_ENGINEER,Engineer
+SQUAD_ROLE_ENGINEER_SUB,doubles your speed on the vault and caches when beside you
+SQUAD_PLAN,Plan: %s
+SQUAD_ALL,All: %s
+SQUAD_ONE,%s: %s
+SQUAD_RULE,Rule: %s
+SQUAD_ORDER_FOLLOW,follow me
+SQUAD_ORDER_HOLD,hold here
+SQUAD_ORDER_GUARD_PAD,guard the extraction pad
+SQUAD_ORDER_ESCORT,escort me (close)
+SQUAD_ORDER_FETCH,get my cargo out
+SQUAD_ORDER_ATTACK,attack (nearest rival)
+SQUAD_ORDER_FALL_BACK,fall back to me
+SQUAD_RULE_HOLD_FIRE,hold fire
+SQUAD_RULE_RETURN_FIRE,return fire only
+SQUAD_RULE_WEAPONS_FREE,weapons free
+SQUAD_SPREAD_TOGETHER,Stay together
+SQUAD_SPREAD_SPREAD,Spread out
+SQUAD_STRATEGY_STEALTH,STEALTH
+SQUAD_STRATEGY_STEALTH_SUB,"Hold fire, spread out · scout and engineer slip off for your cargo"
+SQUAD_STRATEGY_ASSAULT,ASSAULT
+SQUAD_STRATEGY_ASSAULT_SUB,"Weapons free, together · gunner and scout go for the nearest rival"
+SQUAD_STRATEGY_TURTLE,TURTLE
+SQUAD_STRATEGY_TURTLE_SUB,Guard the pad · ambush whoever comes to extract
+SQUAD_STRATEGY_BODYGUARD,BODYGUARD
+SQUAD_STRATEGY_BODYGUARD_SUB,Everyone close round you · return fire only
+SQUAD_FEED_ORDER,Squad: %s
+SQUAD_FEED_RULE,Squad rule: %s
+SQUAD_FEED_PLAN,Squad plan: %s
+SQUAD_FEED_DOWN,Your %s is down
+SQUAD_FEED_SPOTTED,Scout marks %s

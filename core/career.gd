@@ -282,7 +282,7 @@ static func fresh() -> Dictionary:
 			"oxygen": 100.0, "fatigue": 0.0, "water": 100.0, "lab": {}, "job": {}, "jobs_done": {}, "companion": "",
 			"armed": "", "rover_cargo": {},
 			"home": {"locker": {}, "lock": 0, "checked_at": 0, "robbed": {}}, "ride": 0,
-			"aircraft": -1, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
+			"aircraft": -1, "team": [], "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
 			"trade": {"chain": 0, "sold": 0, "learned": [], "clients": {}, "orders": [], "dealers": {}, "order_at": 0},
 			"heist": {}, "heists_done": {},
 			"feed": [], "fame": 0, "partner": {},
@@ -1769,6 +1769,34 @@ func claim_bounty(alive: bool, now: int) -> int:
 ## rank, and a higher rank holds more members. Members walk with you in
 ## town and fight beside you when it comes to it.
 const GANG_COST := 1500
+## Your squad for the dig (HuntSquad, saved as `team`): up to HuntSquad.MAX_SIZE roles, each
+## paid SQUAD_COST a run when you deploy.
+const SQUAD_COST := 90
+
+
+func squad_add(role: String) -> bool:
+	if not HuntSquad.ROLES.has(role) or (d.team as Array).size() >= HuntSquad.MAX_SIZE:
+		return false
+	(d.team as Array).append(role)
+	return true
+
+
+func squad_remove(i: int) -> bool:
+	if i < 0 or i >= (d.team as Array).size():
+		return false
+	(d.team as Array).remove_at(i)
+	return true
+
+
+## The squad that can deploy now: as many as the wallet pays for, paid.
+func squad_deploy() -> Array:
+	var out := []
+	for r: String in d.team:
+		if d.wallet < SQUAD_COST:
+			break
+		d.wallet -= SQUAD_COST
+		out.append(r)
+	return out
 const RECRUIT_COST := 250
 ## [rank name, respect needed, members it can hold].
 const GANG_RANKS := [["Street crew", 0, 2], ["Runners", 100, 3], ["Enforcers", 300, 4], ["Syndicate", 700, 6],

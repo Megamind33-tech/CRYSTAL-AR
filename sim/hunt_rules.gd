@@ -140,6 +140,7 @@ var grudges: Dictionary = {}
 var personalities: Dictionary = {}
 ## Operational credits and mercenary contracts.
 var economy := HuntEconomy.new()
+var squad := HuntSquad.new()  ## the hunters' AI teammates
 ## Recovery Contract: victim id -> {"treasure", "position" (fuzzed), "tick"}.
 var recovery_clues: Dictionary = {}
 ## Last Extraction: the match's end tick (0: no clock, every pad stays open),
@@ -194,6 +195,7 @@ func reset(world: SimWorld) -> void:
 	vault_progress = 0
 	_searching.clear()
 	economy.reset()
+	squad.reset()
 	end_tick = 0
 	final_zone = -1
 	_announced = 0
@@ -209,7 +211,7 @@ func reset(world: SimWorld) -> void:
 	for id in ids:
 		# economy.reset() above queued any mercenary bodies for removal: they
 		# are no hunters (no assignments, no credits).
-		if not economy.pending_dismissals.has(id):
+		if not economy.pending_dismissals.has(id) and not squad.pending_dismissals.has(id):
 			economy.add_hunter(id)
 			_assign(world, id)
 	_seat_nations(world, ids)
@@ -223,7 +225,7 @@ func _seat_nations(world: SimWorld, ids: Array) -> void:
 	nations.clear()
 	if home_nations.is_empty():
 		return  # a run without nations (tests, old saves): as before
-	var hunters := ids.filter(func(id: int) -> bool: return not economy.is_merc(id) and not economy.pending_dismissals.has(id))
+	var hunters := ids.filter(func(id: int) -> bool: return not _aux(id) and not economy.pending_dismissals.has(id))
 	nations = Nations.seat(hunters, home_nations, world.match_seed)
 	var by_nation := {}
 	for id: int in hunters:
@@ -245,7 +247,7 @@ func nation_of(id: int) -> int:
 ## an employer and its mercenary, and allies. Allies CAN be hurt (friendly
 ## fire is on: anyone can turn on anyone), see protects().
 func friendly(a: int, b: int) -> bool:
-	return economy.protects(a, b) or social.allied(a, b)
+	return economy.protects(a, b) or squad.same_side(a, b) or social.allied(a, b)
 
 
 ## A hit between hunters: fire on an ally is friendly fire (HuntSocial).
@@ -254,7 +256,7 @@ func on_damage(world: SimWorld, attacker: int, target: int, amount: float, kille
 
 
 func add_player(world: SimWorld, p: SimPlayer) -> void:
-	if economy.is_merc(p.net_id):
+	if _aux(p.net_id):
 		return  # a hired mercenary: no assignments, no credits
 	if treasures.is_empty():
 		_new_treasure(Kind.GRAND, 0, vault).locked = true
@@ -273,6 +275,9 @@ func remove_player(world: SimWorld, p: SimPlayer) -> void:
 		economy.end_contract(world, p.net_id, "left")
 	elif economy.is_merc(p.net_id):
 		economy.end_contract(world, economy.mercs[p.net_id], "merc_down")
+	elif squad.is_member(p.net_id):
+		squad.on_death(world, p.net_id)
+	squad.disband(world, p.net_id)  # a leader leaving takes their squad
 
 
 ## Limited ammunition: at most SPARE_MAGS spare magazines per weapon.
@@ -295,8 +300,9 @@ func on_kill(world: SimWorld, victim: SimPlayer, killer: int, suicide: bool) -> 
 	_drop(world, victim)
 	extract_progress.erase(victim.net_id)
 	economy.on_death(world, victim.net_id)
-	if economy.is_merc(killer) or economy.is_merc(victim.net_id):
-		if economy.is_merc(killer) and not suicide and world.scores.has(killer):
+	squad.on_death(world, victim.net_id)
+	if _aux(killer) or _aux(victim.net_id):
+		if _aux(killer) and not suicide and world.scores.has(killer):
 			world.scores[killer] -= 1  # hired guns don't score
 		return
 	if not suicide and world.scores.has(killer):
@@ -313,7 +319,7 @@ func on_kill(world: SimWorld, victim: SimPlayer, killer: int, suicide: bool) -> 
 ## Stealing: a melee hit on a carrier takes the treasure, if the attacker's
 ## hands are free.
 func on_melee_hit(world: SimWorld, attacker: SimPlayer, target: SimPlayer) -> void:
-	if economy.is_merc(attacker.net_id):
+	if _aux(attacker.net_id):
 		return  # mercenaries fight; they don't carry treasure
 	var t := carried_by(target.net_id)
 	if t == null or carried_by(attacker.net_id) != null:
@@ -390,7 +396,7 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 		var best_d := INF
 		for id in ids:
 			var p: SimPlayer = world.players[id]
-			if not p.state.alive or carried_by(id) != null or economy.is_merc(id):
+			if not p.state.alive or carried_by(id) != null or (_aux(id) and not _may_carry(id, t)):
 				continue
 			if id == t.blocked_id and tick < t.blocked_until:
 				continue
@@ -415,6 +421,7 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 	_step_vault(world, ids, interacting)
 	social.step(world, ids)
 	economy.step(world)
+	squad.step(world, self)
 	_step_last_extraction(world)
 	# The alarm trap.
 	if trap != Vector3.INF:
@@ -423,7 +430,7 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 		if trap_rearm_tick == 0:
 			for id in ids:
 				var p: SimPlayer = world.players[id]
-				if p.state.alive and not economy.is_merc(id) and p.state.position.distance_to(trap) <= TRAP_RADIUS:
+				if p.state.alive and not _aux(id) and p.state.position.distance_to(trap) <= TRAP_RADIUS:
 					revealed_until[id] = tick + TRAP_REVEAL_TICKS
 					trap_rearm_tick = tick + TRAP_REARM_TICKS
 					world._emit("ha:%d" % tick, "hunt", {"action": "alarm", "player": id, "position": p.state.position,
@@ -518,7 +525,7 @@ func _step_caches(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 				c.progress = 0
 				continue
 			c.collector_hp = hp
-			c.progress += 1
+			c.progress += 1 + squad.work_bonus(world, c.collector)  # an engineer beside you
 			if c.progress >= HuntResources.collect_ticks(c.resource):
 				var t := _new_treasure(Kind.RESOURCE, c.collector, c.position)
 				t.resource = c.resource
@@ -529,7 +536,7 @@ func _step_caches(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 				c.collector = 0
 			continue
 		for id in ids:
-			if not interacting.has(id) or economy.is_merc(id) or carried_by(id) != null:
+			if not interacting.has(id) or _aux(id) or carried_by(id) != null:
 				continue
 			var p: SimPlayer = world.players[id]
 			if p.state.alive and _flat(p.state.position, c.position) <= CACHE_RADIUS and not _collecting(id):
@@ -583,12 +590,12 @@ func _step_vault(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 			vault_progress = 0
 			return
 		_unlocker_hp = hp
-		vault_progress += 1
+		vault_progress += 1 + squad.work_bonus(world, vault_unlocker)
 		if vault_progress >= vault_ticks():
 			_unlock_vault(world, g, vault_unlocker)
 		return
 	for id in ids:
-		if not interacting.has(id) or economy.is_merc(id) or carried_by(id) != null:
+		if not interacting.has(id) or _aux(id) or carried_by(id) != null:
 			continue
 		var p: SimPlayer = world.players[id]
 		if p.state.alive and _flat(p.state.position, g.position) <= VAULT_UNLOCK_RADIUS:
@@ -736,6 +743,14 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 			return economy.hire(world, hunter)
 		"merc_order":
 			return economy.order(world, hunter, str(args.get("order", "")))
+		"squad_order":
+			return squad.order(world, hunter, str(args.get("order", "")), str(args.get("role", "")), int(args.get("target", 0)))
+		"squad_rule":
+			return squad.set_rule(world, hunter, str(args.get("rule", "")))
+		"squad_spread":
+			return squad.set_spread(world, hunter, str(args.get("spread", "")))
+		"squad_strategy":
+			return squad.set_strategy(world, hunter, str(args.get("strategy", "")))
 		"dismiss_merc":
 			if not economy.contracts.has(hunter):
 				return false
@@ -743,7 +758,7 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 			return true
 		"propose_alliance":
 			var to := int(args.get("target", 0))
-			return not economy.is_merc(to) and not economy.is_merc(hunter) and social.propose(world, hunter, to)
+			return not _aux(to) and not _aux(hunter) and social.propose(world, hunter, to)
 		"respond_alliance":
 			return social.respond(world, hunter, bool(args.get("accept", false)))
 		"leave_alliance":
@@ -761,7 +776,7 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 ## its confidence. Refused, at no cost, when there's nothing to report. An
 ## ally gets a copy (allies share information).
 func buy_intel(world: SimWorld, hunter: int, kind: String) -> bool:
-	if not HuntEconomy.INTEL.has(kind) or economy.is_merc(hunter) or not world.players.has(hunter):
+	if not HuntEconomy.INTEL.has(kind) or _aux(hunter) or not world.players.has(hunter):
 		return false
 	var spec: Dictionary = HuntEconomy.INTEL[kind]
 	var me: SimPlayer = world.players[hunter]
@@ -790,7 +805,7 @@ func buy_intel(world: SimWorld, hunter: int, kind: String) -> bool:
 		"rival_position":
 			var target: SimPlayer = null
 			for p: SimPlayer in world.players.values():
-				if p.net_id == hunter or not p.state.alive or economy.is_merc(p.net_id) or social.allied(hunter, p.net_id):
+				if p.net_id == hunter or not p.state.alive or _aux(p.net_id) or social.allied(hunter, p.net_id):
 					continue
 				var carrying := carried_by(p.net_id) != null
 				var better := target == null or (carrying and carried_by(target.net_id) == null) \
@@ -838,7 +853,18 @@ func _fuzz(at: Vector3, radius: float) -> Vector3:
 ## its mercenary. Allies can: turning on your squad is always possible
 ## (docs/game-plan.md, decision 3), and HuntSocial makes it a betrayal.
 func protects(a: int, b: int) -> bool:
-	return economy.protects(a, b)
+	return economy.protects(a, b) or squad.same_side(a, b)
+
+
+## A hired gun or a squad's teammate: no hunter (no assignments, credits,
+## bounties, alliances).
+func _aux(id: int) -> bool:
+	return economy.is_merc(id) or squad.is_member(id)
+
+
+## A teammate may pick up its leader's own cargo (to extract it for them).
+func _may_carry(id: int, t: Treasure) -> bool:
+	return squad.is_member(id) and t.kind == Kind.PERSONAL and t.owner == squad.leader_of(id)
 
 
 # --- Internals ---
@@ -1019,7 +1045,7 @@ func _step_holds(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 	for id in ids:
 		var p: SimPlayer = world.players[id]
 		var hold := _hold_at(world, p.state.position) if p.state.alive and p.state.vehicle < 0 else -1
-		if hold < 0 or carried_by(id) != null or economy.is_merc(id) or stowed_in(hold).is_empty():
+		if hold < 0 or carried_by(id) != null or _aux(id) or stowed_in(hold).is_empty():
 			_searching.erase(id)
 			continue
 		var t: Treasure = stowed_in(hold)[0]
@@ -1051,6 +1077,9 @@ func _unstow(world: SimWorld, p: SimPlayer, t: Treasure) -> void:
 
 
 func _bank(world: SimWorld, p: SimPlayer, t: Treasure) -> void:
+	if squad.is_member(p.net_id) and world.players.has(squad.leader_of(p.net_id)):
+		t.carrier = 0
+		p = world.players[squad.leader_of(p.net_id)]  # a teammate banks for its leader
 	var points := value_for(t, p.net_id)
 	world.scores[p.net_id] = world.scores.get(p.net_id, 0) + points
 	banked_count[p.net_id] = banked_count.get(p.net_id, 0) + 1

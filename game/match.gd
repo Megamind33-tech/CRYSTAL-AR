@@ -602,6 +602,7 @@ func _process(delta: float) -> void:
 			server.world.teleport(me, _arrival)
 			_arrival = Vector3.INF
 			_bring_companion()
+			_bring_squad()
 	_setup_squad()
 	_update_aim_assist(delta)
 	if city != null:
@@ -1218,6 +1219,46 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 			func() -> bool:
 				var e: HuntEconomy = econ.call()
 				return e != null and e.contracts.has(local_id()), "crew")
+	# Your squad (HuntSquad): a plan in one tap, orders to everyone or to one
+	# role, the rules of engagement, together or spread out.
+	var my_squad := func() -> HuntSquad.Squad:
+		var st: Dictionary = hunt_menu.state.call()
+		return (st.hunt as HuntRules).squad.squad_of(local_id()) if not st.is_empty() else null
+	for plan: String in HuntSquad.STRATEGY_IDS:
+		hunt_menu.add_row(func() -> String: return tr("SQUAD_PLAN") % tr("SQUAD_STRATEGY_" + plan.to_upper()),
+				func() -> void: hunt_menu.request.call("squad_strategy", {"strategy": plan}),
+				func() -> bool:
+					var sq: HuntSquad.Squad = my_squad.call()
+					return sq != null and sq.strategy != plan, "squad")
+	for order: String in HuntSquad.ORDER_IDS:
+		hunt_menu.add_row(func() -> String: return tr("SQUAD_ALL") % tr("SQUAD_ORDER_" + order.to_upper()),
+				func() -> void: hunt_menu.request.call("squad_order", {"order": order, "target": _nearest_hunter()}),
+				func() -> bool: return my_squad.call() != null, "squad")
+	for role: String in HuntSquad.ROLE_IDS:
+		for order: String in ["follow", "hold", "fetch", "attack"]:
+			hunt_menu.add_row(func() -> String: return tr("SQUAD_ONE") % [tr("SQUAD_ROLE_" + role.to_upper()),
+						tr("SQUAD_ORDER_" + order.to_upper())],
+					func() -> void: hunt_menu.request.call("squad_order", {"order": order, "role": role, "target": _nearest_hunter()}),
+					func() -> bool:
+						var sq: HuntSquad.Squad = my_squad.call()
+						if sq == null:
+							return false
+						for m in sq.members:
+							if m.role == role:
+								return true
+						return false, "squad")
+	for rule: String in HuntSquad.RULE_IDS:
+		hunt_menu.add_row(func() -> String: return tr("SQUAD_RULE") % tr("SQUAD_RULE_" + rule.to_upper()),
+				func() -> void: hunt_menu.request.call("squad_rule", {"rule": rule}),
+				func() -> bool:
+					var sq: HuntSquad.Squad = my_squad.call()
+					return sq != null and HuntSquad.RULE_IDS[sq.rule] != rule, "squad")
+	for spread: String in HuntSquad.SPREAD_IDS:
+		hunt_menu.add_row(func() -> String: return tr("SQUAD_SPREAD_" + spread.to_upper()),
+				func() -> void: hunt_menu.request.call("squad_spread", {"spread": spread}),
+				func() -> bool:
+					var sq: HuntSquad.Squad = my_squad.call()
+					return sq != null and HuntSquad.SPREAD_IDS[sq.spread] != spread, "squad")
 	# Alliances: propose to the nearest hunter, answer a proposal.
 	hunt_menu.add_row(func() -> String:
 				var to := _nearest_hunter()
@@ -1546,6 +1587,27 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			_kill_feed.add_note("", tr("HUNT_FEED_LAST_EXTRACTION"), UiStyle.WARN)
 			audio.play_ui("shield_break")
 			_hunt_banner("HUNT_BANNER_LAST", tr("HUNT_BANNER_LAST_SUB"), UiStyle.WARN)
+		"squad_formed", "squad_order", "squad_rule", "squad_spread", "squad_strategy", "squad_down", "squad_spotted":
+			if e.player == me:
+				var line := ""
+				match e.action:
+					"squad_order":
+						var to := tr("SQUAD_ORDER_" + str(e.order).to_upper())
+						line = tr("SQUAD_FEED_ORDER") % [to if str(e.role) == "" else "%s: %s" % [tr("SQUAD_ROLE_" + str(e.role).to_upper()), to]]
+					"squad_rule":
+						line = tr("SQUAD_FEED_RULE") % tr("SQUAD_RULE_" + str(e.rule).to_upper())
+					"squad_spread":
+						line = tr("SQUAD_SPREAD_" + str(e.spread).to_upper())
+					"squad_strategy":
+						line = tr("SQUAD_FEED_PLAN") % tr("SQUAD_STRATEGY_" + str(e.strategy).to_upper())
+						_hunt_banner("SQUAD_STRATEGY_" + str(e.strategy).to_upper(), tr("SQUAD_STRATEGY_" + str(e.strategy).to_upper() + "_SUB"), HuntHud.ALLY)
+					"squad_down":
+						line = tr("SQUAD_FEED_DOWN") % tr("SQUAD_ROLE_" + str(e.role).to_upper())
+					"squad_spotted":
+						line = tr("SQUAD_FEED_SPOTTED") % _display_name(int(e.target))
+				if not line.is_empty():
+					_kill_feed.add_note("", line, HuntHud.ALLY, true)
+			return
 		"merc_hired", "merc_order", "merc_ended":
 			if e.player == me:
 				var key: String = {"merc_hired": "HUNT_FEED_MERC_HIRED", "merc_order": "HUNT_FEED_MERC_ORDER",
@@ -1702,6 +1764,19 @@ func _bring_companion() -> void:
 	var h := server.world.hunt
 	if h.economy.bring_friend(server.world, ServerSession.LOCAL_PLAYER_ID, Career.PEOPLE[who].name, h.end_tick + 600):
 		_kill_feed.add_note(Career.PEOPLE[who].name, tr("HUNT_FEED_FRIEND_JOINS"), HuntHud.ALLY, true)
+
+
+## Your squad deploys with you (Career.squad, paid as it goes): AI
+## teammates you command from the phone (HuntSquad).
+func _bring_squad() -> void:
+	if config.game_mode != GameMode.HUNT or server.world.hunt == null:
+		return
+	var roles := Profile.career().squad_deploy()
+	if roles.is_empty():
+		return
+	if server.world.hunt.squad.form(server.world, ServerSession.LOCAL_PLAYER_ID, roles):
+		Profile.save()
+		_kill_feed.add_note("", tr("SQUAD_FEED_DEPLOYS") % roles.size(), HuntHud.ALLY, true)
 
 
 ## After a deployment's results: back to Tharsis Gate (once).

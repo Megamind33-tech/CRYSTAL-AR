@@ -21,6 +21,9 @@ func _run() -> void:
 		get_viewport().mesh_lod_threshold = 4.0  # as project.godot's .mobile override
 	var dig := Platform.user_args.has("--dig-only")
 	Platform.storage_available = false
+	if Platform.user_args.has("--squad"):  # deploy with a full squad (HuntSquad)
+		Profile.career().d.team = ["gunner", "medic", "engineer"]
+		Profile.career().d.wallet = 1000
 	if dig:  # Adaeze, a friend, comes along
 		Profile.career().d.trust = {"foreman": Career.FRIEND}
 		Profile.career().d.companion = "foreman"
@@ -1278,6 +1281,14 @@ func _dig_run(me: SimPlayer) -> void:
 	m.hunt_hud.touch = true
 	print("CITY WALK: run started, player at %s" % me.state.position)
 	await _shot("d1_arrival_pad")
+	if Platform.user_args.has("--squad"):
+		var hr: HuntRules = m.server.world.hunt
+		print("CITY WALK: squad of %d, members %s" % [hr.squad.squad_of(me.net_id).members.size() if hr.squad.squad_of(me.net_id) != null else 0, hr.squad.by_id.keys()])
+		hr.request(m.server.world, me.net_id, "squad_strategy", {"strategy": "bodyguard"})
+		await _frames(240)
+		for id: int in hr.squad.by_id:
+			print("CITY WALK: teammate %d %.1f m from you" % [id, m.server.world.players[id].state.position.distance_to(me.state.position)])
+		await _shot("d1b_squad")
 	var pad := WorldLayout.dig_pad()
 	await _pose(me, pad + Vector3(-8, 0.3, 0), PI * 0.5 + 0.35, -0.12)
 	await _shot("d2_rover_at_pad")

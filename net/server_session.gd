@@ -527,6 +527,32 @@ func _service_hunt_mercs() -> void:
 		stats.add_player(id, merc_name, true, world.tick)
 		Log.d("server", "mercenary %s (id %d) hired by %d" % [merc_name, id, employer])
 		_broadcast_roster()
+	# Squads (HuntSquad): teammates leave and arrive the same way.
+	var sq := world.hunt.squad
+	while not sq.pending_dismissals.is_empty():
+		var gone: int = sq.pending_dismissals.pop_back()
+		if hunt_mercs.has(gone):
+			hunt_mercs.erase(gone)
+			world.remove_player(gone)
+			stats.remove_player(gone, world.tick)
+			_broadcast_roster()
+	while not sq.pending.is_empty():
+		var mate: HuntSquad.Member = sq.pending.pop_front()
+		var lead: SimPlayer = world.players.get(mate.leader)
+		if lead == null or bot_nav == null or sq.squad_of(mate.leader) == null:
+			continue
+		var mid := 2000 + _merc_seq
+		_merc_seq += 1
+		sq.bind(mate, mid)  # before the body exists: HuntRules treats it as a teammate
+		hunt_mercs[mid] = SquadBrain.new(world, bot_nav, mid, _rng.randi(), mate.leader)
+		var mate_name := "%s·%s" % [tr("SQUAD_ROLE_" + mate.role.to_upper()), lead.display_name]
+		var body := world.add_player(mid, _loadout_for(0), mate_name, true)
+		body.character = (mate.slot + 1) % 4
+		var a := TAU * float(mate.slot) / float(HuntSquad.MAX_SIZE)
+		world.teleport(body, lead.state.position + Vector3(cos(a) * 2.0, 0.2, sin(a) * 2.0))
+		stats.add_player(mid, mate_name, true, world.tick)
+		Log.d("server", "squad %s (id %d) with %d" % [mate_name, mid, mate.leader])
+		_broadcast_roster()
 
 
 ## A death, flag or wave event in a few words, for the log.

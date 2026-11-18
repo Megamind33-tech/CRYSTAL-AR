@@ -100,11 +100,41 @@ func update(me: SimPlayer, busy: bool) -> String:
 		return "estate:aero"
 	if pos.distance_to(gang_spot()) < 2.4:
 		return "estate:gang"
+	if pos.distance_to(squad_spot()) < 2.4:
+		return "estate:squad"
 	if c.d.stash.get("cutter", 0) > 0 or not _cutting.is_empty():
 		for t: Array in WorldLayout.trees():
 			if not felled(str(t[0])) and Vector2(pos.x - (t[1] as Vector3).x, pos.z - (t[1] as Vector3).z).length() < 2.6:
 				return "estate:tree:" + str(t[0])
 	return ""
+
+
+## The squad office (HuntSquad): by the gate, where you pick who deploys
+## with you to the dig.
+static func squad_spot() -> Vector3:
+	return CityLayout.ORIGIN + Vector3(18, 0, 24)
+
+
+func _squad_line() -> String:
+	var c := Profile.career()
+	var names := []
+	for r: String in c.d.team:
+		names.append(_t("SQUAD_ROLE_" + r.to_upper()))
+	var who := ", ".join(names) if not names.is_empty() else _t("SQUAD_NONE")
+	return _t("SQUAD_LINE") % [who, (c.d.team as Array).size(), HuntSquad.MAX_SIZE, Career.SQUAD_COST]
+
+
+func _squad_options() -> Array:
+	var c := Profile.career()
+	var out := []
+	var full := (c.d.team as Array).size() >= HuntSquad.MAX_SIZE
+	for r: String in HuntSquad.ROLE_IDS:
+		out.append([_t("SQUAD_ADD") % [_t("SQUAD_ROLE_" + r.to_upper()), _t("SQUAD_ROLE_" + r.to_upper() + "_SUB")], not full,
+				ComicUI.CYAN, "estate:squad_add:" + r])
+	for i in (c.d.team as Array).size():
+		out.append([_t("SQUAD_REMOVE") % _t("SQUAD_ROLE_" + str(c.d.team[i]).to_upper()), true, ComicUI.PAPER,
+				"estate:squad_remove:%d" % i])
+	return out
 
 
 ## Where you form and run your gang: the back room of the Dust Devil Saloon's
@@ -135,6 +165,8 @@ func prompt(key: String) -> String:
 			return _t("ESTATE_PROMPT_AERO")
 		"gang":
 			return _t("ESTATE_PROMPT_GANG")
+		"squad":
+			return _t("ESTATE_PROMPT_SQUAD")
 		"tree":
 			if _cutting == parts[2]:
 				return _t("ESTATE_CUTTING") % roundi(_cut_t / CUT_SECONDS * 100.0)
@@ -168,6 +200,8 @@ func act(key: String, me: SimPlayer) -> void:
 			city.open_menu(_t("AERO_NAME"), _aero_line(), _aero_options())
 		"gang":
 			city.open_menu(_t("GANG_TITLE"), _gang_line(), _gang_options())
+		"squad":
+			city.open_menu(_t("SQUAD_TITLE"), _squad_line(), _squad_options())
 		"tree":
 			if _cutting.is_empty():
 				_cutting = parts[2]
@@ -203,6 +237,14 @@ func menu_act(what: String, me: SimPlayer) -> void:
 				city.news("MARSNET_AIRCRAFT", [VehicleSim.MODELS[model].name], 5)
 				city._flash_text(_t("AERO_BOUGHT") % VehicleSim.MODELS[model].name, ComicUI.GREEN)
 			city.garage.set_menu(_aero_line(), _aero_options())
+		"squad_add":
+			if c.squad_add(parts[1]):
+				Profile.save()
+			city.garage.set_menu(_squad_line(), _squad_options())
+		"squad_remove":
+			if c.squad_remove(int(parts[1])):
+				Profile.save()
+			city.garage.set_menu(_squad_line(), _squad_options())
 		"form":
 			if c.form_gang(GANG_NAMES[int(parts[1])]):
 				city._flash_text(_t("GANG_FORMED") % c.d.gang.name, ComicUI.MAGENTA)
