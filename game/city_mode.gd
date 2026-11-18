@@ -70,6 +70,7 @@ var trade: CityTrade     ## the Red Dust Trade
 var events: CityEvents   ## things that turn up out in the valley
 var heist: CityHeist     ## heists in stages
 var social: CitySocial   ## MarsNet and the people in your life
+var venues: CityVenues   ## the Land Office, the Pit, the ruby cutter
 var marsnet_button: Button
 var style: CityStyle     ## looks and the season
 var style_button: Button
@@ -398,6 +399,11 @@ func _update() -> void:
 	Diagnostics.time_section("social", _t_social)
 	if _near.is_empty() and not social_near.is_empty():
 		_near = social_near
+	if venues == null:
+		venues = CityVenues.new(self)
+	var venue_near := venues.update(me, match_node.get_process_delta_time(), _panels_open())
+	if _near.is_empty() and not venue_near.is_empty():
+		_near = venue_near
 	marsnet_button.visible = not _panels_open()
 	style_button.visible = not _panels_open()
 	style.apply()
@@ -453,6 +459,8 @@ func _update() -> void:
 			heist.act(_near, me)
 		elif _near.begins_with("social:"):
 			social.act(_near, me)
+		elif _near.begins_with("venue:"):
+			venues.act(_near, me)
 		elif _near == "bounty:ask":
 			bounty.ask(me)
 		elif _near.begins_with("kiosk:"):
@@ -875,7 +883,8 @@ func toggle_drawn() -> void:
 
 ## Any of the city's panels open (the controls are theirs).
 func _panels_open() -> bool:
-	return screen.visible or talk.visible or shelf.visible or garage.visible or (social != null and social.panel.visible)
+	return screen.visible or talk.visible or shelf.visible or garage.visible or (social != null and social.panel.visible) \
+			or (venues != null and venues.busy()) or is_instance_valid(_arrival_overlay)
 
 
 ## A line on MarsNet about what just happened (and fame for it).
@@ -1996,6 +2005,8 @@ func prompt() -> String:
 		if _near.begins_with("estate:tree:") and et.contains("%"):
 			return et
 		text = et
+	elif _near.begins_with("venue:"):
+		text = venues.prompt(_near)
 	elif _near.begins_with("kiosk:"):
 		text = tr("CITY_PROMPT_KIOSK")
 	elif _near == "showroom":
@@ -2088,56 +2099,66 @@ func open_terminal(tab: String) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
-## First arrival: choose your nation before anything else (Guide step 1).
+## Arrival, in order and once each: nation (flag cards) -> landing at the
+## colony -> path (government or freelance) -> the guide's intro card.
+## Registration happens before, on the main menu. An arrived career with a
+## path skips all of it.
 var _nation_pick: NationPick
+var _path_pick: PathPick
+var _arrival_overlay: Control  # whichever arrival card is up
+
+
+func _arrival_lock(on: bool) -> void:
+	if on:
+		match_node.input.enabled = false
+		match_node.touch.release_all()
+		if match_node.touch.visible:
+			_touch_was_visible = true
+		match_node.touch.visible = false
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	else:
+		match_node.input.enabled = true
+		match_node.touch.visible = _touch_was_visible
 
 
 func _maybe_pick_nation() -> void:
-	_maybe_pick_path()
-	if _nation_pick != null or Profile.career().nation() != Nations.NONE or match_node.server == null \
+	if is_instance_valid(_arrival_overlay) or match_node.server == null \
 			or match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID) == null:
 		return
-	_nation_pick = NationPick.new()
-	hud_layer.get_parent().add_child(_nation_pick)
-	match_node.input.enabled = false
-	match_node.touch.release_all()
-	_touch_was_visible = match_node.touch.visible
-	match_node.touch.visible = false
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_nation_pick.chosen.connect(func(i: int) -> void:
-		Profile.career().choose_nation(i)
-		var me = match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
-		if me != null and not bool(Profile.career().d.arrived):
-			match_node.server.world.teleport(me, Arrival.spawn(i))  # off to the nation's colony
-			Profile.career().d.arrived = true
-		Profile.save()
-		_flash_text(tr("NATION_WELCOME") % Nations.display_name(i), Nations.color(i))
-		_nation_pick.queue_free()
-		var intro := GuideIntro.new()
-		hud_layer.get_parent().add_child(intro)
-		intro.done.connect(func() -> void:
-			match_node.input.enabled = true
-			match_node.touch.visible = _touch_was_visible))
-
-
-## After arrival: government or freelance, asked once.
-var _path_pick: PathPick
-
-
-func _maybe_pick_path() -> void:
 	var c := Profile.career()
-	if _path_pick != null or _nation_pick != null or c.nation() == Nations.NONE or c.path() != "" \
-			or match_node.server == null:
-		return
-	_path_pick = PathPick.new()
-	hud_layer.get_parent().add_child(_path_pick)
-	match_node.input.enabled = false
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_path_pick.chosen.connect(func(p: String) -> void:
-		Profile.career().choose_path(p)
-		Profile.save()
-		_path_pick.queue_free()
-		match_node.input.enabled = true)
+	if c.nation() == Nations.NONE:
+		_nation_pick = NationPick.new()
+		_arrival_overlay = _nation_pick
+		hud_layer.get_parent().add_child(_nation_pick)
+		_arrival_lock(true)
+		_nation_pick.chosen.connect(func(i: int) -> void:
+			Profile.career().choose_nation(i)
+			var me = match_node.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
+			if me != null and not bool(Profile.career().d.arrived):
+				match_node.server.world.teleport(me, Arrival.spawn(i))  # off to the nation's colony
+				Profile.career().d.arrived = true
+			Profile.save()
+			_flash_text(tr("NATION_WELCOME") % Nations.display_name(i), Nations.color(i))
+			_nation_pick.queue_free()
+			_nation_pick = null
+			_arrival_overlay = null
+			_arrival_lock(false))
+	elif c.path() == "":
+		_path_pick = PathPick.new()
+		_arrival_overlay = _path_pick
+		hud_layer.get_parent().add_child(_path_pick)
+		_arrival_lock(true)
+		_path_pick.chosen.connect(func(p: String) -> void:
+			Profile.career().choose_path(p)
+			Profile.save()
+			_path_pick.queue_free()
+			_path_pick = null
+			var intro := GuideIntro.new()
+			_arrival_overlay = intro
+			hud_layer.get_parent().add_child(intro)
+			intro.done.connect(func() -> void:
+				_arrival_overlay = null
+				_arrival_lock(false)))
 
 
 ## Through the gate: a deployment to Rustwood Yard (the career's contract

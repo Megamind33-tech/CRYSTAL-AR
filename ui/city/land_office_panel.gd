@@ -89,7 +89,7 @@ func refresh() -> void:
 func _row(id: String) -> Control:
 	var info: Dictionary = LandOffice.PLOTS[id]
 	var box := PanelContainer.new()
-	var accent := {"residential": ComicUI.CYAN, "commercial": ComicUI.MAGENTA, "industrial": ComicUI.YELLOW}[info.zone]
+	var accent: Color = {"residential": ComicUI.CYAN, "commercial": ComicUI.MAGENTA, "industrial": ComicUI.YELLOW}[info.zone]
 	box.add_theme_stylebox_override("panel", ComicUI.box(ComicUI.PANEL, accent, 3, 0.04, false))
 	var col := VBoxContainer.new()
 	box.add_child(col)
@@ -101,6 +101,10 @@ func _row(id: String) -> Control:
 	if not LandOffice.owned(_s, id):
 		row.add_child(_button("BUY %d" % LandOffice.price(_s, id), ComicUI.GREEN, _act.bind("buy", id, ""),
 			int(_holder.wallet) >= LandOffice.price(_s, id)))
+		var rc := Career.RUBY_PRICES.get("land:plot", -1) as int
+		if rc >= 0:
+			row.add_child(_button(tr("LAND_BUY_RUBIES") % rc, ComicUI.RED, _act.bind("buy_rubies", id, str(rc)),
+				int(_holder.get("rubies", 0)) >= rc))
 		return box
 	var p := LandOffice.plot(_s, id)
 	if p.building == "":
@@ -138,6 +142,7 @@ func _status(id: String) -> String:
 func _act(what: String, id: String, arg: String) -> void:
 	match what:
 		"buy": LandOffice.buy(_s, _holder, id, _now)
+		"buy_rubies": LandOffice.buy_rubies(_s, _holder, id, _now, int(arg))
 		"sell": LandOffice.sell(_s, _holder, id, _now)
 		"build": LandOffice.build(_s, _holder, id, arg, _now)
 		"list": LandOffice.list_for_players(_s, id, int(arg), _now)

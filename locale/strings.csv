@@ -1199,3 +1199,21 @@ CARD_NEXT,Next: press DEPLOY. You can drop it any time (small standing cost).
 TOUCH_WALK,Walk
 TOUCH_JOG,Jog
 TOUCH_RUN,Run
+# integration
+LAND_SIGN,LAND OFFICE
+LAND_PLOT_SIGN,PLOT %s FOR SALE
+LAND_PROMPT,the Land Office
+LAND_BUY_RUBIES,BUY %d RUBIES
+LAND_TENANT_IN,%s moved into plot %s!
+LAND_RENT,"Rent in: %d, upkeep out: %d"
+PIT_SIGN,THE PIT (DOWNSTAIRS)
+PIT_PROMPT,down to the Pit
+PIT_BET_OK,Bet's on the book!
+PIT_BET_NO,The bookie shakes his head.
+PIT_RESULT,"%s wins by %s! You collect %d."
+PIT_RING_WON,"You beat %s by %s! Purse %d and a ruby."
+PIT_RING_LOST,"%s put you down (%s). Purse %d."
+CUTTER_SIGN,RUBY CUTTER
+CUTTER_PROMPT,the ruby cutter
+CUTTER_NOTHING,No raw rubies or relics to work on.
+CUTTER_DONE,"+%d rubies! You hold %d."

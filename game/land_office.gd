@@ -20,9 +20,9 @@ const PLOTS := {
 	"r2": {"pos": Vector3(90, 0, 40), "size": 24.0, "price": 18000, "zone": "residential"},
 	"r3": {"pos": Vector3(60, 0, 75), "size": 30.0, "price": 26000, "zone": "residential"},
 	"c1": {"pos": Vector3(-70, 0, 30), "size": 30.0, "price": 40000, "zone": "commercial"},
-	"c2": {"pos": Vector3(-70, 0, 70), "size": 30.0, "price": 40000, "zone": "commercial"},
-	"i1": {"pos": Vector3(0, 0, -120), "size": 40.0, "price": 55000, "zone": "industrial"},
-	"i2": {"pos": Vector3(50, 0, -120), "size": 40.0, "price": 55000, "zone": "industrial"},
+	"c2": {"pos": Vector3(-120, 0, 140), "size": 30.0, "price": 40000, "zone": "commercial"},
+	"i1": {"pos": Vector3(-100, 0, -120), "size": 40.0, "price": 55000, "zone": "industrial"},
+	"i2": {"pos": Vector3(-80, 0, -160), "size": 40.0, "price": 55000, "zone": "industrial"},
 }
 
 ## id -> {name, piece (art/environment/<piece>.glb), zone, cost, build_days, upkeep/day, rent/day, footprint m}
@@ -74,6 +74,23 @@ static func buy(s: Dictionary, holder: Dictionary, id: String, now: int) -> bool
 	s.plots[id] = {"building": "", "built_at": 0, "tenant": "", "tenant_kind": "", "vacant_since": now,
 		"listed_rent": 0, "paid_to": now}
 	return true
+
+
+## Buys a plot for rubies (Career.price_rubies("land:plot")) instead of cash:
+## the holder needs a "rubies" count.
+static func buy_rubies(s: Dictionary, holder: Dictionary, id: String, now: int, cost: int) -> bool:
+	if not PLOTS.has(id) or owned(s, id) or cost < 0 or int(holder.get("rubies", 0)) < cost:
+		return false
+	holder.rubies = int(holder.rubies) - cost
+	s.plots[id] = {"building": "", "built_at": 0, "tenant": "", "tenant_kind": "", "vacant_since": now,
+		"listed_rent": 0, "paid_to": now}
+	return true
+
+
+## The plot's centre on the ground (PLOTS keep only x/z).
+static func ground(id: String) -> Vector3:
+	var p: Vector3 = PLOTS[id].pos
+	return Vector3(p.x, WorldTerrain.height(p.x, p.z), p.z)
 
 
 static func sell(s: Dictionary, holder: Dictionary, id: String, now: int) -> int:
@@ -206,7 +223,7 @@ static func place(s: Dictionary, id: String, now: int, parent: Node3D, body: Sta
 	if not built(s, id, now):
 		return null
 	var piece: String = BUILDINGS[plot(s, id).building].piece
-	var at: Vector3 = PLOTS[id].pos
+	var at := ground(id)
 	var mi := Comic.kit_instance(piece, at)
 	mi.name = "Land_" + id
 	parent.add_child(mi)
