@@ -119,3 +119,40 @@ func test_battlegrounds_are_many_and_sound() -> void:
 			assert_false(WorldLayout.region_at(p.x, p.z) in WorldLayout.LAWFUL, "%s: lawless at %s" % [id, p])
 			assert_true(area.has_point(p), "%s: inside the bots' navigation at %s" % [id, p])
 		assert_gte(Battlegrounds.spawns(id).size(), 6, "%s: spawns" % id)
+
+
+## Camps: every side builds with its credits; the buildings are solid and
+## work (turret, med bay, refinery, comms); walls make a ring with a gate.
+func test_building_a_camp() -> void:
+	_start(HuntWar.Objective.HOLD)
+	for i in 2:
+		var c := HuntWar.Camp.new()
+		c.side = h.war.side_of(h, i + 1)
+		c.at = CAMPS[i]
+		h.war.camps.append(c)
+	h.economy.credits[1] = 1000
+	h.economy.credits[2] = 0
+	assert_true(h.request(world, 1, "build", {"module": "turret"}))
+	assert_false(h.request(world, 2, "build", {"module": "turret"}), "no credits, no turret")
+	assert_false(h.request(world, 1, "build", {"module": "castle"}), "only real modules")
+	assert_eq(h.economy.credits[1], 1000 - int(HuntCamps.MODULES.turret.cost), "paid")
+	assert_true(h.request(world, 1, "build", {"module": "walls"}))
+	assert_false(h.request(world, 1, "build", {"module": "walls"}), "one ring")
+	await wait_physics_frames(2)
+	# The turret is solid: a ray through its socket hits it.
+	var sock := HuntCamps.socket_at(CAMPS[0], 0)
+	var hit := world._ray(sock + Vector3(-5, 1.0, 0), sock + Vector3(5, 1.0, 0))
+	assert_false(hit.is_empty(), "the turret stops a shot")
+	# It fires on an enemy in range.
+	var rival: SimPlayer = world.players[2]
+	world.teleport(rival, sock + Vector3(0, 0.05, 4.5))  # inside the walls (they block its sight)
+	rival.state.shield = 0.0
+	var hp := rival.state.health
+	_step(HuntCamps.MODULES.turret.every * 2 + 1)
+	assert_lt(rival.state.health, hp, "the turret hits the rival")
+	assert_true(h.request(world, 1, "build", {"module": "med_bay"}))
+	var me: SimPlayer = world.players[1]
+	world.teleport(me, HuntCamps.socket_at(CAMPS[0], 2) + Vector3(3, 0.05, 0))
+	me.state.health = 30.0
+	_step(HuntCamps.MODULES.med_bay.every + 1)
+	assert_gt(me.state.health, 30.0, "the med bay heals its side")

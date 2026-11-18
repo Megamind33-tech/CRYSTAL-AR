@@ -303,6 +303,8 @@ func on_kill(world: SimWorld, victim: SimPlayer, killer: int, suicide: bool) -> 
 	_drop(world, victim)
 	extract_progress.erase(victim.net_id)
 	economy.on_death(world, victim.net_id)
+	if squad.is_member(victim.net_id):
+		war.builds.on_teammate_down(world, self, squad.leader_of(victim.net_id), squad.by_id[victim.net_id].role)
 	squad.on_death(world, victim.net_id)
 	if _aux(killer) or _aux(victim.net_id):
 		if _aux(killer) and not suicide and world.scores.has(killer):
@@ -753,6 +755,8 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 			return squad.set_rule(world, hunter, str(args.get("rule", "")))
 		"squad_spread":
 			return squad.set_spread(world, hunter, str(args.get("spread", "")))
+		"build":
+			return war.enabled and war.builds.build(world, self, hunter, str(args.get("module", "")))
 		"squad_strategy":
 			return squad.set_strategy(world, hunter, str(args.get("strategy", "")))
 		"dismiss_merc":

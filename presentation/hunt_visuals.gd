@@ -489,7 +489,8 @@ func _glow(color: Color, alpha: float, energy: float) -> StandardMaterial3D:
 
 # --- War (HuntWar): the control point, the camps ---
 
-var _war_built := false
+var _war_key := ""
+var _war_nodes: Array[Node] = []
 var _point_label: Label3D
 var _camp_labels: Array[Label3D] = []
 const POINT_GOLD := Color(1.0, 0.8, 0.25)
@@ -504,16 +505,33 @@ func _side_color(hunt: HuntRules, side: int, local_id: int) -> Color:
 
 func _sync_war(hunt: HuntRules, local_id: int) -> void:
 	var w := hunt.war
-	if not w.enabled or w.objective == HuntWar.Objective.EXTRACT or w.objective == HuntWar.Objective.DROPS:
+	if not w.enabled:
 		return
-	if not _war_built:
-		_war_built = true
+	# Set up again whenever the run's war is (the countdown's reset rolls it).
+	var key := "%d:%d:%s" % [w.objective, w.camps.size(), str(w.camps[0].at) if not w.camps.is_empty() else ""]
+	if key != _war_key:
+		_war_key = key
+		for n in _war_nodes:
+			if is_instance_valid(n):
+				n.queue_free()
+		_war_nodes.clear()
+		_camp_labels.clear()
+		_camp_drawn.clear()
+		_point_label = null
+		var before := get_child_count()
 		if w.objective == HuntWar.Objective.HOLD:
 			_mast(w.point, POINT_GOLD, HuntWar.HOLD_RADIUS)
 			_point_label = _war_label(w.point + Vector3(0, 7.5, 0), POINT_GOLD)
 		for c in w.camps:
-			_mast(c.at, _side_color(hunt, c.side, local_id), HuntWar.CAMP_RADIUS)
-			_camp_labels.append(_war_label(c.at + Vector3(0, 7.5, 0), _side_color(hunt, c.side, local_id)))
+			var col := _side_color(hunt, c.side, local_id)
+			_mast(c.at + Vector3(0, HuntCamps.CORE_SIZE.y, 0), col, HuntWar.CAMP_RADIUS)
+			var core := Comic.kit_instance("hab_dome", c.at, 0.0, 0.42)
+			add_child(core)
+			_camp_labels.append(_war_label(c.at + Vector3(0, 10.0, 0), col))
+			_camp_drawn.append({})
+		for i in range(before, get_child_count()):
+			_war_nodes.append(get_child(i))
+	_sync_buildings(hunt)
 	if _point_label != null:
 		var held := ""
 		for side: int in w.hold:
@@ -522,7 +540,10 @@ func _sync_war(hunt: HuntRules, local_id: int) -> void:
 		_point_label.modulate = _side_color(hunt, w.holder, local_id) if w.holder >= 0 else POINT_GOLD
 	for i in _camp_labels.size():
 		var c: HuntWar.Camp = w.camps[i]
-		_camp_labels[i].text = tr("WAR_CAMP_LABEL") % c.charges if c.charges > 0 else tr("WAR_CAMP_DOWN")
+		if w.objective != HuntWar.Objective.CAMPS:
+			_camp_labels[i].text = tr("WAR_CAMP")
+		else:
+			_camp_labels[i].text = tr("WAR_CAMP_LABEL") % c.charges if c.charges > 0 else tr("WAR_CAMP_DOWN")
 
 
 ## A flag mast on a ring (no body: you walk round it, nothing to snag on).
@@ -556,3 +577,65 @@ func _war_label(at: Vector3, color: Color) -> Label3D:
 	l.position = at
 	add_child(l)
 	return l
+
+
+# --- Camp buildings (HuntCamps) ---
+
+var _camp_drawn: Array = []  ## per camp: {socket or "walls": node}
+## The kit piece and scale for each module (sized to its collision box).
+const MODULE_KITS := {
+	"med_bay": ["life/greenhouse", 1.0], "barracks": ["shopfront", 0.63], "comms": ["comms_tower", 1.0],
+	"refinery": ["tank_cluster", 1.0],
+}
+
+
+func _sync_buildings(hunt: HuntRules) -> void:
+	var w := hunt.war
+	for ci in mini(w.builds.built.size(), _camp_drawn.size()):
+		var b: HuntCamps.Built = w.builds.built[ci]
+		var drawn: Dictionary = _camp_drawn[ci]
+		var c: HuntWar.Camp = w.camps[ci]
+		if b.walls and not drawn.has("walls"):
+			drawn["walls"] = true
+			for seg: Array in HuntCamps.wall_segments(c.at, b.gate_angle):
+				var wall := Comic.kit_instance("wall_segment", seg[0], seg[1], 1.0)
+				wall.scale = Vector3(1.27, 0.66, 0.6)
+				add_child(wall)
+				_war_nodes.append(wall)
+		for socket: int in b.modules:
+			if drawn.has(socket):
+				continue
+			var m: String = b.modules[socket]
+			var at := HuntCamps.socket_at(c.at, socket)
+			var node: Node3D
+			if m == "turret":
+				node = _turret_model(at)
+			else:
+				var kit: Array = MODULE_KITS[m]
+				node = Comic.kit_instance(kit[0], at, rad_to_deg(atan2(c.at.x - at.x, c.at.z - at.z)), kit[1])
+			add_child(node)
+			_war_nodes.append(node)
+			drawn[socket] = node
+
+
+## A turret in the kit's style: a base, a turning head, twin barrels.
+func _turret_model(at: Vector3) -> Node3D:
+	var root := Node3D.new()
+	root.position = at
+	var base := MeshInstance3D.new()
+	base.mesh = _box_mesh(Vector3(2.2, 2.2, 2.2))
+	base.position.y = 1.1
+	base.material_override = _metal()
+	root.add_child(base)
+	var head := MeshInstance3D.new()
+	head.mesh = _box_mesh(Vector3(1.4, 0.8, 1.4))
+	head.position.y = 2.6
+	head.material_override = _glow(RIVAL, 1.0, 0.6)
+	root.add_child(head)
+	for sx in [-0.3, 0.3]:
+		var barrel := MeshInstance3D.new()
+		barrel.mesh = _box_mesh(Vector3(0.16, 0.16, 1.6))
+		barrel.position = Vector3(sx, 0.0, -1.1)
+		barrel.material_override = _metal()
+		head.add_child(barrel)
+	return root

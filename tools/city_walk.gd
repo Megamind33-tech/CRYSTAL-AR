@@ -1293,8 +1293,18 @@ func _dig_run(me: SimPlayer) -> void:
 		var c: Vector2 = s[1]
 		await _aerial("w_site_" + Battlegrounds.current, c, Vector3(0, 170, 150))
 		if not hr.war.camps.is_empty():
-			var camp: Vector3 = hr.war.camps[0].at
-			await _pose(me, camp + Vector3(0, 0.3, 12), 0.0, 0.05)
+			# Build the lot at your camp; the bots build theirs.
+			hr.economy.credits[me.net_id] = 2000
+			for mod: String in ["walls", "turret", "med_bay", "barracks", "comms", "refinery", "turret"]:
+				print("CITY WALK: build %s: %s" % [mod, hr.request(m.server.world, me.net_id, "build", {"module": mod})])
+			await _frames(120)
+			var ci := hr.war.builds._camp_of(hr, me.net_id)
+			var camp: Vector3 = hr.war.camps[ci].at
+			var mid := Vector2(camp.x, camp.z)
+			await _aerial("w_camp_air", mid, Vector3(0, 45, 40))
+			var gate := hr.war.builds.built[ci].gate_angle
+			var front := camp + Vector3(cos(gate), 0, sin(gate)) * 24.0
+			await _pose(me, front + Vector3(0, 0.3, 0), atan2(front.x - camp.x, front.z - camp.z), 0.02)
 			await _shot("w_camp")
 		get_tree().quit(0)
 		return

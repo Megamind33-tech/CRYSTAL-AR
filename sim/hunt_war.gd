@@ -49,6 +49,7 @@ var holder: int = -1  ## the side alone on the point now (-1: nobody, or contest
 var drops: Dictionary = {}  ## side -> drops extracted
 var next_drop_tick: int = 0
 var winner_side: int = -1
+var builds := HuntCamps.new()  ## what the sides build at their camps
 var _rng := RandomNumberGenerator.new()
 ## Tools and screenshots: every run gets this objective (-1: rolled).
 static var force_objective: int = -1
@@ -66,6 +67,7 @@ func start(world: SimWorld, hunt: HuntRules) -> void:
 	hold.clear()
 	drops.clear()
 	camps.clear()
+	builds.reset()
 	holder = -1
 	winner_side = -1
 	objective = Objective.EXTRACT
@@ -80,16 +82,16 @@ func start(world: SimWorld, hunt: HuntRules) -> void:
 			break
 	if force_objective >= 0:
 		objective = force_objective
-	if objective == Objective.CAMPS:
-		var sides := sides_in(world, hunt)
-		for i in mini(sides.size(), camp_spots.size()):
-			var c := Camp.new()
-			c.side = sides[i]
-			c.at = camp_spots[i]
-			camps.append(c)
-		if camps.size() < 2:
-			objective = Objective.EXTRACT  # one side: no war of camps
-			camps.clear()
+	# Every side has a camp in a war, whatever wins it (HuntCamps: they build).
+	var sides := sides_in(world, hunt)
+	for i in mini(sides.size(), camp_spots.size()):
+		var c := Camp.new()
+		c.side = sides[i]
+		c.at = camp_spots[i]
+		camps.append(c)
+	if objective == Objective.CAMPS and camps.size() < 2:
+		objective = Objective.EXTRACT  # one side: no war of camps
+	builds.start(world, self)
 	next_drop_tick = world.tick + DROP_EVERY / 3
 	world._emit("hw2:%d" % world.tick, "hunt", {"action": "war_objective", "player": 0, "position": point,
 			"treasure": 0, "kind": -1, "objective": IDS[objective]})
@@ -120,6 +122,7 @@ func sides_in(world: SimWorld, hunt: HuntRules) -> Array:
 func step(world: SimWorld, hunt: HuntRules, ids: Array, interacting: Dictionary) -> void:
 	if not enabled or winner_side >= 0:
 		return
+	builds.step(world, hunt, ids)
 	match objective:
 		Objective.HOLD:
 			_step_hold(world, hunt, ids)

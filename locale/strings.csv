@@ -1302,3 +1302,20 @@ WAR_FEED_SABOTAGE,sabotaged %s's camp (%d left)
 WAR_POINT_LABEL,CONTROL POINT
 WAR_CAMP_LABEL,CAMP · %d
 WAR_CAMP_DOWN,CAMP DOWN
+HUNT_TAB_CAMP,CAMP
+WAR_CAMP,CAMP
+CAMP_BUILD,Build %s · %d cr · %s
+CAMP_FEED_BUILT,built a %s at the camp
+SQUAD_FEED_REJOINED,Your %s is back from the barracks
+CAMP_WALLS,wall ring
+CAMP_WALLS_SUB,a ring round the camp with a gate · stops people and shots
+CAMP_TURRET,turret
+CAMP_TURRET_SUB,shoots enemies it can see near the camp
+CAMP_MED_BAY,med bay
+CAMP_MED_BAY_SUB,heals your side nearby
+CAMP_BARRACKS,barracks
+CAMP_BARRACKS_SUB,brings fallen squad teammates back
+CAMP_COMMS,comms mast
+CAMP_COMMS_SUB,reveals enemies near the camp
+CAMP_REFINERY,refinery
+CAMP_REFINERY_SUB,earns you credits over time

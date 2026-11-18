@@ -1219,6 +1219,18 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 			func() -> bool:
 				var e: HuntEconomy = econ.call()
 				return e != null and e.contracts.has(local_id()), "crew")
+	# Your side's camp (HuntCamps): build with your run credits.
+	for module: String in HuntCamps.IDS:
+		hunt_menu.add_row(func() -> String: return tr("CAMP_BUILD") % [tr("CAMP_" + module.to_upper()),
+					int(HuntCamps.MODULES[module].cost), tr("CAMP_" + module.to_upper() + "_SUB")],
+				func() -> void: hunt_menu.request.call("build", {"module": module}),
+				func() -> bool:
+					var st: Dictionary = hunt_menu.state.call()
+					if st.is_empty():
+						return false
+					var hr: HuntRules = st.hunt
+					return hr.war.enabled and not hr.war.camps.is_empty() \
+							and hr.economy.credits.get(local_id(), 0) >= int(HuntCamps.MODULES[module].cost), "camp")
 	# Your squad (HuntSquad): a plan in one tap, orders to everyone or to one
 	# role, the rules of engagement, together or spread out.
 	var my_squad := func() -> HuntSquad.Squad:
@@ -1663,6 +1675,14 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			if int(e.side) >= 0:
 				_kill_feed.add_note("", tr("WAR_FEED_HOLDS") % _side_name(int(e.side)), UiStyle.ACCENT)
 			return
+		"camp_built":
+			if h_side_is_mine(int(e.side)):
+				_kill_feed.add_note(_display_name(int(e.player)), tr("CAMP_FEED_BUILT") % tr("CAMP_" + str(e.module).to_upper()), HuntHud.ALLY)
+			return
+		"turret_fire", "squad_rejoined":
+			if e.action == "squad_rejoined" and e.player == me:
+				_kill_feed.add_note("", tr("SQUAD_FEED_REJOINED") % tr("SQUAD_ROLE_" + str(e.role).to_upper()), HuntHud.ALLY, true)
+			return
 		"war_drop":
 			_kill_feed.add_note("", tr("WAR_FEED_DROP"), HuntVisuals.CACHE)
 			return
@@ -1804,6 +1824,12 @@ func _bring_companion() -> void:
 	var h := server.world.hunt
 	if h.economy.bring_friend(server.world, ServerSession.LOCAL_PLAYER_ID, Career.PEOPLE[who].name, h.end_tick + 600):
 		_kill_feed.add_note(Career.PEOPLE[who].name, tr("HUNT_FEED_FRIEND_JOINS"), HuntHud.ALLY, true)
+
+
+## Whether a war side is the local player's.
+func h_side_is_mine(side: int) -> bool:
+	var h: HuntRules = server.world.hunt if server != null else null
+	return h != null and h.war.side_of(h, local_id()) == side
 
 
 ## A war side's name: its nation, else the hunter.

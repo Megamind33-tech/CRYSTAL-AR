@@ -34,13 +34,24 @@ stays, and grows alongside.
 - **Squads** (`sim/hunt_squad.gd`): up to 3 AI teammates with roles,
   orders, rules of engagement and one-tap plans.
 
+- **Camps** (`sim/hunt_camps.gd`): every side in a war has a camp core.
+  Each hunter spends run credits from the phone's CAMP app on six sockets
+  round it, plus a wall ring with a gate facing the middle. Everything is
+  solid: it stops people, shots and turret sight. The modules:
+  - **Turret:** shoots enemies it can see, credited to its builder.
+  - **Med bay:** heals your side nearby.
+  - **Barracks:** brings fallen squad teammates back.
+  - **Comms mast:** reveals enemies near the camp.
+  - **Refinery:** earns credits.
+
+  Bots build for their side. The models are existing kit pieces sized to
+  each collision box (the turret is built in code).
+
 ## Next
 
-1. **Camps you build.** Sockets round each camp core; spend the side's
-   credits on walls and gates, turrets, a med bay, barracks (bigger squad,
-   respawns), a comms mast (enemy squads on the map), a refinery and a
-   rotorcraft pad. Camp cores and modules get real collision and models.
-   The AI leader builds too.
+1. **Camps, next:** a rotorcraft pad (fast travel); upgrades (turret range,
+   thicker walls); repairing damage; enemies destroying modules (today
+   only the core can be sabotaged); purpose-made models.
 2. **More rules per match.** King of the vault (the relic scores while you
    hold it), escort the convoy across the site, a territory war (several
    points, the most held over time), last squad standing, and a timed

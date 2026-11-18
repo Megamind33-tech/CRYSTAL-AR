@@ -245,6 +245,27 @@ func on_death(world: SimWorld, victim: int) -> void:
 	_emit(world, m.leader, "squad_down", {"role": m.role})
 
 
+## A teammate comes back to `leader`'s squad (the camp's barracks).
+func rejoin(world: SimWorld, leader: int, role: String) -> bool:
+	if not world.players.has(leader) or not ROLES.has(role):
+		return false
+	var sq: Squad = squads.get(leader)
+	if sq == null:
+		sq = Squad.new()
+		sq.leader = leader
+		squads[leader] = sq
+	if sq.members.size() >= MAX_SIZE:
+		return false
+	var m := Member.new()
+	m.leader = leader
+	m.role = role
+	m.slot = sq.members.size()
+	sq.members.append(m)
+	pending.append(m)
+	_emit(world, leader, "squad_rejoined", {"role": role})
+	return true
+
+
 ## The leader is gone (left the match): the squad goes with them.
 func disband(world: SimWorld, leader: int) -> void:
 	var sq: Squad = squads.get(leader)
