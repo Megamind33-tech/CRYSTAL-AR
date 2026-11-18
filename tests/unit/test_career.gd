@@ -347,3 +347,41 @@ func test_hidden_stashes_survive_a_robbery() -> void:
 	assert_eq(c.make_cache(Vector3(999, 0, 0)), -1, "only so many stashes")
 	c.tidy_caches()
 	assert_eq(c.d.caches.size(), 1, "empty ones are forgotten")
+
+
+func test_rubies_earn_spend_and_old_saves() -> void:
+	var old := Career.new({"wallet": 10, "stash": {}, "gear": {}, "standing": {}, "market": {}, "settled": []})
+	assert_eq(old.rubies(), 0, "old saves start with none")
+	assert_eq(old.d.memory, {})
+	assert_eq(old.d.land, {})
+	var c := Career.new()
+	c.receive_pickup("raw_ruby", 2)
+	c.receive_pickup("nonsense", 2)
+	assert_eq(c.d.stash, {"raw_ruby": 2}, "pickups go in the pack, unknown ones don't")
+	assert_eq(c.cut_rubies(), 2)
+	assert_eq(c.rubies(), 2)
+	assert_false(c.pay_rubies(3), "not enough rubies")
+	assert_true(c.pay_rubies(2))
+	assert_eq(c.rubies(), 0)
+	assert_eq(c.price_rubies("land:plot"), Career.RUBY_PRICES["land:plot"])
+	assert_eq(c.price_rubies("cargo_case"), -1)
+
+
+func test_ruby_sources_and_shop() -> void:
+	var c := Career.new()
+	c.d.contract = Career.CONTRACTS[2].duplicate()  # crack the vault: ruby bonus
+	var r := c.settle("run-r", [{"item": "vault_relic", "value": 1}, {"item": "vault_relic", "value": 1}])
+	assert_eq(c.rubies(), 2, "contract bonus in rubies")
+	assert_eq(r.rubies, 2)
+	assert_eq(c.sell_special("vault_relic"), 2, "a special good sells for rubies")
+	assert_eq(c.rubies(), 4)
+	assert_eq(c.sell_special("cargo_case"), 0)
+	assert_true(c.dig_ruby(0.0))
+	assert_false(c.dig_ruby(0.9))
+	var found := c.scavenge("spot", [["water_ice", 1, 1.0]], 0.01, 0, 10)
+	assert_eq(found, {"raw_ruby": 1}, "a rare find while searching")
+	assert_false(c.buy_at_rubies("exchange", "jetpack"), "12 rubies is more than you have")
+	c.add_rubies(20)
+	assert_true(c.buy_at_rubies("exchange", "scanner"))
+	assert_eq(c.d.stash.scanner, 1)
+	assert_eq(c.rubies(), 22, "scanner cost 3")

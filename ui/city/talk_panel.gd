@@ -20,6 +20,9 @@ var _trust: ProgressBar
 var _trust_label: Label
 var _buttons: VBoxContainer
 var _note: String = ""
+## Set by CityMode before open(): {"region": region, "stars": wanted.stars}.
+var situation: Dictionary = {}
+var conv: Conversation   ## topics, memory, allies (game/conversation.gd)
 
 
 func _ready() -> void:
@@ -82,7 +85,8 @@ func _label(f: Font, px: int, col: Color) -> Label:
 
 func open(p_who: String) -> void:
 	who = p_who
-	_note = ""
+	conv = conversation()
+	_note = conv.greeting(who, context())
 	visible = true
 	refresh()
 
@@ -101,6 +105,7 @@ func refresh() -> void:
 	_line.text = "“%s”" % (_note if not _note.is_empty() else line)
 	for b in _buttons.get_children():
 		b.queue_free()
+	_conversation_buttons(c)
 	var talked := int(c.d.talked.get(who, -1)) == int(c.d.runs)
 	_button(tr("TALK_CHAT") if not talked else tr("TALK_CHATTED"), not talked, ComicUI.CYAN, func() -> void:
 		if c.talk(who):
@@ -180,6 +185,49 @@ func refresh() -> void:
 	_button(tr("TALK_LEAVE"), true, ComicUI.PAPER, func() -> void:
 		visible = false
 		closed.emit())
+
+
+## The memory store: in the career when the director has added
+## `talk_memory` to it, else a file of our own under user://.
+static func conversation() -> Conversation:
+	var c := Profile.career()
+	if c.d.get("talk_memory") is Dictionary:
+		return Conversation.new(c.d.talk_memory)
+	return Conversation.load_from()
+
+
+## The situation the person sees you in.
+func context() -> Dictionary:
+	var c := Profile.career()
+	var ctx := {"trust": c.trust(who), "now": int(Time.get_unix_time_from_system()),
+			"fame": c.fame_tier(), "nation": str(c.d.get("nation", ""))}
+	ctx.hour = fmod(GameClock.hour(ctx.now) + CityNpcs.hour_offset, 24.0)
+	ctx.merge(situation, true)
+	return ctx
+
+
+func _conversation_buttons(c: Career) -> void:
+	var ctx := context()
+	_trust_label.text += "  ·  " + tr("TALK_TOPICS") % conv.topics_left(who, ctx) \
+			if tr("TALK_TOPICS") != "TALK_TOPICS" else "  ·  %d topics left" % conv.topics_left(who, ctx)
+	for o: Dictionary in conv.options(who, ctx):
+		var accent := ComicUI.MAGENTA if str(o.id).begins_with("mission:") else (ComicUI.GREEN if o.id in ["join", "dismiss"] else ComicUI.CYAN)
+		var text: String = o.text
+		if not bool(o.enabled) and o.why in ["squad", "trust", "betrayed"]:
+			text += "\n" + conv.refusal(who, o.why)
+		var id: String = o.id
+		_button(text, bool(o.enabled), accent, func() -> void:
+			var r := conv.choose(who, id, context())
+			_note = r.line
+			if int(r.trust) != 0:
+				c.d.trust[who] = clampi(c.trust(who) + int(r.trust), 0, 100)
+			if r.has("ally") and c.d.has("companion"):
+				var first: Array = conv.allies()
+				c.set_companion(first[0] if not first.is_empty() else "")
+			if r.has("mission"):
+				c.d["talk_mission"] = {"who": who, "id": r.mission.id, "pay": r.mission.pay, "squad": r.mission.squad}
+			if not c.d.get("talk_memory") is Dictionary:
+				conv.save_to())
 
 
 func _button(text: String, enabled: bool, accent: Color, action: Callable) -> void:

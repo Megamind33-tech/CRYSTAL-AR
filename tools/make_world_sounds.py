@@ -60,3 +60,23 @@ noise = rng.standard_normal(t.size)
 roar = lowpass(noise, 0.06) * (0.8 + 0.2 * np.sin(2 * np.pi * 9 * t))
 hiss = (noise - lowpass(noise, 0.4)) * 0.25
 save("jet_loop.wav", loop(roar * 3.0 + hiss, fade=2000))
+
+
+# footstep_ground_1..3.wav: a footstep on dirt and gravel outdoors (a gritty
+# crunch that drops off fast, over a low dull thud). Metal footsteps indoors
+# come from gen_sounds.gd; these are the outdoor set.
+def alpha(cutoff):
+    return 1 - np.exp(-2 * np.pi * cutoff / RATE)
+
+
+def envelope(t, attack, decay):
+    return np.clip(t / attack, 0, 1) * np.exp(-t / decay)
+
+
+rng_ground = np.random.default_rng(11)
+for variant, name in enumerate(["footstep_ground_1.wav", "footstep_ground_2.wav", "footstep_ground_3.wav"]):
+    v = variant * 0.35
+    t = np.arange(int(RATE * 0.16)) / RATE
+    thud = np.sin(2 * np.pi * (60 + v * 25) * t) * 0.45 * envelope(t, 0.004, 0.045)
+    crunch = lowpass(rng_ground.uniform(-1, 1, t.size), alpha(2600 + v * 700)) * 0.6 * envelope(t, 0.002, 0.03)
+    save(name, thud + crunch)

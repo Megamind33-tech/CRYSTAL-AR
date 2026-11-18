@@ -208,3 +208,46 @@ Each phase ships on its own and is played on the phone before the next one.
    re-issues the basic sidearm. What's in your home locker, your wallet and
    your rover stay yours.
 5. **The city's systems** stay and open gradually as you rank up.
+
+## 10. The full game (17 Nov 2026): Saturn expanded
+
+**The fantasy.** You register, choose one of four nations by its flag, and
+land in that nation's colony on Titan. There you choose a life: serve your
+government (salaried posts, missions, protection, rank) or go freelance
+(contracts for anyone, bigger risks, your own rules). Everyone lives off
+Titan: expeditions and extractions in the wild, fights over what's found,
+trade, land, and power.
+
+**Pillars, each a system the player can live in:**
+
+| Pillar | What you do |
+|---|---|
+| Expeditions and extraction | Scan, mine, haul, survive the haze; alone or with a squad (some missions need a squad) |
+| Combat | Real gunfights and hand-to-hand; the underground fight club (bet your earnings on bouts, or fight in them) |
+| Government or freelance | Posts, salary and missions for your nation; or contracts on the open board |
+| Land and building | Buy plots, build homes, shops and depots, rent them to bots or players |
+| Politics | Standing in your nation, councils and elections for colony offices (later) |
+| Economy | Credits for everyday trade; rubies (rare, found or earned) for land, licences, upgrades and the club's big bets |
+| People | Bots with memory and character you can talk to properly, ally with, be protected by, and betray or be betrayed by |
+
+**The first five minutes.** Register, choose a nation by its flag, land in its
+colony, meet your nation's officer (a bot you talk to), who explains the two
+paths and gives the first task; the tracker shows every step.
+
+**Roadmap (in order; each ships playable and tested):**
+
+1. Foundations: movement controls (walk, jog, run, crouch buttons), footsteps,
+   bots that move like people, nothing passes through buildings or secured
+   areas, proper gates and security, pickups into your pack, the HUD without
+   overlaps, readable boards, comic weather and looks
+2. Arrival: registration, nation by flag, a colony per nation, the officer,
+   the government or freelance choice
+3. People: conversations with memory, alliances and companions who protect
+   you, missions that need a squad
+4. Combat: hand-to-hand moves, the underground fight club with betting
+5. Economy and land: rubies, buying land, building, renting
+6. Politics: offices and elections
+
+**How it's built:** in parallel by focused agents, each owning its own files
+(docs/handoff/agents.md), reporting to the director, who integrates the shared
+files (CityMode, Match, the strings table) and runs the full checks.

@@ -162,6 +162,11 @@ func refresh() -> void:
 				_button(tr("SHELF_BUY") % cost, c.d.wallet >= cost, ComicUI.GREEN, func() -> void:
 					if c.buy_at(shop, item):
 						_done("buy", item, tr("SHELF_BOUGHT") % _name(item)))
+				var rub := c.shop_price_rubies(shop, item)
+				if rub >= 0:
+					_button(tr("SHELF_BUY_RUBIES") % rub, c.rubies() >= rub, ComicUI.MAGENTA, func() -> void:
+						if c.buy_at_rubies(shop, item):
+							_done("buy", item, tr("SHELF_BOUGHT") % _name(item)))
 		elif _sel_side == 0 and mode == "shop" and item != "pulse_rifle":
 			var offer := c.shop_offer(shop, item)
 			_button(tr("SHELF_SELL") % offer if offer > 0 else tr("SHELF_WONT_BUY"), offer > 0, ComicUI.YELLOW,
@@ -297,6 +302,8 @@ func _draw() -> void:
 	ComicUI.draw_text(self, Vector2(48 * s, 64 * s), tr("SHELF_YOUR_PACK"), UiStyle.font_hud_big, roundi(38 * s), ComicUI.YELLOW)
 	ComicUI.draw_text(self, Vector2(size.x * 0.5, 64 * s), "$%d" % int(c.d.wallet), UiStyle.font_hud_big, roundi(40 * s),
 			ComicUI.GREEN, 1)
+	ComicUI.draw_text(self, Vector2(size.x * 0.5, 100 * s), "%d R" % c.rubies(), UiStyle.font_hud_bold, roundi(26 * s),
+			ComicUI.MAGENTA, 1)
 	ComicUI.draw_text(self, Vector2(size.x - 48 * s, 64 * s), title.to_upper(), UiStyle.font_hud_big, roundi(34 * s),
 			ComicUI.CYAN, 2)
 	_slots.clear()
@@ -364,7 +371,8 @@ func _tag(item: String, side: int) -> String:
 		if item.begins_with("gear:"):
 			var cost := c.gear_cost(item.substr(5))
 			return "$%d" % cost if cost >= 0 else "MAX"
-		return "$%d" % c.shop_price(shop, item)
+		var rub := c.shop_price_rubies(shop, item)
+		return "$%d" % c.shop_price(shop, item) + (" / %d R" % rub if rub >= 0 else "")
 	var offer := c.shop_offer(shop, item) if item != "pulse_rifle" else 0
 	return "$%d" % offer if offer > 0 else ""
 

@@ -11,6 +11,7 @@ extends RefCounted
 
 
 const HAZE := Color(0.7, 0.63, 0.5)
+const SKY_SHADER := preload("res://presentation/comic/comic_sky.gdshader")
 
 
 static func add(parent: Node) -> void:
@@ -24,15 +25,15 @@ static func add(parent: Node) -> void:
 	sun.directional_shadow_max_distance = 45.0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	parent.add_child(sun)
-	# The haze: brown-amber overhead to a pale gold horizon.
-	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.4, 0.31, 0.17)
-	sky_mat.sky_horizon_color = Color(0.8, 0.7, 0.5)
-	sky_mat.sky_curve = 0.3
-	sky_mat.ground_horizon_color = Color(0.58, 0.48, 0.32)
-	sky_mat.ground_bottom_color = Color(0.16, 0.13, 0.09)
-	sky_mat.sun_angle_max = 0.0  # no disc: the haze hides it
-	sky_mat.sun_curve = 0.0
+	# The haze in comic bands (comic_sky.gdshader): flat stripes of brown-amber
+	# overhead to pale gold at the horizon, hard edges, no sun disc.
+	var sky_mat := ShaderMaterial.new()
+	sky_mat.shader = SKY_SHADER
+	sky_mat.set_shader_parameter("top_color", Color(0.4, 0.31, 0.17))
+	sky_mat.set_shader_parameter("mid_color", Color(0.62, 0.5, 0.3))
+	sky_mat.set_shader_parameter("horizon_color", Color(0.8, 0.7, 0.5))
+	sky_mat.set_shader_parameter("ground_color", Color(0.58, 0.48, 0.32))
+	sky_mat.set_shader_parameter("ground_bottom_color", Color(0.16, 0.13, 0.09))
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	var env := Environment.new()
@@ -56,10 +57,10 @@ static func add(parent: Node) -> void:
 	env.fog_density = 0.0016  # Titan's haze: the far side of the valley fades, the near ground keeps its colours
 	env.fog_aerial_perspective = 0.15
 	env.fog_sky_affect = 0.4
-	# A light grade: contrast and saturation (cheap; part of tonemapping).
+	# Comic contrast: ink-friendly darks and bolder mid tones.
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.07
-	env.adjustment_saturation = 1.0
+	env.adjustment_contrast = 1.12
+	env.adjustment_saturation = 1.05
 	env.adjustment_brightness = 1.0
 	var we := WorldEnvironment.new()
 	we.environment = env

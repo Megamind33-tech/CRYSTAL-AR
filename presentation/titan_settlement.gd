@@ -122,9 +122,19 @@ func _process(delta: float) -> void:
 		for v: Node in get_tree().get_nodes_in_group("movers"):
 			if (v as Node3D).is_visible_in_tree():
 				people.append((v as Node3D).global_position)
+		var secured: Array = get_tree().get_nodes_in_group("secured_gates")
 		for d: Array in _doors:
 			var centre: Vector3 = d[2]
 			d[8] = 0.0
+			# A secured door (the gatehouse's): the simulation decides
+			# (SecuredGate: it stays shut on the wanted).
+			var gate: SecuredGate = null
+			for g: SecuredGate in secured:
+				if Vector2(g.centre.x - centre.x, g.centre.z - centre.z).length() < 1.0:
+					gate = g
+			if gate != null:
+				d[8] = 1.0 if gate.open else 0.0
+				continue
 			for at: Vector3 in people:
 				if Vector2(at.x - centre.x, at.z - centre.z).length() < float(d[5]) and absf(at.y - centre.y) < 6.0:
 					d[8] = 1.0

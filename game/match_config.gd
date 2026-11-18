@@ -151,6 +151,10 @@ static func for_place(game_mode: int, player_name: String) -> MatchConfig:
 	c.game_mode = game_mode
 	c.primary = Profile.career().primary_index()  # the gun in your pack
 	if game_mode == GameMode.CITY:
+		var landing := Arrival.pending_spawn(Profile.career())
+		if landing != Vector3.INF and spawn_at == Vector3.INF:
+			spawn_at = landing  # first time in the city: your nation's colony
+			Profile.career().d.arrived = true
 		c.map = GameMode.CITY_MAP
 		c.bots = 0
 		c.minutes = 0

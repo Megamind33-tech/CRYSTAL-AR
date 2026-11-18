@@ -45,14 +45,14 @@ func _ready() -> void:
 func _card(i: int) -> Button:
 	var b := Button.new()
 	b.name = "Nation_%s" % Nations.id_of(i)
-	b.custom_minimum_size = Vector2(250, 250)
+	b.custom_minimum_size = Vector2(250, 290)
 	b.text = "%s\n%s" % [Nations.display_name(i).to_upper(), Nations.motto(i)]
-	b.icon = Nations.shape_texture(i, 88)
+	b.icon = Nations.flag_texture(i, 150)
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ComicUI.style_button(b, Nations.color(i), 26)
 	for k in ["icon_normal_color", "icon_hover_color", "icon_focus_color", "icon_pressed_color"]:
-		b.add_theme_color_override(k, Nations.color(i))
+		b.add_theme_color_override(k, Color.WHITE)  # the flag keeps its own colours
 	b.pressed.connect(func() -> void: chosen.emit(i))
 	return b

@@ -244,6 +244,8 @@ func _ready() -> void:
 			server.world.kill_y = -600.0  # below Deep Furrow (200 m down) and the interiors (450 m)
 			for spot: Array in WorldLayout.rover_spots():
 				server.world.add_vehicle(spot[0], spot[1])
+			for d: Array in CityLayout.gate_doors():
+				SecuredGate.add(server.world, d[0], d[1], d[2], d[3])
 			if config.game_mode == GameMode.CITY:
 				# The first rover at the gate is yours: its hold is the career's.
 				server.world.vehicles[0].owner = ServerSession.LOCAL_PLAYER_ID
@@ -2050,6 +2052,9 @@ func _handle_event(e: Dictionary) -> void:
 			effects.pickup_burst(e.position + Vector3(0.0, 0.6, 0.0), PickupVisuals.color_of(e.weapon))
 			if e.player == me:
 				audio.play_ui("pickup", -4.0)
+				var g := PickupItems.career_item(e)
+				if not g.is_empty():
+					Profile.career().receive_pickup(String(g.item), int(g.count))
 			else:
 				audio.play_at("pickup", e.position, "World", 1, -6.0)
 

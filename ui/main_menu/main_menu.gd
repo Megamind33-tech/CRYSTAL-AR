@@ -95,6 +95,10 @@ func _ready() -> void:
 		_show_status(tr(MatchConfig.last_error))
 		MatchConfig.last_error = ""
 	_offer_rejoin()
+	if not Profile.career().registered():  # first launch: register before anything else
+		var reg := Registration.new()
+		add_child(reg)
+		reg.done.connect(_update_player_card)
 	_update_player_card()
 	Profile.changed.connect(_update_player_card)
 	_show(Page.HOME, false)
