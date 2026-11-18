@@ -63,6 +63,7 @@ func _process(delta: float) -> void:
 		if _models[i] != vehicles[i].model:  # a different model (the factory sold one)
 			_models[i] = vehicles[i].model
 			_build(i, VehicleSim.MODELS[clampi(_models[i], 0, VehicleSim.MODELS.size() - 1)].kit)
+			_armour(i, _models[i])
 	var me := world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	m.view.driving = me != null and me.state.vehicle >= 0
 	var visuals: Dictionary = m._visuals
@@ -116,6 +117,38 @@ func _fly_pose(i: int, v: SimVehicle, mi: MeshInstance3D, at: Vector3, world: Si
 
 ## The body without wheels, and a pivot per wheel (the mesh under it, its
 ## hub at the pivot), for model `kit`.
+## The army's machines (HuntArmy) dressed for war: a tank gets a turret
+## and armour, a crawler its drill and plating.
+func _armour(i: int, model: int) -> void:
+	var mi := _rovers[i]
+	var old := mi.get_node_or_null("Armour")
+	if old != null:
+		old.queue_free()
+	if model != VehicleSim.TANK and model != VehicleSim.CRAWLER:
+		return
+	var root := Node3D.new()
+	root.name = "Armour"
+	mi.add_child(root)
+	var dark := Comic.kit_material_paint(Color(0.26, 0.28, 0.24))
+	var add := func(size: Vector3, at: Vector3) -> MeshInstance3D:
+		var box := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = size
+		box.mesh = bm
+		box.position = at
+		box.material_override = dark
+		root.add_child(box)
+		return box
+	if model == VehicleSim.TANK:
+		add.call(Vector3(2.5, 0.5, 4.2), Vector3(0, 1.0, 0))  # armour over the hull
+		var turret: MeshInstance3D = add.call(Vector3(1.6, 0.8, 1.8), Vector3(0, 1.65, 0.2))
+		add.call(Vector3(0.22, 0.22, 2.6), Vector3(0, 1.75, -1.9))  # the gun
+		turret.name = "Turret"
+	else:
+		add.call(Vector3(2.7, 0.35, 5.6), Vector3(0, 1.9, 0))  # plating
+		add.call(Vector3(0.9, 0.9, 1.4), Vector3(0, 0.9, -3.6))  # the drill head
+
+
 func _build(i: int, kit: String) -> void:
 	var mi := _rovers[i]
 	mi.mesh = Comic.kit_mesh_lod(kit)

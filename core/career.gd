@@ -282,7 +282,7 @@ static func fresh() -> Dictionary:
 			"oxygen": 100.0, "fatigue": 0.0, "water": 100.0, "lab": {}, "job": {}, "jobs_done": {}, "companion": "",
 			"armed": "", "rover_cargo": {},
 			"home": {"locker": {}, "lock": 0, "checked_at": 0, "robbed": {}}, "ride": 0,
-			"aircraft": -1, "team": [], "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
+			"aircraft": -1, "team": [], "army": {}, "army_deploy": {}, "war_xp": 0, "visas": {}, "property": {}, "gang": {}, "felled": {}, "bounty": {}, "bounties_done": {},
 			"trade": {"chain": 0, "sold": 0, "learned": [], "clients": {}, "orders": [], "dealers": {}, "order_at": 0},
 			"heist": {}, "heists_done": {},
 			"feed": [], "fame": 0, "partner": {},
@@ -309,8 +309,9 @@ func normalize() -> void:
 	if not d.land is Dictionary:
 		d.land = {}
 	# The jet is retired: its owners get the rotorcraft and the difference back.
-	if int(d.get("aircraft", -1)) >= VehicleSim.MODELS.size():
-		var hopper := VehicleSim.MODELS.size() - 1
+	var plane := int(d.get("aircraft", -1))
+	if plane >= VehicleSim.MODELS.size() or (plane >= 0 and not VehicleSim.flies(plane)):
+		var hopper := 3  # the Skyhopper
 		d.wallet += VehicleSim.RETIRED_JET_PRICE - int(VehicleSim.MODELS[hopper].price)
 		d["aircraft"] = hopper
 	d.runs = int(d.runs)
@@ -1020,7 +1021,8 @@ func ride_price(model: int) -> int:
 
 
 func buy_ride(model: int) -> bool:
-	if model < 0 or model >= VehicleSim.MODELS.size() or model == int(d.get("ride", 0)) or VehicleSim.flies(model):
+	if model < 0 or model >= VehicleSim.MODELS.size() or model == int(d.get("ride", 0)) or VehicleSim.flies(model) \
+			or VehicleSim.army(model):
 		return false
 	var cost := ride_price(model)
 	if d.wallet < cost:
@@ -1772,6 +1774,114 @@ const GANG_COST := 1500
 ## Your squad for the dig (HuntSquad, saved as `team`): up to HuntSquad.MAX_SIZE roles, each
 ## paid SQUAD_COST a run when you deploy.
 const SQUAD_COST := 90
+
+# --- The army (HuntArmy): units by rank, counted, upgraded ---
+
+## Military ranks: [name, war experience needed, command points].
+const RANKS := [["Recruit", 0, 3], ["Corporal", 300, 5], ["Sergeant", 900, 7], ["Lieutenant", 2000, 10],
+		["Captain", 4000, 13], ["Commander", 8000, 16]]
+const WAR_XP_RUN := 50
+const WAR_XP_WIN := 200
+## Units: rank to unlock, price of one, upgrade prices per level, command
+## points one takes deployed, and whether a run spends it (called in) or
+## brings it home (a machine, unless it's destroyed).
+const UNITS := {
+	"hauler": {"rank": 0, "price": 0, "upgrades": [400, 900, 1600], "cp": 0, "spent": false},
+	"scout_drone": {"rank": 0, "price": 120, "upgrades": [250, 600], "cp": 1, "spent": true},
+	"crawler": {"rank": 2, "price": 900, "upgrades": [700, 1500, 2600], "cp": 3, "spent": false},
+	"attack_drone": {"rank": 1, "price": 260, "upgrades": [500, 1100, 2000], "cp": 2, "spent": true},
+	"tank": {"rank": 3, "price": 1800, "upgrades": [1200, 2400, 4000], "cp": 4, "spent": false},
+	"gunship": {"rank": 4, "price": 900, "upgrades": [1500, 3000], "cp": 4, "spent": true},
+	"strike_jet": {"rank": 5, "price": 1400, "upgrades": [2500, 5000], "cp": 5, "spent": true},
+}
+const UNIT_IDS := ["hauler", "scout_drone", "crawler", "attack_drone", "tank", "gunship", "strike_jet"]
+
+
+func rank() -> int:
+	var r := 0
+	for i in RANKS.size():
+		if int(d.get("war_xp", 0)) >= int(RANKS[i][1]):
+			r = i
+	return r
+
+
+func command_points() -> int:
+	return int(RANKS[rank()][2])
+
+
+func unit_count(id: String) -> int:
+	if id == "hauler":
+		return 1  # everyone has the hauler (your rover)
+	return int((d.army as Dictionary).get(id, {}).get("count", 0))
+
+
+func unit_level(id: String) -> int:
+	return int((d.army as Dictionary).get(id, {}).get("level", 0))
+
+
+func buy_unit(id: String) -> bool:
+	if not UNITS.has(id) or id == "hauler" or rank() < int(UNITS[id].rank) or d.wallet < int(UNITS[id].price):
+		return false
+	d.wallet -= int(UNITS[id].price)
+	var u: Dictionary = (d.army as Dictionary).get(id, {"count": 0, "level": 0})
+	u.count = int(u.count) + 1
+	d.army[id] = u
+	return true
+
+
+func upgrade_unit(id: String) -> bool:
+	if not UNITS.has(id) or (id != "hauler" and unit_count(id) <= 0):
+		return false
+	var lv := unit_level(id)
+	var ups: Array = UNITS[id].upgrades
+	if lv >= ups.size() or d.wallet < int(ups[lv]):
+		return false
+	d.wallet -= int(ups[lv])
+	var u: Dictionary = (d.army as Dictionary).get(id, {"count": 0, "level": 0})
+	u.level = lv + 1
+	d.army[id] = u
+	return true
+
+
+## Set how many of a unit go to the next war (within what you own and your
+## command points).
+func set_deploy(id: String, n: int) -> bool:
+	if not UNITS.has(id) or id == "hauler":
+		return false
+	n = clampi(n, 0, unit_count(id))
+	var plan: Dictionary = (d.army_deploy as Dictionary).duplicate()
+	plan[id] = n
+	var used := 0
+	for k: String in plan:
+		used += int(plan[k]) * int(UNITS[k].cp)
+	if used > command_points():
+		return false
+	d.army_deploy = plan
+	return true
+
+
+## The army that deploys now: {unit: [count, level]} (the hauler always).
+func army_deploy() -> Dictionary:
+	var out := {"hauler": [1, unit_level("hauler")]}
+	for id: String in d.army_deploy:
+		var n := mini(int(d.army_deploy[id]), unit_count(id))
+		if n > 0:
+			out[id] = [n, unit_level(id)]
+	return out
+
+
+## After a war: units spent or lost leave the roster; war experience.
+func settle_army(used: Dictionary, won: bool) -> void:
+	for id: String in used:
+		if id == "hauler":
+			continue
+		var u: Dictionary = (d.army as Dictionary).get(id, {})
+		if u.is_empty():
+			continue
+		u.count = maxi(int(u.count) - int(used[id]), 0)
+		d.army[id] = u
+		d.army_deploy[id] = mini(int(d.army_deploy.get(id, 0)), int(u.count))
+	d.war_xp = int(d.get("war_xp", 0)) + WAR_XP_RUN + (WAR_XP_WIN if won else 0)
 
 
 func squad_add(role: String) -> bool:

@@ -102,11 +102,55 @@ func update(me: SimPlayer, busy: bool) -> String:
 		return "estate:gang"
 	if pos.distance_to(squad_spot()) < 2.4:
 		return "estate:squad"
+	if pos.distance_to(army_spot()) < 2.4:
+		return "estate:army"
 	if c.d.stash.get("cutter", 0) > 0 or not _cutting.is_empty():
 		for t: Array in WorldLayout.trees():
 			if not felled(str(t[0])) and Vector2(pos.x - (t[1] as Vector3).x, pos.z - (t[1] as Vector3).z).length() < 2.6:
 				return "estate:tree:" + str(t[0])
 	return ""
+
+
+## The army depot (HuntArmy): by the gate, across from the squad office.
+static func army_spot() -> Vector3:
+	return CityLayout.ORIGIN + Vector3(-18, 0, 24)
+
+
+func _army_line() -> String:
+	var c := Profile.career()
+	var r := c.rank()
+	var next := _t("ARMY_TOP") if r >= Career.RANKS.size() - 1 else _t("ARMY_NEXT") % [int(Career.RANKS[r + 1][1]),
+			Career.RANKS[r + 1][0]]
+	var used := 0
+	for k: String in c.d.army_deploy:
+		used += int(c.d.army_deploy[k]) * int(Career.UNITS[k].cp)
+	return _t("ARMY_LINE") % [Career.RANKS[r][0], int(c.d.get("war_xp", 0)), next, used, c.command_points()]
+
+
+func _army_options() -> Array:
+	var c := Profile.career()
+	var out := []
+	for id: String in Career.UNIT_IDS:
+		var u: Dictionary = Career.UNITS[id]
+		var name := _t("UNIT_" + id.to_upper())
+		var lv := c.unit_level(id)
+		if c.rank() < int(u.rank):
+			out.append([_t("ARMY_LOCKED") % [name, Career.RANKS[int(u.rank)][0]], false, ComicUI.PAPER, "none"])
+			continue
+		if id != "hauler":
+			out.append([_t("ARMY_BUY") % [name, int(u.price), c.unit_count(id)], c.d.wallet >= int(u.price), ComicUI.CYAN,
+					"estate:unit_buy:" + id])
+		var ups: Array = u.upgrades
+		if lv < ups.size() and c.unit_count(id) > 0:
+			out.append([_t("ARMY_UPGRADE") % [name, lv + 1, int(ups[lv])], c.d.wallet >= int(ups[lv]), ComicUI.YELLOW,
+					"estate:unit_up:" + id])
+		if id != "hauler" and c.unit_count(id) > 0:
+			var n := int(c.d.army_deploy.get(id, 0))
+			out.append([_t("ARMY_DEPLOY") % [name, n, c.unit_count(id), int(u.cp)], true, ComicUI.GREEN,
+					"estate:unit_more:" + id])
+			if n > 0:
+				out.append([_t("ARMY_LESS") % name, true, ComicUI.PAPER, "estate:unit_less:" + id])
+	return out
 
 
 ## The squad office (HuntSquad): by the gate, where you pick who deploys
@@ -167,6 +211,8 @@ func prompt(key: String) -> String:
 			return _t("ESTATE_PROMPT_GANG")
 		"squad":
 			return _t("ESTATE_PROMPT_SQUAD")
+		"army":
+			return _t("ESTATE_PROMPT_ARMY")
 		"tree":
 			if _cutting == parts[2]:
 				return _t("ESTATE_CUTTING") % roundi(_cut_t / CUT_SECONDS * 100.0)
@@ -202,6 +248,8 @@ func act(key: String, me: SimPlayer) -> void:
 			city.open_menu(_t("GANG_TITLE"), _gang_line(), _gang_options())
 		"squad":
 			city.open_menu(_t("SQUAD_TITLE"), _squad_line(), _squad_options())
+		"army":
+			city.open_menu(_t("ARMY_TITLE"), _army_line(), _army_options())
 		"tree":
 			if _cutting.is_empty():
 				_cutting = parts[2]
@@ -237,6 +285,21 @@ func menu_act(what: String, me: SimPlayer) -> void:
 				city.news("MARSNET_AIRCRAFT", [VehicleSim.MODELS[model].name], 5)
 				city._flash_text(_t("AERO_BOUGHT") % VehicleSim.MODELS[model].name, ComicUI.GREEN)
 			city.garage.set_menu(_aero_line(), _aero_options())
+		"unit_buy", "unit_up", "unit_more", "unit_less":
+			var id := parts[1]
+			var ok := false
+			match parts[0]:
+				"unit_buy":
+					ok = c.buy_unit(id)
+				"unit_up":
+					ok = c.upgrade_unit(id)
+				"unit_more":
+					ok = c.set_deploy(id, int(c.d.army_deploy.get(id, 0)) + 1)
+				"unit_less":
+					ok = c.set_deploy(id, int(c.d.army_deploy.get(id, 0)) - 1)
+			if ok:
+				Profile.save()
+			city.garage.set_menu(_army_line(), _army_options())
 		"squad_add":
 			if c.squad_add(parts[1]):
 				Profile.save()

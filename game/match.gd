@@ -1219,6 +1219,18 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 			func() -> bool:
 				var e: HuntEconomy = econ.call()
 				return e != null and e.contracts.has(local_id()), "crew")
+	# Your army (HuntArmy): call units in where you aim.
+	for unit: String in Career.UNIT_IDS:
+		if unit == "hauler":
+			continue
+		hunt_menu.add_row(func() -> String:
+					var st: Dictionary = hunt_menu.state.call()
+					var n := (st.hunt as HuntRules).army.left(local_id(), unit) if not st.is_empty() else 0
+					return tr("ARMY_CALL") % [tr("UNIT_" + unit.to_upper()), n],
+				func() -> void: hunt_menu.request.call("call_unit", {"unit": unit, "target": _aim_point()}),
+				func() -> bool:
+					var st: Dictionary = hunt_menu.state.call()
+					return not st.is_empty() and (st.hunt as HuntRules).army.left(local_id(), unit) > 0, "army")
 	# Your side's camp (HuntCamps): build with your run credits.
 	for module: String in HuntCamps.IDS:
 		hunt_menu.add_row(func() -> String: return tr("CAMP_BUILD") % [tr("CAMP_" + module.to_upper()),
@@ -1675,6 +1687,12 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			if int(e.side) >= 0:
 				_kill_feed.add_note("", tr("WAR_FEED_HOLDS") % _side_name(int(e.side)), UiStyle.ACCENT)
 			return
+		"unit_called":
+			_kill_feed.add_note(_display_name(int(e.player)), tr("ARMY_FEED_CALLED") % tr("UNIT_" + str(e.unit).to_upper()),
+					HuntHud.ALLY if h_side_is_mine(server.world.hunt.war.side_of(server.world.hunt, int(e.player))) else UiStyle.WARN)
+			return
+		"jet_strike":
+			return
 		"camp_built":
 			if h_side_is_mine(int(e.side)):
 				_kill_feed.add_note(_display_name(int(e.player)), tr("CAMP_FEED_BUILT") % tr("CAMP_" + str(e.module).to_upper()), HuntHud.ALLY)
@@ -1789,6 +1807,10 @@ func _settle_career(result_id: String, me: int) -> void:
 	if not result_id in career.d.settled:
 		career.record_squad_run(_squadmate, _squad_outcome)  # before settle counts the run
 	var report := career.settle(result_id, server.world.hunt.haul.get(me, []))
+	if report.applied:  # once a run: units spent or lost, war experience
+		var hw := server.world.hunt.war
+		career.settle_army(server.world.hunt.army.used.get(me, {}),
+				hw.winner_side >= 0 and hw.winner_side == hw.side_of(server.world.hunt, me))
 	if report.applied:
 		career.d["last_report"] = report
 		if bool(report.get("ruby_found", false)) and _kill_feed != null:
@@ -1837,11 +1859,43 @@ func _side_name(side: int) -> String:
 	return Nations.display_name(side - 100) if side >= 100 else _display_name(side)
 
 
+## Your army deploys with you (Career.army_deploy): the units you call in
+## from the phone's ARMY app; your rover is your hauler (the extraction
+## machine every hunter has).
+func _bring_army() -> void:
+	var h := server.world.hunt
+	var me := ServerSession.LOCAL_PLAYER_ID
+	h.army.deploy(me, Profile.career().army_deploy())
+	var p: SimPlayer = server.world.players.get(me)
+	var best := -1
+	var best_d := 60.0
+	for i in server.world.vehicles.size():
+		var v: SimVehicle = server.world.vehicles[i]
+		if p != null and v.owner != -1 and v.position.distance_to(p.state.position) < best_d:
+			best_d = v.position.distance_to(p.state.position)
+			best = i
+	if best >= 0:
+		server.world.vehicles[best].owner = me
+		h.army.set_hauler(me, best)
+
+
+## Where you aim, on the ground or a wall (the army's targets).
+func _aim_point() -> Vector3:
+	var p: SimPlayer = server.world.players.get(local_id()) if server != null else null
+	if p == null:
+		return Vector3.ZERO
+	var eye := p.state.position + Vector3(0, 1.6, 0)
+	var dir := Basis.from_euler(Vector3(input.look_pitch, input.look_yaw, 0.0)) * Vector3.FORWARD
+	var hit := server.world._ray(eye, eye + dir * 250.0)
+	return hit.position if not hit.is_empty() else eye + dir * 60.0
+
+
 ## Your squad deploys with you (Career.squad, paid as it goes): AI
 ## teammates you command from the phone (HuntSquad).
 func _bring_squad() -> void:
 	if config.game_mode != GameMode.HUNT or server.world.hunt == null:
 		return
+	_bring_army()
 	var roles := Profile.career().squad_deploy()
 	if roles.is_empty():
 		return

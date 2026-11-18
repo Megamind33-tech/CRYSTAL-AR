@@ -56,6 +56,7 @@ func sync(hunt: HuntRules, tick: int, local_id: int, carrier_pos: Callable) -> v
 	if not _built:
 		_build_static(hunt)
 	_sync_war(hunt, local_id)
+	_sync_army(hunt, tick)
 	var seen := {}
 	for t: HuntRules.Treasure in hunt.treasures:
 		seen[t.id] = true
@@ -638,4 +639,69 @@ func _turret_model(at: Vector3) -> Node3D:
 		barrel.position = Vector3(sx, 0.0, -1.1)
 		barrel.material_override = _metal()
 		head.add_child(barrel)
+	return root
+
+
+# --- The army's units in the air (HuntArmy calls) ---
+
+var _unit_nodes: Dictionary = {}  ## HuntArmy.Call -> Node3D
+
+
+func _sync_army(hunt: HuntRules, tick: int) -> void:
+	var live := {}
+	for c in hunt.army.calls:
+		live[c] = true
+		var node: Node3D = _unit_nodes.get(c)
+		if node == null:
+			node = _unit_model(c.unit)
+			add_child(node)
+			_unit_nodes[c] = node
+		var info: Dictionary = HuntArmy.UNITS[c.unit]
+		if c.unit == "strike_jet":
+			# Flying in along its run during the run-up, low and fast.
+			var dir := c.at - c.from
+			dir.y = 0.0
+			dir = dir.normalized() if dir.length() > 0.1 else Vector3.FORWARD
+			var u := clampf(1.0 - float(c.start_tick - tick) / float(info.delay), 0.0, 1.0)
+			var a := c.at - dir * 260.0
+			node.position = a.lerp(c.at, u) + Vector3(0, float(info.height), 0)
+			node.rotation.y = atan2(-dir.x, -dir.z)
+		else:
+			# Circling over the target.
+			var t := float(tick) / 60.0
+			var r := 6.0 if c.unit != "gunship" else 12.0
+			node.position = c.at + Vector3(cos(t * 0.6) * r, float(info.height) + sin(t * 1.3) * 0.6, sin(t * 0.6) * r)
+			node.rotation.y = -t * 0.6
+	for c in _unit_nodes.keys():
+		if not live.has(c):
+			(_unit_nodes[c] as Node).queue_free()
+			_unit_nodes.erase(c)
+
+
+## A unit in the sky: the gunship is a Skyhopper; drones and the jet are
+## built in the kit's style.
+func _unit_model(unit: String) -> Node3D:
+	if unit == "gunship":
+		return Comic.kit_instance("world/skyhopper", Vector3.ZERO, 0.0, 1.3)
+	var root := Node3D.new()
+	var parts := []
+	if unit == "strike_jet":
+		parts = [[Vector3(1.4, 1.0, 9.0), Vector3.ZERO], [Vector3(9.0, 0.25, 2.6), Vector3(0, 0, 0.8)],
+				[Vector3(3.6, 0.2, 1.2), Vector3(0, 0.3, 4.0)], [Vector3(0.2, 1.6, 1.4), Vector3(0, 1.0, 3.9)]]
+	else:
+		var s := 0.6 if unit == "scout_drone" else 1.0
+		parts = [[Vector3(1.0, 0.4, 1.0) * s, Vector3.ZERO]]
+		for q: Vector3 in [Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, -1)]:
+			parts.append([Vector3(0.9, 0.08, 0.9) * s, q * 0.9 * s + Vector3(0, 0.25, 0) * s])
+	for p: Array in parts:
+		var mi := MeshInstance3D.new()
+		mi.mesh = _box_mesh(p[0])
+		mi.position = p[1]
+		mi.material_override = _metal()
+		root.add_child(mi)
+	var light := MeshInstance3D.new()
+	light.mesh = _box_mesh(Vector3(0.3, 0.3, 0.3))
+	light.position = Vector3(0, -0.4, 0)
+	light.material_override = _glow(RIVAL if unit != "strike_jet" else Color(1.0, 0.5, 0.2), 1.0, 2.5)
+	root.add_child(light)
 	return root

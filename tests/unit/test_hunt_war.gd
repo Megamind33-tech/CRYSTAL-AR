@@ -156,3 +156,67 @@ func test_building_a_camp() -> void:
 	me.state.health = 30.0
 	_step(HuntCamps.MODULES.med_bay.every + 1)
 	assert_gt(me.state.health, 30.0, "the med bay heals its side")
+
+
+## Armies: units by rank, counted and upgraded in the career; called in
+## during a run they act (drones and gunships shoot, a jet strafes, a
+## scout reveals); machines speed extraction and heavy loads need one.
+func test_the_career_army() -> void:
+	var c := Career.new()
+	c.d.wallet = 100000
+	assert_eq(c.rank(), 0, "a recruit")
+	assert_false(c.buy_unit("tank"), "a tank needs rank")
+	assert_true(c.buy_unit("scout_drone"))
+	c.d.war_xp = 8000
+	assert_eq(c.rank(), Career.RANKS.size() - 1, "a commander")
+	assert_true(c.buy_unit("tank"))
+	assert_true(c.buy_unit("strike_jet"))
+	assert_true(c.upgrade_unit("tank"))
+	assert_eq(c.unit_level("tank"), 1)
+	assert_true(c.set_deploy("tank", 1))
+	assert_true(c.set_deploy("strike_jet", 1))
+	var plan := c.army_deploy()
+	assert_eq(plan.tank, [1, 1])
+	assert_true(plan.has("hauler"), "everyone brings the hauler")
+	c.settle_army({"strike_jet": 1}, true)
+	assert_eq(c.unit_count("strike_jet"), 0, "a jet called in is spent")
+	assert_eq(c.unit_count("tank"), 1, "a tank comes home")
+	assert_eq(int(c.d.war_xp), 8000 + Career.WAR_XP_RUN + Career.WAR_XP_WIN, "war experience")
+
+
+func test_called_in_units_act() -> void:
+	h.army.deploy(1, {"attack_drone": [1, 0], "strike_jet": [1, 0], "scout_drone": [1, 0]})
+	var rival: SimPlayer = world.players[2]
+	world.teleport(rival, Vector3(12, 0.05, 10))
+	rival.state.shield = 0.0
+	var hp := rival.state.health
+	assert_true(h.request(world, 1, "call_unit", {"unit": "attack_drone", "target": Vector3(12, 0, 10)}))
+	assert_eq(h.army.left(1, "attack_drone"), 0, "spent")
+	assert_false(h.request(world, 1, "call_unit", {"unit": "attack_drone", "target": Vector3.ZERO}), "none left")
+	await wait_physics_frames(2)
+	_step(HuntArmy.UNITS.attack_drone.every * 3 + 1)
+	assert_lt(rival.state.health, hp, "the drone hits the rival")
+	assert_true(h.request(world, 1, "call_unit", {"unit": "scout_drone", "target": Vector3(12, 0, 10)}))
+	_step(61)
+	assert_true(h.is_revealed(2, world.tick), "the scout drone reveals the rival")
+	rival.state.health = Balance.PLAYER.max_health
+	rival.state.shield = 0.0
+	assert_true(h.request(world, 1, "call_unit", {"unit": "strike_jet", "target": Vector3(12, 0, 10)}))
+	_step(HuntArmy.UNITS.strike_jet.delay + 2)
+	assert_lt(rival.state.health, Balance.PLAYER.max_health, "the jet's run hits")
+
+
+func test_heavy_loads_need_a_machine_at_the_pad() -> void:
+	var t := h._new_treasure(HuntRules.Kind.RESOURCE, 0, ZONE)
+	t.resource = "rare_ore"
+	var me: SimPlayer = world.players[1]
+	world.teleport(me, ZONE + Vector3(0, 0.05, 0))
+	t.carrier = 1
+	_step(HuntRules.EXTRACT_TICKS + 5)
+	assert_false(t.banked, "no machine at the pad: the load stays")
+	var v := world.add_vehicle(ZONE + Vector3(5, 0.4, 0), 0.0)
+	v.owner = 1
+	h.army.deploy(1, {"hauler": [1, 1]})
+	h.army.set_hauler(1, world.vehicles.size() - 1)
+	_step(HuntRules.EXTRACT_TICKS / 2)
+	assert_true(t.banked, "beside your hauler (level 1): out, and faster")

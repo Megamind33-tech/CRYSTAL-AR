@@ -1292,6 +1292,18 @@ func _dig_run(me: SimPlayer) -> void:
 		var s := Battlegrounds.site(Battlegrounds.current)
 		var c: Vector2 = s[1]
 		await _aerial("w_site_" + Battlegrounds.current, c, Vector3(0, 170, 150))
+		if Platform.user_args.has("--army"):
+			var w := m.server.world
+			hr.army.deploy(me.net_id, {"hauler": [1, 2], "tank": [1, 1], "gunship": [1, 0], "attack_drone": [1, 0],
+					"strike_jet": [1, 0]})
+			var ahead := me.state.position + Vector3(-sin(me.state.yaw), 0, -cos(me.state.yaw)) * 30.0
+			for u: String in ["tank", "gunship", "attack_drone", "strike_jet"]:
+				print("CITY WALK: call %s: %s" % [u, hr.request(w, me.net_id, "call_unit", {"unit": u, "target": ahead})])
+			await _frames(90)  # the jet's still flying in
+			await _pose(me, me.state.position, me.state.yaw, 0.35)
+			await _shot("w_army")
+			get_tree().quit(0)
+			return
 		if not hr.war.camps.is_empty():
 			# Build the lot at your camp; the bots build theirs.
 			hr.economy.credits[me.net_id] = 2000

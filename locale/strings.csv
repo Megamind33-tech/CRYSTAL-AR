@@ -1319,3 +1319,24 @@ CAMP_COMMS,comms mast
 CAMP_COMMS_SUB,reveals enemies near the camp
 CAMP_REFINERY,refinery
 CAMP_REFINERY_SUB,earns you credits over time
+HUNT_TAB_ARMY,ARMY
+ARMY_SIGN,ARMY DEPOT
+ARMY_TITLE,Army depot
+ESTATE_PROMPT_ARMY,Army depot · units for the wars
+ARMY_LINE,"Rank: %s · %d war experience · %s · Deploying %d of %d command points"
+ARMY_NEXT,%d for %s
+ARMY_TOP,top rank
+ARMY_LOCKED,%s · unlocks at %s
+ARMY_BUY,Buy a %s · $%d · you have %d
+ARMY_UPGRADE,Upgrade %s to level %d · $%d
+ARMY_DEPLOY,Deploy one more %s (%d of %d) · %d CP each
+ARMY_LESS,Deploy one less %s
+ARMY_CALL,Call in %s · %d left
+ARMY_FEED_CALLED,called in a %s
+UNIT_HAULER,hauler (your rover)
+UNIT_SCOUT_DRONE,scout drone
+UNIT_CRAWLER,extraction crawler
+UNIT_ATTACK_DRONE,attack drone
+UNIT_TANK,tank
+UNIT_GUNSHIP,gunship
+UNIT_STRIKE_JET,strike jet

@@ -7,10 +7,11 @@ extends Control
 ## HuntRules.request(), the same entry point the bots use, so the phone
 ## only decides what to show; the rules validate everything.
 
-const TABS := ["jobs", "camp", "squad", "crew", "deals", "intel"]
+const TABS := ["jobs", "army", "camp", "squad", "crew", "deals", "intel"]
 const PHONE_SIZE := Vector2(340, 600)
 const APPS := {
 	"jobs": {"color": Color("e5484d"), "glyph": "target"},
+	"army": {"color": Color("dc2626"), "glyph": "target"},
 	"camp": {"color": Color("a16207"), "glyph": "rings"},
 	"squad": {"color": Color("f59e0b"), "glyph": "people"},
 	"crew": {"color": Color("3b82f6"), "glyph": "people"},

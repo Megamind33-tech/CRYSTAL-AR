@@ -142,6 +142,7 @@ var personalities: Dictionary = {}
 var economy := HuntEconomy.new()
 var squad := HuntSquad.new()  ## the hunters' AI teammates
 var war := HuntWar.new()  ## what wins the run: sides, objectives (battlegrounds)
+var army := HuntArmy.new()  ## the hunters' units: drones, gunships, jets, tanks, machines
 ## Recovery Contract: victim id -> {"treasure", "position" (fuzzed), "tick"}.
 var recovery_clues: Dictionary = {}
 ## Last Extraction: the match's end tick (0: no clock, every pad stays open),
@@ -198,6 +199,7 @@ func reset(world: SimWorld) -> void:
 	_searching.clear()
 	economy.reset()
 	squad.reset()
+	army.reset()
 	end_tick = 0
 	final_zone = -1
 	_announced = 0
@@ -387,7 +389,13 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 				_drop(world, c)
 			continue
 		if _in_zone(c.state.position, tick):
-			var ticks: int = extract_progress.get(c.net_id, 0) + 1
+			# An extraction machine of yours at the pad (HuntArmy): faster; in a
+			# war a heavy load (the relic, resources) goes out only beside one.
+			var boost := army.extraction_boost(world, self, c.net_id, nearest_zone(c.state.position, tick))
+			if war.enabled and _heavy(t) and boost == 0:
+				extract_progress[c.net_id] = 0
+				continue
+			var ticks: int = extract_progress.get(c.net_id, 0) + 1 + boost
 			extract_progress[c.net_id] = ticks
 			if ticks >= EXTRACT_TICKS:
 				_bank(world, c, t)
@@ -428,6 +436,7 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 	economy.step(world)
 	squad.step(world, self)
 	war.step(world, self, ids, interacting)
+	army.step(world, self)
 	_step_last_extraction(world)
 	# The alarm trap.
 	if trap != Vector3.INF:
@@ -755,6 +764,8 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 			return squad.set_rule(world, hunter, str(args.get("rule", "")))
 		"squad_spread":
 			return squad.set_spread(world, hunter, str(args.get("spread", "")))
+		"call_unit":
+			return army.call_unit(world, self, hunter, str(args.get("unit", "")), args.get("target", Vector3.ZERO))
 		"build":
 			return war.enabled and war.builds.build(world, self, hunter, str(args.get("module", "")))
 		"squad_strategy":
@@ -868,6 +879,11 @@ func protects(a: int, b: int) -> bool:
 ## bounties, alliances).
 func _aux(id: int) -> bool:
 	return economy.is_merc(id) or squad.is_member(id)
+
+
+## A heavy load: it needs an extraction machine at the pad in a war.
+func _heavy(t: Treasure) -> bool:
+	return t.kind == Kind.GRAND or t.kind == Kind.RESOURCE
 
 
 ## A teammate may pick up its leader's own cargo (to extract it for them).
@@ -1042,7 +1058,7 @@ func _step_holds(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 		if d == null or carried_by(v.driver) != null:
 			continue  # (a carrier extracts by the usual count)
 		if _in_zone(v.position, world.tick):
-			var ticks: int = extract_progress.get(v.driver, 0) + 1
+			var ticks: int = extract_progress.get(v.driver, 0) + 1 + army.extraction_boost(world, self, v.driver, v.position)
 			extract_progress[v.driver] = ticks
 			if ticks >= EXTRACT_TICKS:
 				for t in cargo:

@@ -26,7 +26,14 @@ const MODELS := [
 	# straight up ("fly": "vtol").
 	{"name": "Skyhopper rotorcraft", "max": 48.0, "rev": 6.0, "accel": 11.0, "turn": 1.3, "slots": 6, "price": 9000,
 			"half": Vector2(2.6, 3.4), "kit": "world/skyhopper", "fly": "vtol"},
+	# The army's machines (HuntArmy: deployed in wars, not sold as rides).
+	{"name": "Extraction crawler", "max": 13.0, "rev": 4.0, "accel": 5.0, "turn": 1.0, "slots": 40, "price": 0,
+			"half": Vector2(1.35, 3.2), "kit": "world/hauler", "army": true},
+	{"name": "Tank", "max": 15.0, "rev": 5.0, "accel": 6.0, "turn": 1.1, "slots": 2, "price": 0,
+			"half": Vector2(1.2, 2.2), "kit": "world/rover", "army": true},
 ]
+const CRAWLER := 4
+const TANK := 5
 ## The jet that was sold before the rotorcraft became the only aircraft
 ## (its price is refunded to anyone who owned one: Career.normalize).
 const RETIRED_JET_PRICE := 24000
@@ -37,6 +44,11 @@ const JET_CLIMB := 16.0
 const LIFT_OFF := 30.0
 const TAXI := 9.0
 const CEILING := 320.0
+
+
+## An army machine (HuntArmy), not a ride for sale.
+static func army(model: int) -> bool:
+	return MODELS[clampi(model, 0, MODELS.size() - 1)].get("army", false)
 
 
 static func flies(model: int) -> bool:

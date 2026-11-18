@@ -553,7 +553,7 @@ func _step_traffic(me: SimPlayer, dt: float) -> void:
 			var pts: Array = []
 			for sample: Array in WorldLayout.road_samples(roads[k % roads.size()], 2.0):
 				pts.append(sample[0])
-			var ground_models := range(VehicleSim.MODELS.size()).filter(func(i: int) -> bool: return not VehicleSim.flies(i))
+			var ground_models := range(VehicleSim.MODELS.size()).filter(func(i: int) -> bool: return not VehicleSim.flies(i) and not VehicleSim.army(i))
 			var kit: String = VehicleSim.MODELS[ground_models[k % ground_models.size()]].kit  # no aircraft on the roads
 			var mi := Comic.kit_instance(kit, Vector3.ZERO, 0.0)
 			mi.visibility_range_end = 220.0  # traffic: not drawn across the valley
@@ -1504,8 +1504,8 @@ func _motors_options() -> Array:
 		if i == int(c.d.get("ride", 0)):
 			out.append([tr("MOTORS_YOURS") % m.name, false, ComicUI.PAPER, "none"])
 			continue
-		if VehicleSim.flies(i):
-			continue  # aircraft are Kasei Aero's, at the Skyport
+		if VehicleSim.flies(i) or VehicleSim.army(i):
+			continue  # aircraft are Kasei Aero's, at the Skyport; army machines the depot's
 		var cost := c.ride_price(i)
 		out.append([tr("MOTORS_BUY") % [m.name, roundi(float(m.max) * 3.6), int(m.slots), cost], c.d.wallet >= cost,
 				ComicUI.CYAN, "ride:%d" % i])
