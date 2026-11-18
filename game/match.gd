@@ -244,6 +244,8 @@ func _ready() -> void:
 			server.world.kill_y = -600.0  # below Deep Furrow (200 m down) and the interiors (450 m)
 			for spot: Array in WorldLayout.rover_spots():
 				server.world.add_vehicle(spot[0], spot[1])
+			for d: Array in CityLayout.gate_doors():
+				SecuredGate.add(server.world, d[0], d[1], d[2], d[3])
 			if config.game_mode == GameMode.CITY:
 				# The first rover at the gate is yours: its hold is the career's.
 				server.world.vehicles[0].owner = ServerSession.LOCAL_PLAYER_ID

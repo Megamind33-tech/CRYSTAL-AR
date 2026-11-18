@@ -1060,6 +1060,7 @@ func _step_police(me: SimPlayer, dt: float) -> void:
 			crime("rover")
 	elif me.state.vehicle < 0:
 		_rover_crime = -1
+	SecuredGate.refused[ServerSession.LOCAL_PLAYER_ID] = wanted.stars > 0
 	if wanted.stars == 0:
 		_police_seen = false
 		if _police != null:

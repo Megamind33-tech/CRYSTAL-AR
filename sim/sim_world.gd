@@ -348,6 +348,7 @@ func step(commands: Dictionary, stalled: Dictionary = {}) -> void:
 			drops.remove_at(i)
 	var ids := players.keys()
 	ids.sort()
+	SecuredGate.step_all(self)
 	var interacting := {}
 	for id in ids:
 		var p: SimPlayer = players[id]
