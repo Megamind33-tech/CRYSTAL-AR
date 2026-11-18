@@ -1292,6 +1292,38 @@ func _dig_run(me: SimPlayer) -> void:
 		var s := Battlegrounds.site(Battlegrounds.current)
 		var c: Vector2 = s[1]
 		await _aerial("w_site_" + Battlegrounds.current, c, Vector3(0, 170, 150))
+		if Platform.user_args.has("--aa"):
+			# Air defence at work: your camp's flak and aegis against a rival's
+			# gunship and drone; a tank of yours beside them.
+			var w: SimWorld = m.server.world
+			var ci := hr.war.builds._camp_of(hr, me.net_id)
+			var camp: Vector3 = hr.war.camps[ci].at
+			hr.home_nations[me.net_id] = Nations.index_of("meridian")
+			hr.economy.credits[me.net_id] = 3000
+			for mod: String in ["air_defense", "aegis_battery", "turret"]:
+				print("CITY WALK: build %s: %s" % [mod, hr.request(w, me.net_id, "build", {"module": mod})])
+			var rival := 0
+			for id: int in w.players:
+				if w.players[id].is_bot and not hr._aux(id) and hr.war.side_of(hr, id) != hr.war.side_of(hr, me.net_id):
+					rival = id
+					break
+			hr.army.deploy(rival, {"gunship": [1, 0], "attack_drone": [1, 0]})
+			hr.army.deploy(me.net_id, {"tank": [1, 0]})
+			print("CITY WALK: rival %d gunship %s drone %s" % [rival,
+					hr.request(w, rival, "call_unit", {"unit": "gunship", "target": camp}),
+					hr.request(w, rival, "call_unit", {"unit": "attack_drone", "target": camp + Vector3(6, 0, 0)})])
+			var to_mid := hr.war.point - camp
+			to_mid.y = 0
+			var stand := camp + to_mid.normalized() * 11.0
+			w.teleport(me, stand + Vector3(0, 0.3, 0))
+			print("CITY WALK: tank %s" % hr.request(w, me.net_id, "call_unit", {"unit": "tank", "target": camp}))
+			var face := atan2(-(camp.x - stand.x), -(camp.z - stand.z))
+			for k in 4:
+				await _pose(me, stand + Vector3(0, 0.3, 0), face, 0.45)
+				await _shot("w_aa_%d" % k)
+				print("CITY WALK: aircraft left %d" % hr.army.calls.size())
+			get_tree().quit(0)
+			return
 		if Platform.user_args.has("--army"):
 			var w: SimWorld = m.server.world
 			hr.army.deploy(me.net_id, {"hauler": [1, 2], "tank": [1, 1], "gunship": [1, 0], "attack_drone": [1, 0],
