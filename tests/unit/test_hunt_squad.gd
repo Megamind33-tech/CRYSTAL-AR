@@ -126,3 +126,26 @@ func test_the_career_keeps_and_pays_for_the_squad() -> void:
 	c.d.wallet = Career.SQUAD_COST * 2
 	assert_eq(c.squad_deploy(), ["gunner", "scout"], "as many as the wallet pays for")
 	assert_eq(int(c.d.wallet), 0)
+
+
+func test_marks_moves_plans_and_abilities() -> void:
+	var medic: HuntSquad.Member = h.squad.by_id[MATE_A]
+	assert_true(h.request(world, LEADER, "squad_order", {"order": "attack", "target": RIVAL}))
+	assert_eq(medic.target, RIVAL, "after the mark")
+	var spot := Vector3(10, 0, -10)
+	assert_false(h.request(world, LEADER, "squad_order", {"order": "move"}), "a move needs somewhere")
+	assert_true(h.request(world, LEADER, "squad_order", {"order": "move", "point": spot}))
+	assert_eq(medic.hold_at, spot, "to where you aimed")
+	assert_true(h.request(world, LEADER, "squad_strategy", {"strategy": "gather"}))
+	assert_eq(h.squad.squad_of(LEADER).rule, HuntSquad.Rule.HOLD_FIRE)
+	# Abilities: a drop to where you aim, a supply crate, a scan; then cooldowns.
+	assert_true(h.request(world, LEADER, "squad_ability", {"ability": "drop", "point": spot}))
+	assert_lt(world.players[MATE_A].state.position.distance_to(spot), 4.0, "dropped there")
+	assert_false(h.request(world, LEADER, "squad_ability", {"ability": "drop", "point": spot}), "cooling down")
+	var lead: SimPlayer = world.players[LEADER]
+	lead.state.health = 30.0
+	assert_true(h.request(world, LEADER, "squad_ability", {"ability": "supply"}))
+	assert_gt(lead.state.health, 30.0, "patched up by the crate")
+	world.teleport(world.players[RIVAL], lead.state.position + Vector3(20, 0.05, 0))
+	assert_true(h.request(world, LEADER, "squad_ability", {"ability": "scan"}))
+	assert_true(h.is_revealed(RIVAL, world.tick), "the scan shows the rival")

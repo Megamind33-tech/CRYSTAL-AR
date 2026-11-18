@@ -11,8 +11,8 @@ extends RefCounted
 ## may carry their leader's own cargo and extract it: the points, credits and
 ## haul go to the leader. Leader and teammates never hurt each other.
 
-enum Order { FOLLOW, HOLD, GUARD_PAD, ESCORT, FETCH, ATTACK, FALL_BACK }
-const ORDER_IDS := ["follow", "hold", "guard_pad", "escort", "fetch", "attack", "fall_back"]
+enum Order { FOLLOW, HOLD, GUARD_PAD, ESCORT, FETCH, ATTACK, FALL_BACK, MOVE }
+const ORDER_IDS := ["follow", "hold", "guard_pad", "escort", "fetch", "attack", "fall_back", "move"]
 enum Rule { HOLD_FIRE, RETURN_FIRE, WEAPONS_FREE }
 const RULE_IDS := ["hold_fire", "return_fire", "weapons_free"]
 const SPREAD_IDS := ["together", "spread"]
@@ -38,8 +38,21 @@ const STRATEGIES := {
 			"orders": {"gunner": Order.GUARD_PAD, "scout": Order.GUARD_PAD, "medic": Order.ESCORT, "engineer": Order.GUARD_PAD}},
 	"bodyguard": {"rule": Rule.RETURN_FIRE, "spread": 0,
 			"orders": {"gunner": Order.ESCORT, "scout": Order.ESCORT, "medic": Order.ESCORT, "engineer": Order.ESCORT}},
+	# Plans that send the squad somewhere ("to": where HuntRules points them).
+	"raid": {"rule": Rule.WEAPONS_FREE, "spread": 0, "to": "enemy_camp",
+			"orders": {"gunner": Order.MOVE, "scout": Order.MOVE, "medic": Order.MOVE, "engineer": Order.MOVE}},
+	"hold_point": {"rule": Rule.RETURN_FIRE, "spread": 1, "to": "point",
+			"orders": {"gunner": Order.MOVE, "scout": Order.MOVE, "medic": Order.MOVE, "engineer": Order.MOVE}},
+	"gather": {"rule": Rule.HOLD_FIRE, "spread": 1,
+			"orders": {"gunner": Order.FETCH, "scout": Order.FETCH, "medic": Order.FOLLOW, "engineer": Order.FETCH}},
 }
-const STRATEGY_IDS := ["stealth", "assault", "turtle", "bodyguard"]
+const STRATEGY_IDS := ["stealth", "assault", "turtle", "bodyguard", "raid", "hold_point", "gather"]
+## Leader abilities, on cooldowns (seconds): a rotorcraft drops your squad
+## where you aim; a supply crate (health, ammo) for you and your squad
+## close by; a scan shows the enemies round you.
+const ABILITIES := {"drop": {"cooldown": 120, "reach": 150.0}, "supply": {"cooldown": 90, "radius": 8.0, "heal": 40.0},
+		"scan": {"cooldown": 60, "radius": 80.0, "ticks": 600}}
+const ABILITY_IDS := ["drop", "supply", "scan"]
 
 
 class Member:
@@ -125,7 +138,8 @@ func bind(member: Member, id: int) -> void:
 
 
 ## An order to the whole squad (`role` "") or to the teammates of one role.
-func order(world: SimWorld, leader: int, order_id: String, role: String = "", target: int = 0) -> bool:
+func order(world: SimWorld, leader: int, order_id: String, role: String = "", target: int = 0,
+		point := Vector3.INF) -> bool:
 	var sq: Squad = squads.get(leader)
 	var o := ORDER_IDS.find(order_id)
 	if sq == null or o < 0:
@@ -135,6 +149,10 @@ func order(world: SimWorld, leader: int, order_id: String, role: String = "", ta
 		if not role.is_empty() and m.role != role:
 			continue
 		_set_order(world, m, o, target)
+		if o == Order.MOVE:
+			if point == Vector3.INF:
+				return false
+			m.hold_at = point
 		any = true
 	if any:
 		sq.strategy = ""  # a hand-given order: no plan any more
@@ -171,15 +189,21 @@ func set_spread(world: SimWorld, leader: int, spread_id: String) -> bool:
 	return true
 
 
-func set_strategy(world: SimWorld, leader: int, strategy_id: String) -> bool:
+func set_strategy(world: SimWorld, leader: int, strategy_id: String, places: Dictionary = {}) -> bool:
 	var sq: Squad = squads.get(leader)
 	if sq == null or not STRATEGIES.has(strategy_id):
 		return false
 	var plan: Dictionary = STRATEGIES[strategy_id]
+	var to: Vector3 = places.get(plan.get("to", ""), Vector3.INF)
+	if plan.has("to") and to == Vector3.INF:
+		return false  # nowhere to send them (no enemy camp, no point)
 	sq.rule = int(plan.rule)
 	sq.spread = int(plan.spread)
 	for m in sq.members:
 		_set_order(world, m, int(plan.orders.get(m.role, Order.FOLLOW)), 0)
+		if m.order == Order.MOVE:
+			var a := TAU * m.slot / float(maxi(sq.members.size(), 1))
+			m.hold_at = to + Vector3(cos(a), 0.0, sin(a)) * 3.0
 	sq.strategy = strategy_id
 	_emit(world, leader, "squad_strategy", {"strategy": strategy_id})
 	return true
@@ -297,3 +321,53 @@ func _emit(world: SimWorld, leader: int, action: String, extra: Dictionary) -> v
 	var e := {"action": action, "player": leader, "position": Vector3.ZERO, "treasure": 0, "kind": -1}
 	e.merge(extra)
 	world._emit("hq:%s:%d:%d" % [action, leader, world.tick], "hunt", e)
+
+
+var _ability_tick: Dictionary = {}  ## "leader:ability" -> tick last used
+
+
+func ability_ready(world: SimWorld, leader: int, kind: String) -> bool:
+	return world.tick - int(_ability_tick.get("%d:%s" % [leader, kind], -1000000)) >= int(ABILITIES[kind].cooldown) * Sim.TICK_RATE
+
+
+## A leader's ability: "drop" (the squad flown to `point`), "supply"
+## (health and ammo round the leader), "scan" (enemies near revealed).
+func ability(world: SimWorld, hunt: HuntRules, leader: int, kind: String, point: Vector3) -> bool:
+	var lead: SimPlayer = world.players.get(leader)
+	if lead == null or not lead.state.alive or not ABILITIES.has(kind) or hunt._aux(leader) or not ability_ready(world, leader, kind):
+		return false
+	var info: Dictionary = ABILITIES[kind]
+	var sq: Squad = squads.get(leader)
+	match kind:
+		"drop":
+			if sq == null or sq.members.is_empty() or point == Vector3.INF \
+					or point.distance_to(lead.state.position) > float(info.reach):
+				return false
+			for m in sq.members:
+				if world.players.has(m.id):
+					var a := TAU * m.slot / float(sq.members.size())
+					world.teleport(world.players[m.id], point + Vector3(cos(a) * 2.5, 0.6, sin(a) * 2.5))
+					m.order = Order.HOLD
+					m.hold_at = world.players[m.id].state.position
+		"supply":
+			var mates: Array[SimPlayer] = [lead]
+			if sq != null:
+				for m in sq.members:
+					if world.players.has(m.id):
+						mates.append(world.players[m.id])
+			for p in mates:
+				if p.state.alive and p.state.position.distance_to(lead.state.position) <= float(info.radius):
+					p.state.health = minf(p.state.health + float(info.heal), Balance.PLAYER.max_health)
+					for i in p.state.weapons.size():
+						var w := Weapons.at(p.state.weapons[i])
+						if w != null:
+							p.state.reserve[i] = maxi(p.state.reserve[i], w.mag_size * 2)
+		"scan":
+			for id: int in world.players:
+				var o: SimPlayer = world.players[id]
+				if o.state.alive and id != leader and not hunt.friendly(leader, id) and not same_side(leader, id) \
+						and o.state.position.distance_to(lead.state.position) <= float(info.radius):
+					hunt.revealed_until[id] = maxi(int(hunt.revealed_until.get(id, 0)), world.tick + int(info.ticks))
+	_ability_tick["%d:%s" % [leader, kind]] = world.tick
+	_emit(world, leader, "squad_ability", {"ability": kind, "position": point if kind == "drop" else lead.state.position})
+	return true

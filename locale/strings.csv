@@ -1263,7 +1263,7 @@ SQUAD_ORDER_HOLD,hold here
 SQUAD_ORDER_GUARD_PAD,guard the extraction pad
 SQUAD_ORDER_ESCORT,escort me (close)
 SQUAD_ORDER_FETCH,get my cargo out
-SQUAD_ORDER_ATTACK,attack (nearest rival)
+SQUAD_ORDER_ATTACK,attack my mark (who I aim at)
 SQUAD_ORDER_FALL_BACK,fall back to me
 SQUAD_RULE_HOLD_FIRE,hold fire
 SQUAD_RULE_RETURN_FIRE,return fire only
@@ -1382,3 +1382,13 @@ WAR_FEED_OUT,%s is out of the war
 WAR_FEED_FLAG,%s takes a flag
 WAR_FLAG_LABEL,FLAG
 WAR_CONVOY_LABEL,CONVOY
+SQUAD_ORDER_MOVE,go where I aim
+SQUAD_STRATEGY_RAID,RAID
+SQUAD_STRATEGY_RAID_SUB,"Weapons free, together · everyone to the nearest enemy camp"
+SQUAD_STRATEGY_HOLD_POINT,HOLD THE POINT
+SQUAD_STRATEGY_HOLD_POINT_SUB,Everyone to the control point · return fire
+SQUAD_STRATEGY_GATHER,GATHER
+SQUAD_STRATEGY_GATHER_SUB,Hold fire · the squad fetches your cargo out
+SQUAD_ABILITY_DROP,Rotorcraft drop: the squad to where you aim
+SQUAD_ABILITY_SUPPLY,Supply crate: health and ammo here
+SQUAD_ABILITY_SCAN,Scan: show enemies round you

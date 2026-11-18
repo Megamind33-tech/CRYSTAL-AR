@@ -1279,13 +1279,14 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 					return sq != null and sq.strategy != plan, "squad")
 	for order: String in HuntSquad.ORDER_IDS:
 		hunt_menu.add_row(func() -> String: return tr("SQUAD_ALL") % tr("SQUAD_ORDER_" + order.to_upper()),
-				func() -> void: hunt_menu.request.call("squad_order", {"order": order, "target": _nearest_hunter()}),
+				func() -> void: hunt_menu.request.call("squad_order", {"order": order, "target": _mark(), "point": _aim_point()}),
 				func() -> bool: return my_squad.call() != null, "squad")
 	for role: String in HuntSquad.ROLE_IDS:
-		for order: String in ["follow", "hold", "fetch", "attack"]:
+		for order: String in ["follow", "hold", "move", "fetch", "attack"]:
 			hunt_menu.add_row(func() -> String: return tr("SQUAD_ONE") % [tr("SQUAD_ROLE_" + role.to_upper()),
 						tr("SQUAD_ORDER_" + order.to_upper())],
-					func() -> void: hunt_menu.request.call("squad_order", {"order": order, "role": role, "target": _nearest_hunter()}),
+					func() -> void: hunt_menu.request.call("squad_order", {"order": order, "role": role, "target": _mark(),
+							"point": _aim_point()}),
 					func() -> bool:
 						var sq: HuntSquad.Squad = my_squad.call()
 						if sq == null:
@@ -1294,6 +1295,12 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 							if m.role == role:
 								return true
 						return false, "squad")
+	for ab: String in HuntSquad.ABILITY_IDS:
+		hunt_menu.add_row(func() -> String: return tr("SQUAD_ABILITY_" + ab.to_upper()),
+				func() -> void: hunt_menu.request.call("squad_ability", {"ability": ab, "point": _aim_point()}),
+				func() -> bool:
+					var st: Dictionary = hunt_menu.state.call()
+					return not st.is_empty() and (st.hunt as HuntRules).squad.ability_ready(st.world, local_id(), ab), "squad")
 	for rule: String in HuntSquad.RULE_IDS:
 		hunt_menu.add_row(func() -> String: return tr("SQUAD_RULE") % tr("SQUAD_RULE_" + rule.to_upper()),
 				func() -> void: hunt_menu.request.call("squad_rule", {"rule": rule}),
@@ -1952,6 +1959,31 @@ func _bring_army() -> void:
 	if best >= 0:
 		server.world.vehicles[best].owner = me
 		h.army.set_hauler(me, best)
+
+
+## Your mark: the hunter nearest the line you aim along (within a few
+## metres of it, in front), else the nearest hunter.
+func _mark() -> int:
+	var p: SimPlayer = server.world.players.get(local_id()) if server != null else null
+	if p == null:
+		return 0
+	var eye := p.state.position + Vector3(0, 1.6, 0)
+	var dir := Basis.from_euler(Vector3(input.look_pitch, input.look_yaw, 0.0)) * Vector3.FORWARD
+	var best := 0
+	var best_off := 3.0
+	for id: int in server.world.players:
+		var o: SimPlayer = server.world.players[id]
+		if id == p.net_id or not o.state.alive or server.world.hunt._aux(id):
+			continue
+		var to := o.state.position + Vector3(0, 1.0, 0) - eye
+		var along := to.dot(dir)
+		if along <= 0.0:
+			continue
+		var off := (to - dir * along).length()
+		if off < best_off:
+			best_off = off
+			best = id
+	return best if best != 0 else _nearest_hunter()
 
 
 ## Where you aim, on the ground or a wall (the army's targets).

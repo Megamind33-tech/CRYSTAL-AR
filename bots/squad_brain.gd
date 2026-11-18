@@ -97,7 +97,7 @@ func _squad_station(tick: int, p: SimPlayer, m: HuntSquad.Member, sq: HuntSquad.
 	var lead := boss.state.position
 	var spot := lead
 	match m.order:
-		SqOrder.HOLD:
+		SqOrder.HOLD, SqOrder.MOVE:
 			spot = m.hold_at
 		SqOrder.GUARD_PAD:
 			spot = _ring(h.nearest_zone(lead, tick), PAD_RING, m.slot, sq.members.size(), 0.0)

@@ -762,7 +762,10 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 		"merc_order":
 			return economy.order(world, hunter, str(args.get("order", "")))
 		"squad_order":
-			return squad.order(world, hunter, str(args.get("order", "")), str(args.get("role", "")), int(args.get("target", 0)))
+			return squad.order(world, hunter, str(args.get("order", "")), str(args.get("role", "")), int(args.get("target", 0)),
+					args.get("point", Vector3.INF))
+		"squad_ability":
+			return squad.ability(world, self, hunter, str(args.get("ability", "")), args.get("point", Vector3.INF))
 		"squad_rule":
 			return squad.set_rule(world, hunter, str(args.get("rule", "")))
 		"squad_spread":
@@ -778,7 +781,7 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 		"build":
 			return war.enabled and war.builds.build(world, self, hunter, str(args.get("module", "")))
 		"squad_strategy":
-			return squad.set_strategy(world, hunter, str(args.get("strategy", "")))
+			return squad.set_strategy(world, hunter, str(args.get("strategy", "")), _plan_places(world, hunter))
 		"dismiss_merc":
 			if not economy.contracts.has(hunter):
 				return false
@@ -888,6 +891,23 @@ func protects(a: int, b: int) -> bool:
 ## bounties, alliances).
 func _aux(id: int) -> bool:
 	return economy.is_merc(id) or squad.is_member(id)
+
+
+## Where a squad plan sends them: the enemy camp nearest the leader, the
+## war's control point.
+func _plan_places(world: SimWorld, leader: int) -> Dictionary:
+	var out := {}
+	var p: SimPlayer = world.players.get(leader)
+	if p == null:
+		return out
+	if war.enabled:
+		out["point"] = war.point
+		var best := INF
+		for c in war.camps:
+			if c.side != war.side_of(self, leader) and c.at.distance_to(p.state.position) < best:
+				best = c.at.distance_to(p.state.position)
+				out["enemy_camp"] = c.at
+	return out
 
 
 ## A heavy load: it needs an extraction machine at the pad in a war.
