@@ -81,8 +81,15 @@ var _doors: Array = []
 var _t: float = 0.0
 
 
+## Every leaf of a size is one instance of a MultiMesh (two draws: the cel
+## pass and its outline) instead of two draws per leaf: the settlement's
+## sixteen leaves were thirty-odd draws on a phone.
+var _groups: Array = []  ## [MultiMeshInstance3D, centre Vector3] per leaf size
+
+
 func _ready() -> void:
 	var mat := Comic.kit_material(0.01)
+	var by_size := {}  ## Vector2(w, h) -> [[door, leaf side]...]
 	for name: String in DOORS:
 		var p := piece(name)
 		if p.is_empty():
@@ -92,20 +99,53 @@ func _ready() -> void:
 			var h: float = d[3]
 			var centre := to_world(p, d[0], d[1])
 			var b := Basis(Vector3.UP, deg_to_rad(float(p[2])))
-			var leaves := []
-			for side in [-1.0, 1.0]:
-				var leaf := MeshInstance3D.new()
-				var box := BoxMesh.new()
-				box.size = Vector3(w * 0.5, h, 0.1)
-				leaf.mesh = CityMode._tinted(box, Color(0.58, 0.62, 0.68))
-				leaf.material_override = mat
-				leaf.basis = b
-				leaf.position = centre + Vector3(0, h * 0.5, 0) + b * Vector3(side * w * 0.25, 0, 0)
-				leaf.visibility_range_end = 120.0
-				add_child(leaf)
-				leaves.append(leaf)
-			# [left, right, centre, basis, width, reach, opening, height, wanted]
-			_doors.append([leaves[0], leaves[1], centre, b, w, OPEN_REACH_GATE if w > 4.0 else OPEN_REACH, 0.0, h, 0.0])
+			var key := Vector2(w, h)
+			if not by_size.has(key):
+				by_size[key] = []
+			# [centre, basis, width, reach, opening, height, wanted, group, first instance]
+			var door := [centre, b, w, OPEN_REACH_GATE if w > 4.0 else OPEN_REACH, 0.0, h, 0.0, -1, 0]
+			by_size[key].append(door)
+			_doors.append(door)
+	for key: Vector2 in by_size:
+		var doors: Array = by_size[key]
+		var mid := Vector3.ZERO
+		for d: Array in doors:
+			mid += d[0] as Vector3
+		mid /= float(doors.size())
+		var box := BoxMesh.new()
+		box.size = Vector3(key.x * 0.5, key.y, 0.1)
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = CityMode._tinted(box, Color(0.58, 0.62, 0.68))
+		mm.instance_count = doors.size() * 2
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = "Doors_%d" % _groups.size()
+		mmi.multimesh = mm
+		mmi.material_override = mat
+		mmi.position = mid
+		mmi.visibility_range_end = 150.0
+		mmi.custom_aabb = AABB(Vector3(-60, -2, -60), Vector3(120, key.y + 4.0, 120))
+		add_child(mmi)
+		var gi := _groups.size()
+		_groups.append([mmi, mid])
+		for i in doors.size():
+			(doors[i] as Array)[7] = gi
+			(doors[i] as Array)[8] = i * 2
+			_place(doors[i], 0.0)
+
+
+## Puts a door's two leaves, `opening` (0..1) open.
+func _place(d: Array, opening: float) -> void:
+	var g: Array = _groups[d[7]]
+	var mm: MultiMesh = (g[0] as MultiMeshInstance3D).multimesh
+	var centre: Vector3 = d[0]
+	var b: Basis = d[1]
+	var w: float = d[2]
+	var h: float = d[5]
+	for k in 2:
+		var side := -1.0 if k == 0 else 1.0
+		var at := centre + Vector3(0, h * 0.5, 0) + b * Vector3(side * (w * 0.25 + opening * w * 0.48), 0, 0)
+		mm.set_instance_transform(int(d[8]) + k, Transform3D(b, at - (g[1] as Vector3)))
 
 
 ## Doors slide open when anyone (you, the people about, a driver) is near
@@ -124,8 +164,8 @@ func _process(delta: float) -> void:
 				people.append((v as Node3D).global_position)
 		var secured: Array = get_tree().get_nodes_in_group("secured_gates")
 		for d: Array in _doors:
-			var centre: Vector3 = d[2]
-			d[8] = 0.0
+			var centre: Vector3 = d[0]
+			d[6] = 0.0
 			# A secured door (the gatehouse's): the simulation decides
 			# (SecuredGate: it stays shut on the wanted).
 			var gate: SecuredGate = null
@@ -133,21 +173,15 @@ func _process(delta: float) -> void:
 				if Vector2(g.centre.x - centre.x, g.centre.z - centre.z).length() < 1.0:
 					gate = g
 			if gate != null:
-				d[8] = 1.0 if gate.open else 0.0
+				d[6] = 1.0 if gate.open else 0.0
 				continue
 			for at: Vector3 in people:
-				if Vector2(at.x - centre.x, at.z - centre.z).length() < float(d[5]) and absf(at.y - centre.y) < 6.0:
-					d[8] = 1.0
+				if Vector2(at.x - centre.x, at.z - centre.z).length() < float(d[3]) and absf(at.y - centre.y) < 6.0:
+					d[6] = 1.0
 					break
 	for d: Array in _doors:
-		var opening: float = move_toward(float(d[6]), float(d[8]), delta * SLIDE_SPEED)
-		if opening == float(d[6]):
+		var opening: float = move_toward(float(d[4]), float(d[6]), delta * SLIDE_SPEED)
+		if opening == float(d[4]):
 			continue
-		d[6] = opening
-		var centre: Vector3 = d[2]
-		var b: Basis = d[3]
-		var w: float = d[4]
-		var h: float = d[7]
-		for k in 2:
-			var side := -1.0 if k == 0 else 1.0
-			(d[k] as Node3D).position = centre + Vector3(0, h * 0.5, 0) + b * Vector3(side * (w * 0.25 + opening * w * 0.48), 0, 0)
+		d[4] = opening
+		_place(d, opening)

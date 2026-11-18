@@ -80,24 +80,22 @@ func _ready() -> void:
 func _city_life() -> void:
 	var grass := Comic.env_material(load(TEX % ["red_sand", "diff"]), 0.25, Color(0.42, 1.25, 0.3))
 	grass.set_shader_parameter("saturation", 1.6)
+	# The lawns are one mesh (one draw, not one each).
+	var lawn := SurfaceTool.new()
+	lawn.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for l: Array in CityLayout.lawns():
-		var mi := MeshInstance3D.new()
 		var pm := PlaneMesh.new()
 		pm.size = l[1]
-		mi.mesh = pm
-		mi.position = (l[0] as Vector3) + Vector3(0, 0.03, 0)
-		mi.material_override = grass
-		add_child(mi)
-	var ti := 0
+		lawn.append_from(pm, 0, Transform3D(Basis(), (l[0] as Vector3) + Vector3(0, 0.03, 0)))
+	var lawns := MeshInstance3D.new()
+	lawns.name = "Lawns"
+	lawns.mesh = lawn.commit()
+	lawns.material_override = grass
+	add_child(lawns)
 	for p: Array in CityLayout.plants():
-		if p[0] != "life/tree":
-			batches.add_piece(p[0], p[1], p[2], 1.0, 160.0)
-			continue
-		var plant := Comic.kit_instance(p[0], p[1], p[2], 1.0)
-		plant.name = "Tree_c%d" % ti  # each its own node: felled ones are hidden
-		plant.visibility_range_end = 200.0
-		ti += 1
-		add_child(plant)
+		# Trees too: nothing fells the city's (the outland groves are separate
+		# nodes), so they merge into the cell batches like the shrubs.
+		batches.add_piece(p[0], p[1], p[2], 1.0, 200.0 if p[0] == "life/tree" else 160.0)
 	batches.add_piece("life/city_dome", CityLayout.ORIGIN + Vector3(0, -0.4, 0), 0.0, 1.0, 0.0)
 	var glass := MeshInstance3D.new()
 	var sphere := SphereMesh.new()

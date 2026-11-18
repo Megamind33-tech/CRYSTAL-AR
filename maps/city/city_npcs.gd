@@ -239,6 +239,8 @@ func _light_weight(v: Node) -> void:
 			reach = FACE_RANGE  # thousands of triangles for a few pixels
 		elif mi != null and mi.mesh != null and mi.mesh.get_aabb().get_longest_axis_size() < 0.6:
 			reach = GEAR_RANGE  # small kit on the body (two draws each)
+			if mi.material_override is ShaderMaterial and (mi.material_override as ShaderMaterial).next_pass != null:
+				mi.material_override = Comic.kit_material_plain()  # the bodies have no ink line either: one draw
 		if gi.visibility_range_end <= 0.0 or gi.visibility_range_end > reach:
 			gi.visibility_range_end = reach
 			gi.visibility_range_end_margin = 2.0

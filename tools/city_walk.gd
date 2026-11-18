@@ -28,7 +28,7 @@ func _run() -> void:
 		Profile.career().d.stash = {"oxygen_canister": 1}
 	if Platform.user_args.has("--people"):
 		Profile.career().d["body"] = "female"  # play as a woman
-	if Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin") or Platform.user_args.has("--frisk") \
+	if Platform.user_args.has("--budget") or Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin") or Platform.user_args.has("--frisk") \
 			or Platform.user_args.has("--districts"):
 		Profile.career().choose_nation(0)
 		Profile.career().choose_path("freelance")  # no path pick over the shots
@@ -1494,6 +1494,8 @@ func _phase1_run(me: SimPlayer, dig: bool) -> void:
 ##     --quality medium,lod=4.0,probe=false,msaa=1 --cats
 func _budget_probe(me: SimPlayer) -> void:
 	var spots := [["plaza", CityLayout.ORIGIN + Vector3(0, 0.05, 10), 0.0],
+			["titan", CityLayout.ORIGIN + Vector3(-24, 0.05, -28), PI * 0.5 - 0.15],
+			["shop", CityLayout.ORIGIN + Vector3(18, 0.05, -18), 0.1],
 			["hollow", WorldTerrain.at(WorldLayout.HOLLOW.x, WorldLayout.HOLLOW.z + 10) + Vector3(0, 0.1, 0), 0.0],
 			["helios", WorldTerrain.at(WorldLayout.HELIOS.x + 5, WorldLayout.HELIOS.y + 78) + Vector3(0, 0.1, 0), 0.0],
 			["galleria_in", WorldTerrain.at(WorldLayout.GALLERIA.x - 34, WorldLayout.GALLERIA.y) + Vector3(0, 0.1, 0), -PI * 0.5],
@@ -1533,6 +1535,36 @@ func _budget_probe(me: SimPlayer) -> void:
 				for n: Node in nodes:
 					n.set("visible", true)
 				print("BUDGET %s   %-12s x%-3d draws %4d -> %4d  triangles %6.1fk -> %6.1fk" % [place[0], cat, nodes.size(), before.x, after.x, before.y / 1000.0, after.y / 1000.0])
+		if Platform.user_args.has("--shadows"):
+			var lights := get_tree().root.find_children("*", "DirectionalLight3D", true, false)
+			var before := await _measure()
+			for l: DirectionalLight3D in lights:
+				l.shadow_enabled = false
+			var after := await _measure()
+			for l: DirectionalLight3D in lights:
+				l.shadow_enabled = true
+			print("BUDGET %s   shadows off: draws %d -> %d, triangles %.1fk -> %.1fk" % [place[0], before.x, after.x, before.y / 1000.0, after.y / 1000.0])
+			var nb := 0
+			for b: MeshInstance3D in get_tree().root.find_children("Batch_*", "MeshInstance3D", true, false):
+				if b.is_visible_in_tree():
+					nb += 1
+					b.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var a2 := await _measure()
+			print("BUDGET %s   batches cast no shadow (%d): draws -> %d, triangles -> %.1fk" % [place[0], nb, a2.x, a2.y / 1000.0])
+		if Platform.user_args.has("--batchcost"):
+			var base := await _measure()
+			for b: MeshInstance3D in get_tree().root.find_children("Batch_*", "MeshInstance3D", true, false):
+				if not b.is_visible_in_tree():
+					continue
+				b.visible = false
+				var after := await _measure()
+				b.visible = true
+				if base.x - after.x > 0 or base.y - after.y > 2000:
+					print("BUDGET %s   %-18s draws %d tris %.1fk (mesh %.1fk) at %.0f m reach %.0f %s" % [place[0], b.name, base.x - after.x, (base.y - after.y) / 1000.0,
+							(b.mesh as ArrayMesh).surface_get_array_len(0) / 3000.0, get_viewport().get_camera_3d().global_position.distance_to(b.global_position), b.visibility_range_end,
+							"outlined" if b.material_override.next_pass != null else "plain"])
+		if Platform.user_args.has("--world"):
+			_world_tally(str(place[0]))
 		if Platform.user_args.has("--outside"):
 			var cam := get_viewport().get_camera_3d()
 			var tally := {}
@@ -1586,6 +1618,70 @@ func _budget_probe(me: SimPlayer) -> void:
 		get_tree().paused = false
 	_character_report()
 	_texture_report()
+
+
+## --world: what the in-range world meshes spend, grouped by parent + name
+## (draws = surfaces x material passes, as the renderer counts them).
+func _world_tally(spot: String) -> void:
+	var cam := get_viewport().get_camera_3d()
+	var tally := {}
+	for gi: GeometryInstance3D in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
+		if not gi.is_visible_in_tree() or not (gi is MeshInstance3D or gi is MultiMeshInstance3D):
+			continue
+		var d := cam.global_position.distance_to(gi.global_position)
+		if gi.visibility_range_end > 0.0 and d > gi.visibility_range_end:
+			continue
+		if gi.visibility_range_begin > 0.0 and d < gi.visibility_range_begin:
+			continue
+		var planes := cam.get_frustum()
+		var wb := gi.global_transform * gi.get_aabb()
+		var inside := true
+		for pl: Plane in planes:
+			var pt := Vector3(wb.position.x + (wb.size.x if pl.normal.x > 0.0 else 0.0), wb.position.y + (wb.size.y if pl.normal.y > 0.0 else 0.0), wb.position.z + (wb.size.z if pl.normal.z > 0.0 else 0.0))
+			if pl.distance_to(pt) > 0.0:
+				inside = false
+				break
+		if not inside:
+			continue
+		var surf := 1
+		var passes := 1
+		var tris := 0
+		if gi is MeshInstance3D and (gi as MeshInstance3D).mesh != null:
+			var mi := gi as MeshInstance3D
+			surf = mi.mesh.get_surface_count()
+			passes = 0
+			for s in surf:
+				var mat := mi.get_active_material(s)
+				var p := 0
+				while mat != null:
+					p += 1
+					mat = mat.next_pass
+				passes += maxi(p, 1) + (1 if mi.material_overlay != null else 0)
+				if mi.mesh is ArrayMesh:
+					tris += (mi.mesh as ArrayMesh).surface_get_array_index_len(s) / 3
+		else:
+			passes = 2
+		var nm := str(gi.name).get_slice("@", 0)
+		if nm.is_empty():
+			nm = "(anon)"
+		while not nm.begins_with("Batch") and nm.length() > 1 and nm[nm.length() - 1].is_valid_int():
+			nm = nm.left(nm.length() - 1)
+		var anc := []
+		var an: Node = gi.get_parent()
+		while an != null and anc.size() < 3:
+			if not str(an.name).begins_with("@"):
+				anc.append(str(an.name).left(18))
+			an = an.get_parent()
+		var mnm := ""
+		if gi is MeshInstance3D and (gi as MeshInstance3D).mesh != null:
+			mnm = (gi as MeshInstance3D).mesh.get_class() + ((gi as MeshInstance3D).mesh.resource_name if (gi as MeshInstance3D).mesh.resource_name != "" else "")
+		var key := "%s <%s> %s" % [gi.get_class(), "/".join(anc), nm.left(30) + " " + mnm]
+		var row: Array = tally.get(key, [0, 0, 0])
+		tally[key] = [row[0] + 1, row[1] + passes, row[2] + tris]
+	var keys := tally.keys()
+	keys.sort_custom(func(a, b): return tally[a][1] > tally[b][1])
+	for k: String in keys.slice(0, 70):
+		print("BUDGET %s   world x%-3d draws~%-3d tris %-6d %s" % [spot, tally[k][0], tally[k][1], tally[k][2], k])
 
 
 ## What one character costs: draws (surfaces x passes) and triangles per
