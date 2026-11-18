@@ -1249,6 +1249,25 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 					var hr: HuntRules = st.hunt
 					return hr.war.enabled and not hr.war.camps.is_empty() and NationArsenal.allowed(Profile.career().nation_id(), module) \
 							and hr.economy.credits.get(local_id(), 0) >= int(HuntCamps.MODULES[module].cost), "camp")
+	# Alliances between sides (four-way wars).
+	for n in Nations.IDS.size():
+		hunt_menu.add_row(func() -> String: return tr("WAR_ALLY") % Nations.display_name(n),
+				func() -> void: hunt_menu.request.call("war_ally", {"side": 100 + n}),
+				func() -> bool:
+					var st: Dictionary = hunt_menu.state.call()
+					if st.is_empty():
+						return false
+					var hr: HuntRules = st.hunt
+					return hr.war.enabled and hr.war.side_of(hr, local_id()) != 100 + n and (100 + n) in hr.war.sides_in(st.world, hr) \
+							and not hr.war.side_allies.has(hr.war.side_of(hr, local_id())), "camp")
+	hunt_menu.add_row(func() -> String: return tr("WAR_BETRAY"),
+			func() -> void: hunt_menu.request.call("war_betray"),
+			func() -> bool:
+				var st: Dictionary = hunt_menu.state.call()
+				if st.is_empty():
+					return false
+				var hr: HuntRules = st.hunt
+				return hr.war.side_allies.has(hr.war.side_of(hr, local_id())), "camp")
 	hunt_menu.add_row(func() -> String: return tr("CAMP_REPAIR"),
 			func() -> void: hunt_menu.request.call("repair_camp"),
 			func() -> bool:
@@ -1793,6 +1812,14 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			return
 		"pads_shifted":
 			_kill_feed.add_note("", tr("MOD_FEED_PADS"), UiStyle.WARN)
+			return
+		"war_allied", "war_betrayed", "war_ally_offer":
+			var key: String = {"war_allied": "WAR_FEED_ALLIED", "war_betrayed": "WAR_FEED_BETRAYED", "war_ally_offer": "WAR_FEED_OFFER"}[e.action]
+			_kill_feed.add_note("", tr(key) % [_side_name(int(e.side)), _side_name(int(e.to))],
+					UiStyle.WARN if e.action == "war_betrayed" else UiStyle.ACCENT)
+			if e.action != "war_ally_offer":
+				_hunt_banner("WAR_BANNER_ALLIED" if e.action == "war_allied" else "WAR_BANNER_BETRAYED",
+						tr(key) % [_side_name(int(e.side)), _side_name(int(e.to))], UiStyle.WARN)
 			return
 		"war_side_out":
 			_kill_feed.add_note("", tr("WAR_FEED_OUT") % _side_name(int(e.side)), UiStyle.WARN)

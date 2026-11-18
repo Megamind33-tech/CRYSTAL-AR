@@ -77,6 +77,9 @@ var territory: Dictionary = {}  ## side -> points
 var lives: Dictionary = {}  ## side -> lives left
 var out_sides: Array = []
 var race_end_tick: int = 0
+var side_allies: Dictionary = {}  ## side -> the side it's allied with (both ways)
+## Out of 10 wars, how many are duels (two nations); the rest four-way.
+const DUEL_IN_TEN := 4
 var builds := HuntCamps.new()  ## what the sides build at their camps
 var _rng := RandomNumberGenerator.new()
 ## Tools and screenshots: every run gets this objective (-1: rolled).
@@ -100,6 +103,7 @@ func start(world: SimWorld, hunt: HuntRules) -> void:
 	territory.clear()
 	lives.clear()
 	out_sides.clear()
+	side_allies.clear()
 	convoy_pusher = -1
 	builds.reset()
 	holder = -1
@@ -424,3 +428,61 @@ func _step_territory(world: SimWorld, hunt: HuntRules, ids: Array) -> void:
 				if int(territory[f[1]]) >= TERRITORY_TARGET:
 					_win(world, hunt, int(f[1]))
 					return
+
+
+# --- Duels and four-way wars; alliances between sides ---
+
+static func duel_for(seed_value: int) -> bool:
+	var r := RandomNumberGenerator.new()
+	r.seed = hash(["format", seed_value])
+	return r.randi_range(0, 9) < DUEL_IN_TEN
+
+
+func sides_allied(a: int, b: int) -> bool:
+	return a != b and int(side_allies.get(a, -1)) == b
+
+
+## `who`'s side proposes an alliance to `side`. AI sides (no human among
+## them) accept when neither side leads the war; a human side must answer
+## by proposing back. One ally at a time, and never in a duel.
+func propose_alliance(world: SimWorld, hunt: HuntRules, who: int, side: int) -> bool:
+	var mine := side_of(hunt, who)
+	var sides := sides_in(world, hunt)
+	if not enabled or side == mine or not side in sides or sides.size() < 3 or side_allies.has(mine) or side_allies.has(side):
+		return false
+	var human := false
+	for id: int in world.players:
+		if not world.players[id].is_bot and not hunt._aux(id) and side_of(hunt, id) == side:
+			human = true
+	var lead := leader_side()
+	if human:
+		_pending[mine] = side
+		if int(_pending.get(side, -1)) != mine:
+			world._emit("hw9:%d:%d" % [mine, world.tick], "hunt", {"action": "war_ally_offer", "player": who,
+					"position": point, "treasure": 0, "kind": -1, "side": mine, "to": side})
+			return true
+	elif lead == mine or lead == side:
+		return false  # the leader isn't anyone's friend
+	side_allies[mine] = side
+	side_allies[side] = mine
+	_pending.erase(mine)
+	_pending.erase(side)
+	world._emit("hw10:%d:%d" % [mine, world.tick], "hunt", {"action": "war_allied", "player": who,
+			"position": point, "treasure": 0, "kind": -1, "side": mine, "to": side})
+	return true
+
+
+var _pending: Dictionary = {}  ## side -> side it offered an alliance to
+
+
+## A betrayal: `who`'s side breaks its alliance (said to everyone).
+func break_alliance(world: SimWorld, hunt: HuntRules, who: int) -> bool:
+	var mine := side_of(hunt, who)
+	if not side_allies.has(mine):
+		return false
+	var other: int = side_allies[mine]
+	side_allies.erase(mine)
+	side_allies.erase(other)
+	world._emit("hw11:%d:%d" % [mine, world.tick], "hunt", {"action": "war_betrayed", "player": who,
+			"position": point, "treasure": 0, "kind": -1, "side": mine, "to": other})
+	return true

@@ -1408,3 +1408,10 @@ MOD_MERCENARY_MARKET_SUB,Mercenary market: hired guns at half price · four at o
 MOD_FOG_OF_WAR,Fog of war
 MOD_FOG_OF_WAR_SUB,Fog of war: enemy camps hidden till you're close
 MOD_FEED_PADS,The extraction pads have moved
+WAR_ALLY,Propose an alliance to %s
+WAR_BETRAY,Break the alliance (betray them)
+WAR_FEED_ALLIED,%s and %s are allies
+WAR_FEED_BETRAYED,%s betrays %s
+WAR_FEED_OFFER,%s offers %s an alliance
+WAR_BANNER_ALLIED,ALLIANCE
+WAR_BANNER_BETRAYED,BETRAYAL

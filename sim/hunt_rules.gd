@@ -236,6 +236,24 @@ func _seat_nations(world: SimWorld, ids: Array) -> void:
 		return  # a run without nations (tests, old saves): as before
 	var hunters := ids.filter(func(id: int) -> bool: return not _aux(id) and not economy.pending_dismissals.has(id))
 	nations = Nations.seat(hunters, home_nations, world.match_seed)
+	# A war is a duel (two nations) or a four-way war: in a duel the AI are
+	# seated with you or with one rival nation.
+	if war.enabled and HuntWar.duel_for(world.match_seed):
+		var mine := -1
+		for id: int in hunters:
+			if home_nations.has(id):
+				mine = int(home_nations[id])
+		var rival := -1
+		for id: int in hunters:
+			if int(nations[id]) != mine:
+				rival = int(nations[id])
+				break
+		if mine >= 0 and rival >= 0:
+			var k := 0
+			for id: int in hunters:
+				if not home_nations.has(id):
+					nations[id] = mine if k % 3 == 0 else rival  # a third with you, the rest against
+					k += 1
 	var by_nation := {}
 	for id: int in hunters:
 		var n: int = nations[id]
@@ -256,7 +274,8 @@ func nation_of(id: int) -> int:
 ## an employer and its mercenary, and allies. Allies CAN be hurt (friendly
 ## fire is on: anyone can turn on anyone), see protects().
 func friendly(a: int, b: int) -> bool:
-	return economy.protects(a, b) or squad.same_side(a, b) or social.allied(a, b)
+	return economy.protects(a, b) or squad.same_side(a, b) or social.allied(a, b) \
+			or (war.enabled and war.sides_allied(war.side_of(self, a), war.side_of(self, b)))
 
 
 ## A hit between hunters: fire on an ally is friendly fire (HuntSocial).
@@ -785,6 +804,10 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 			return war.enabled and war.builds.upgrade(world, self, hunter, str(args.get("module", "")))
 		"fly_to_camp":
 			return war.enabled and war.builds.fly_to_camp(world, self, hunter)
+		"war_ally":
+			return war.propose_alliance(world, self, hunter, int(args.get("side", -1)))
+		"war_betray":
+			return war.break_alliance(world, self, hunter)
 		"build":
 			return war.enabled and war.builds.build(world, self, hunter, str(args.get("module", "")))
 		"squad_strategy":

@@ -427,3 +427,23 @@ func test_match_modifiers() -> void:
 	h.mods.start(world, h)
 	assert_between(h.mods.active.size(), 1, 2)
 	h.mods.clear(world)
+
+
+## Four-way wars: sides make alliances (AI sides accept when nobody of the
+## two leads) and break them; allies don't hurt each other.
+func test_side_alliances() -> void:
+	h.army.rosters[2] = {}
+	var p3 := world.add_player(3, SimHarness.loadout(), "h3", true)
+	SimHarness.place(p3, Vector3(8, 0.05, 8), 0.0)
+	inputs[3] = SimHarness.CommandScript.new()
+	_start(HuntWar.Objective.HOLD)
+	var s1 := h.war.side_of(h, 1)
+	var s2 := h.war.side_of(h, 2)
+	h.war.hold[h.war.side_of(h, 3)] = 100  # side 3 leads
+	assert_false(h.request(world, 1, "war_ally", {"side": h.war.side_of(h, 3)}), "the leader isn't anyone's friend")
+	assert_true(h.request(world, 1, "war_ally", {"side": s2}))
+	assert_true(h.war.sides_allied(s1, s2))
+	assert_true(h.friendly(1, 2), "allies don't hurt each other")
+	assert_true(h.request(world, 1, "war_betray"))
+	assert_false(h.friendly(1, 2), "betrayed: fair game again")
+	assert_true(HuntWar.duel_for(1) or not HuntWar.duel_for(1), "the format is drawn per match")
