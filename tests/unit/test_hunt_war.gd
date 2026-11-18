@@ -84,6 +84,7 @@ func test_supply_drops_land_and_count_for_a_side() -> void:
 
 func test_camps_fall_to_sabotage_unless_guarded() -> void:
 	_start(HuntWar.Objective.CAMPS)
+	h.army.rosters[2] = {}  # the rival bot brings no army here (it would call a drone on the saboteur)
 	var target: HuntWar.Camp = h.war.camps[1]  # hunter 2's camp
 	world.teleport(world.players[1], target.at + Vector3(0, 0.05, 0))
 	world.teleport(world.players[2], target.at + Vector3(4, 0.05, 0))
@@ -220,3 +221,38 @@ func test_heavy_loads_need_a_machine_at_the_pad() -> void:
 	h.army.set_hauler(1, world.vehicles.size() - 1)
 	_step(HuntRules.EXTRACT_TICKS / 2)
 	assert_true(t.banked, "beside your hauler (level 1): out, and faster")
+
+
+
+## Air defence and the nations' arsenals: flak shoots aircraft down; each
+## nation's doctrine changes what its units do and cost; uniques are its own.
+func test_air_defense_and_doctrines() -> void:
+	assert_gt(NationArsenal.mod("aurora", "attack_drone", "damage"), 1.0, "Aurora: strong drones")
+	assert_lt(NationArsenal.mod("aurora", "tank", "hp"), 1.0, "and weak tanks")
+	assert_gt(NationArsenal.mod("halden", "tank", "hp"), 1.0, "Halden: strong tanks")
+	assert_lt(NationArsenal.mod("halden", "attack_drone", "damage"), 1.0, "and weak drones")
+	assert_gt(NationArsenal.mod("vesper", "strike_jet", "damage"), 1.0, "Vesper: strong jets")
+	assert_lt(NationArsenal.mod("vesper", "air_defense", "damage"), 1.0, "and weak flak")
+	assert_gt(NationArsenal.mod("meridian", "air_defense", "range"), 1.0, "Meridian: long-reach flak")
+	assert_lt(NationArsenal.mod("meridian", "strike_jet", "damage"), 1.0, "and weak jets")
+	for n: String in Nations.IDS:
+		var own: String = NationArsenal.ARSENALS[n].unique
+		assert_true(NationArsenal.allowed(n, own), "%s fields its own" % n)
+		for other: String in Nations.IDS:
+			if other != n:
+				assert_false(NationArsenal.allowed(other, own), "%s can't field %s's %s" % [other, n, own])
+	# Flak brings an attack drone down.
+	h.army.rosters[2] = {}
+	for i in 2:
+		var c := HuntWar.Camp.new()
+		c.side = h.war.side_of(h, i + 1)
+		c.at = CAMPS[i]
+		h.war.camps.append(c)
+	h.economy.credits[2] = 1000
+	h.army.deploy(1, {"attack_drone": [1, 0]})
+	assert_true(h.request(world, 2, "build", {"module": "air_defense"}))
+	var sock := HuntCamps.socket_at(CAMPS[1], 0)
+	assert_true(h.request(world, 1, "call_unit", {"unit": "attack_drone", "target": sock + Vector3(4, 0, 4)}))
+	assert_eq(h.army.calls.size(), 1)
+	_step(600)
+	assert_eq(h.army.calls.size(), 0, "shot down by the flak")

@@ -124,7 +124,9 @@ func _army_line() -> String:
 	var used := 0
 	for k: String in c.d.army_deploy:
 		used += int(c.d.army_deploy[k]) * int(Career.UNITS[k].cp)
-	return _t("ARMY_LINE") % [Career.RANKS[r][0], int(c.d.get("war_xp", 0)), next, used, c.command_points()]
+	var doctrine: String = NationArsenal.ARSENALS.get(c.nation_id(), {}).get("doctrine", "")
+	return _t("ARMY_LINE") % [Career.RANKS[r][0], int(c.d.get("war_xp", 0)), next, used, c.command_points()] \
+			+ ("\n" + _t(doctrine) if not doctrine.is_empty() else "")
 
 
 func _army_options() -> Array:
@@ -134,15 +136,17 @@ func _army_options() -> Array:
 		var u: Dictionary = Career.UNITS[id]
 		var name := _t("UNIT_" + id.to_upper())
 		var lv := c.unit_level(id)
+		if not NationArsenal.allowed(c.nation_id(), id):
+			continue  # another nation's unique
 		if c.rank() < int(u.rank):
 			out.append([_t("ARMY_LOCKED") % [name, Career.RANKS[int(u.rank)][0]], false, ComicUI.PAPER, "none"])
 			continue
 		if id != "hauler":
-			out.append([_t("ARMY_BUY") % [name, int(u.price), c.unit_count(id)], c.d.wallet >= int(u.price), ComicUI.CYAN,
+			out.append([_t("ARMY_BUY") % [name, c.unit_price(id), c.unit_count(id)], c.d.wallet >= c.unit_price(id), ComicUI.CYAN,
 					"estate:unit_buy:" + id])
 		var ups: Array = u.upgrades
 		if lv < ups.size() and c.unit_count(id) > 0:
-			out.append([_t("ARMY_UPGRADE") % [name, lv + 1, int(ups[lv])], c.d.wallet >= int(ups[lv]), ComicUI.YELLOW,
+			out.append([_t("ARMY_UPGRADE") % [name, lv + 1, c.unit_price(id, lv)], c.d.wallet >= c.unit_price(id, lv), ComicUI.YELLOW,
 					"estate:unit_up:" + id])
 		if id != "hauler" and c.unit_count(id) > 0:
 			var n := int(c.d.army_deploy.get(id, 0))

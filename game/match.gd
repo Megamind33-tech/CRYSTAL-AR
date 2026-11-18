@@ -1234,14 +1234,15 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 	# Your side's camp (HuntCamps): build with your run credits.
 	for module: String in HuntCamps.IDS:
 		hunt_menu.add_row(func() -> String: return tr("CAMP_BUILD") % [tr("CAMP_" + module.to_upper()),
-					int(HuntCamps.MODULES[module].cost), tr("CAMP_" + module.to_upper() + "_SUB")],
+					roundi(float(HuntCamps.MODULES[module].cost) * NationArsenal.mod(Profile.career().nation_id(), module, "cost")),
+					tr("CAMP_" + module.to_upper() + "_SUB")],
 				func() -> void: hunt_menu.request.call("build", {"module": module}),
 				func() -> bool:
 					var st: Dictionary = hunt_menu.state.call()
 					if st.is_empty():
 						return false
 					var hr: HuntRules = st.hunt
-					return hr.war.enabled and not hr.war.camps.is_empty() \
+					return hr.war.enabled and not hr.war.camps.is_empty() and NationArsenal.allowed(Profile.career().nation_id(), module) \
 							and hr.economy.credits.get(local_id(), 0) >= int(HuntCamps.MODULES[module].cost), "camp")
 	# Your squad (HuntSquad): a plan in one tap, orders to everyone or to one
 	# role, the rules of engagement, together or spread out.
@@ -1692,6 +1693,10 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 					HuntHud.ALLY if h_side_is_mine(server.world.hunt.war.side_of(server.world.hunt, int(e.player))) else UiStyle.WARN)
 			return
 		"jet_strike":
+			return
+		"unit_downed":
+			_kill_feed.add_note(_display_name(int(e.player)), tr("ARMY_FEED_DOWNED") % tr("UNIT_" + str(e.unit).to_upper()),
+					HuntHud.ALLY if h_side_is_mine(server.world.hunt.war.side_of(server.world.hunt, int(e.player))) else UiStyle.WARN)
 			return
 		"camp_built":
 			if h_side_is_mine(int(e.side)):

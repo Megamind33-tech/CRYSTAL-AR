@@ -1340,3 +1340,15 @@ UNIT_ATTACK_DRONE,attack drone
 UNIT_TANK,tank
 UNIT_GUNSHIP,gunship
 UNIT_STRIKE_JET,strike jet
+UNIT_SWARM,drone swarm
+UNIT_RAPTOR,Raptor jet
+UNIT_BASTION,Bastion tank
+CAMP_AIR_DEFENSE,flak battery
+CAMP_AIR_DEFENSE_SUB,shoots down enemy drones gunships and jets
+CAMP_AEGIS_BATTERY,Aegis battery
+CAMP_AEGIS_BATTERY_SUB,Meridian's heavy flak · long reach
+ARMY_FEED_DOWNED,shot down a %s
+DOCTRINE_AURORA,"Aurora · drone doctrine: drones hit harder and last longer, cheaper; gunships cheaper · tanks weaker and dearer · own unit: the drone swarm"
+DOCTRINE_MERIDIAN,"Meridian · shield doctrine: turrets and flak stronger with longer reach; camp building cheaper · strike jets weaker, gunships frailer · own unit: the Aegis battery"
+DOCTRINE_VESPER,"Vesper · strike doctrine: strike jets much stronger and cheaper; crawlers extract faster · turrets and flak weaker, tanks frailer · own unit: the Raptor (strafes twice)"
+DOCTRINE_HALDEN,"Halden · armour doctrine: tanks much tougher and harder hitting, cheaper · drones weaker and dearer, jets dearer · own unit: the Bastion (its gun shoots aircraft)"

@@ -20,10 +20,13 @@ const MODULES := {
 	"barracks": {"cost": 110, "respawn": 1800, "size": Vector3(8.0, 6.7, 6.7)},
 	"comms": {"cost": 70, "every": 600, "reveal": 420, "radius": 70.0, "size": Vector3(2.8, 16.5, 3.3)},
 	"refinery": {"cost": 80, "every": 1800, "credits": 15, "size": Vector3(8.0, 6.5, 4.5)},
+	# Air defence: shoots down enemy drones, gunships and jets (HuntArmy).
+	"air_defense": {"cost": 110, "range": 48.0, "every": 15, "damage": 16.0, "size": Vector3(2.6, 3.0, 2.6)},
+	"aegis_battery": {"cost": 220, "range": 72.0, "every": 10, "damage": 24.0, "size": Vector3(3.4, 4.0, 3.4)},
 }
-const IDS := ["walls", "turret", "med_bay", "barracks", "comms", "refinery"]
+const IDS := ["walls", "turret", "air_defense", "aegis_battery", "med_bay", "barracks", "comms", "refinery"]
 ## What a side's bots build, in order.
-const BOT_ORDER := ["turret", "walls", "refinery", "med_bay", "turret", "comms", "barracks"]
+const BOT_ORDER := ["turret", "walls", "air_defense", "refinery", "med_bay", "turret", "comms", "barracks"]
 const BOT_EVERY := 900
 const SOCKETS := 6
 const SOCKET_RADIUS := 8.0
@@ -94,7 +97,10 @@ func build(world: SimWorld, hunt: HuntRules, builder: int, module: String) -> bo
 	var b := built[ci]
 	if c.charges <= 0:
 		return false  # a fallen camp builds nothing
-	var cost := int(MODULES[module].cost)
+	var nation := NationArsenal.of(hunt, builder)
+	if not NationArsenal.allowed(nation, module):
+		return false  # another nation's
+	var cost := roundi(float(MODULES[module].cost) * NationArsenal.mod(nation, module, "cost"))
 	if module == "walls":
 		if b.walls or not hunt.economy.spend(builder, cost):
 			return false
@@ -156,6 +162,13 @@ func step(world: SimWorld, hunt: HuntRules, ids: Array) -> void:
 				"turret":
 					if tick % int(info.every) == 0:
 						_turret(world, hunt, c, at, int(b.builders[socket]), info)
+				"air_defense", "aegis_battery":
+					if tick % int(info.every) == 0:
+						var who := int(b.builders[socket])
+						var n := NationArsenal.of(hunt, who)
+						hunt.army.shoot_air(world, hunt, who, at + Vector3(0, 3.0, 0),
+								float(info.range) * NationArsenal.mod(n, "air_defense", "range"),
+								float(info.damage) * NationArsenal.mod(n, "air_defense", "damage"))
 				"med_bay":
 					if tick % int(info.every) == 0:
 						for id: int in ids:
@@ -190,7 +203,8 @@ func on_teammate_down(world: SimWorld, hunt: HuntRules, leader: int, role: Strin
 func _turret(world: SimWorld, hunt: HuntRules, c: HuntWar.Camp, at: Vector3, builder: int, info: Dictionary) -> void:
 	var head := at + Vector3(0, 3.0, 0)
 	var best: SimPlayer = null
-	var best_d := float(info.range)
+	var nation := NationArsenal.of(hunt, builder)
+	var best_d := float(info.range) * NationArsenal.mod(nation, "turret", "range")
 	for id: int in world.players:
 		var p: SimPlayer = world.players[id]
 		if not p.state.alive or hunt.war.side_of(hunt, id) == c.side:
@@ -207,7 +221,8 @@ func _turret(world: SimWorld, hunt: HuntRules, c: HuntWar.Camp, at: Vector3, bui
 	if best == null:
 		return
 	var shooter := builder if world.players.has(builder) else 0
-	world._damage(best, shooter, float(info.damage), false, Weapons.by_id(&"pulse_rifle"), world.tick)
+	world._damage(best, shooter, float(info.damage) * NationArsenal.mod(nation, "turret", "damage"), false,
+			Weapons.by_id(&"pulse_rifle"), world.tick)
 	world._emit("ht:%d:%d" % [best.net_id, world.tick], "hunt", {"action": "turret_fire", "player": shooter,
 			"position": head, "treasure": 0, "kind": -1, "target": best.net_id})
 

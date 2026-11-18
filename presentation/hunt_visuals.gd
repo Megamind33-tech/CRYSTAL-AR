@@ -611,12 +611,41 @@ func _sync_buildings(hunt: HuntRules) -> void:
 			var node: Node3D
 			if m == "turret":
 				node = _turret_model(at)
+			elif m == "air_defense" or m == "aegis_battery":
+				node = _flak_model(at, m == "aegis_battery")
 			else:
 				var kit: Array = MODULE_KITS[m]
 				node = Comic.kit_instance(kit[0], at, rad_to_deg(atan2(c.at.x - at.x, c.at.z - at.z)), kit[1])
 			add_child(node)
 			_war_nodes.append(node)
 			drawn[socket] = node
+
+
+## A flak battery: a squat base, four long barrels raised to the sky
+## (the aegis: bigger, a radar dish).
+func _flak_model(at: Vector3, aegis: bool) -> Node3D:
+	var k := 1.3 if aegis else 1.0
+	var root := Node3D.new()
+	root.position = at
+	var base := MeshInstance3D.new()
+	base.mesh = _box_mesh(Vector3(2.6, 1.6, 2.6) * k)
+	base.position.y = 0.8 * k
+	base.material_override = _metal()
+	root.add_child(base)
+	for q: Vector2 in [Vector2(-0.4, -0.4), Vector2(0.4, -0.4), Vector2(-0.4, 0.4), Vector2(0.4, 0.4)]:
+		var barrel := MeshInstance3D.new()
+		barrel.mesh = _box_mesh(Vector3(0.18, 2.6, 0.18) * k)
+		barrel.position = Vector3(q.x * k, 2.6 * k, q.y * k)
+		barrel.rotation.x = -0.35
+		barrel.material_override = _metal()
+		root.add_child(barrel)
+	if aegis:
+		var dish := MeshInstance3D.new()
+		dish.mesh = _box_mesh(Vector3(2.2, 1.2, 0.15))
+		dish.position = Vector3(0, 4.4, 1.2)
+		dish.material_override = _glow(OWN, 1.0, 1.0)
+		root.add_child(dish)
+	return root
 
 
 ## A turret in the kit's style: a base, a turning head, twin barrels.

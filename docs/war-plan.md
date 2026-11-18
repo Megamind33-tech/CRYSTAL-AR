@@ -47,6 +47,21 @@ stays, and grows alongside.
   Bots build for their side. The models are existing kit pieces sized to
   each collision box (the turret is built in code).
 
+- **Armies** (`sim/hunt_army.gd`, Career): units unlocked by rank, counted
+  and upgraded, deployed within command points. Called in from the ARMY
+  app, or driven (the tank, crawler and bastion). Extraction machines are
+  needed at the pad for heavy loads. Rival AI hunters bring small armies.
+- **Air defence:** air units have health. The flak battery (every nation),
+  Meridian's Aegis battery and Halden's Bastion tank shoot them down; a
+  jet downed during its run-up never strikes.
+- **Nations' arsenals** (`sim/nation_arsenal.gd`): each nation has a
+  doctrine of strengths and weaknesses over units and defences, plus its
+  own unit:
+  - **Aurora:** drones; the drone swarm.
+  - **Meridian:** shields; the Aegis battery.
+  - **Vesper:** strikes; the Raptor, which strafes twice.
+  - **Halden:** armour; the Bastion.
+
 ## Next
 
 1. **Camps, next:** a rotorcraft pad (fast travel); upgrades (turret range,

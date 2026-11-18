@@ -1793,8 +1793,24 @@ const UNITS := {
 	"tank": {"rank": 3, "price": 1800, "upgrades": [1200, 2400, 4000], "cp": 4, "spent": false},
 	"gunship": {"rank": 4, "price": 900, "upgrades": [1500, 3000], "cp": 4, "spent": true},
 	"strike_jet": {"rank": 5, "price": 1400, "upgrades": [2500, 5000], "cp": 5, "spent": true},
+	# Each nation's own (NationArsenal.UNIQUE): only its people field them.
+	"swarm": {"rank": 3, "price": 650, "upgrades": [1200, 2400], "cp": 3, "spent": true},
+	"raptor": {"rank": 4, "price": 1600, "upgrades": [2800, 5200], "cp": 5, "spent": true},
+	"bastion": {"rank": 4, "price": 2600, "upgrades": [1800, 3600], "cp": 5, "spent": false},
 }
-const UNIT_IDS := ["hauler", "scout_drone", "crawler", "attack_drone", "tank", "gunship", "strike_jet"]
+const UNIT_IDS := ["hauler", "scout_drone", "crawler", "attack_drone", "tank", "swarm", "gunship", "raptor", "bastion",
+		"strike_jet"]
+
+
+## Your nation's id ("" before you choose one): its doctrine prices units.
+func nation_id() -> String:
+	return Nations.id_of(nation())
+
+
+## What a unit costs you (your nation's doctrine), or an upgrade level.
+func unit_price(id: String, upgrade_level: int = -1) -> int:
+	var base := int(UNITS[id].price) if upgrade_level < 0 else int(UNITS[id].upgrades[upgrade_level])
+	return roundi(base * NationArsenal.mod(nation_id(), id, "cost"))
 
 
 func rank() -> int:
@@ -1820,9 +1836,10 @@ func unit_level(id: String) -> int:
 
 
 func buy_unit(id: String) -> bool:
-	if not UNITS.has(id) or id == "hauler" or rank() < int(UNITS[id].rank) or d.wallet < int(UNITS[id].price):
+	if not UNITS.has(id) or id == "hauler" or rank() < int(UNITS[id].rank) or not NationArsenal.allowed(nation_id(), id) \
+			or d.wallet < unit_price(id):
 		return false
-	d.wallet -= int(UNITS[id].price)
+	d.wallet -= unit_price(id)
 	var u: Dictionary = (d.army as Dictionary).get(id, {"count": 0, "level": 0})
 	u.count = int(u.count) + 1
 	d.army[id] = u
@@ -1834,9 +1851,9 @@ func upgrade_unit(id: String) -> bool:
 		return false
 	var lv := unit_level(id)
 	var ups: Array = UNITS[id].upgrades
-	if lv >= ups.size() or d.wallet < int(ups[lv]):
+	if lv >= ups.size() or d.wallet < unit_price(id, lv):
 		return false
-	d.wallet -= int(ups[lv])
+	d.wallet -= unit_price(id, lv)
 	var u: Dictionary = (d.army as Dictionary).get(id, {"count": 0, "level": 0})
 	u.level = lv + 1
 	d.army[id] = u
