@@ -93,6 +93,8 @@ var _ally_far_since: int = -1
 var _last_intel: int = -100000
 ## Co-op waves: hunt the nearest human instead of roaming.
 var hunt: bool = false
+## Jump presses this bot has made (tools/playtest.gd reports them per minute).
+var jumps: int = 0
 
 
 ## Roam towards `pos` instead of random points (until reached).
@@ -208,7 +210,9 @@ func command_for(tick: int, p: SimPlayer) -> PlayerCommand:
 					_path = []
 					_last_repath = -100000
 				move = _follow(tick, p, _path_goal)
-			held |= Held.SPRINT if move.length() > 0.5 else 0
+			# Aimless wandering is a walk; heading somewhere is a run.
+			if _destination != Vector3.INF or _world.hunt != null:
+				held |= Held.SPRINT if move.length() > 0.5 else 0
 	move = _stuck_recovery(tick, p, move)
 	held |= _traversal_inputs(p, move)
 	# Look: at the target while fighting, along the way otherwise.
@@ -306,7 +310,14 @@ func _choose_goal(tick: int, p: SimPlayer) -> void:
 	if _world.hunt != null and _world.hunt.carried_by(_id) != null:
 		var close := _visible and target != null and target.state.position.distance_to(s.position) < 6.0
 		if not close:
-			_set_objective(_objective(p))
+			var pad := _objective(p)
+			if pad != Vector3.INF:
+				_set_objective(pad)
+			elif goal != Goal.ROAM:
+				# Every open pad is out of reach from here for now: move on
+				# (roam) instead of standing on a finished path.
+				goal = Goal.ROAM
+				_path_goal = Vector3.INF
 			return
 	# THE HUNT: treasure first. A distant hunter is ignored unless it
 	# carries treasure or is shooting at us (then on_event made it our
@@ -775,19 +786,48 @@ func _attack_move(tick: int, p: SimPlayer, target: SimPlayer) -> Vector3:
 	var d := to.length()
 	if d > CONFIG.follow_beyond:
 		return _follow(tick, p, target.state.position)
+	# Strafe like a person: hold one side for a second or two, change side
+	# now and then, sometimes pause; no hopping (jumps are for obstacles).
 	if tick >= _strafe_until:
-		_strafe = -_strafe if _rng.randf() < 0.7 else _strafe
-		_strafe_until = tick + _rng.randi_range(30, 80)
+		var r := _rng.randf()
+		_strafe = 0.0 if r < 0.2 else (-signf(_strafe) if r < 0.65 and _strafe != 0.0 else (1.0 if _rng.randf() < 0.5 else -1.0))
+		_strafe_until = tick + _rng.randi_range(60, 150)
 	var dir := to / maxf(d, 0.01)
-	var side := Vector3(-dir.z, 0.0, dir.x) * _strafe
+	var side := Vector3(-dir.z, 0.0, dir.x) * _strafe * 0.8
 	var approach := 0.0
 	if d > CONFIG.approach_beyond:
 		approach = 0.7
 	elif d < CONFIG.back_off_within:
 		approach = -0.6
-	if _rng.randf() < 0.008:
-		_press(Action.JUMP)
-	return (side + dir * approach).limit_length(1.0)
+	var move := (side + dir * approach).limit_length(1.0)
+	if move.length_squared() > 0.01 and _blocked_ahead(p, move.normalized()):
+		_strafe = -_strafe  # a wall on that side: strafe the other way
+		_strafe_until = tick + _rng.randi_range(60, 150)
+		move = (Vector3(-dir.z, 0.0, dir.x) * _strafe * 0.8 + dir * approach).limit_length(1.0)
+	return move
+
+
+## A wall or rock right ahead at waist height (1.2 m).
+func _blocked_ahead(p: SimPlayer, dir: Vector3) -> bool:
+	if not p.is_inside_tree():
+		return false
+	var from := p.state.position + Vector3(0, 0.9, 0)
+	var q := PhysicsRayQueryParameters3D.create(from, from + dir * 1.2, Sim.LAYER_WORLD)
+	return not p.get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+
+
+## Something a jump clears right ahead: blocked at the shins, open at head
+## height (a kerb, crate or low rock; not a wall).
+func _jumpable_ahead(p: SimPlayer, dir: Vector3) -> bool:
+	if not p.is_inside_tree() or dir.length_squared() < 0.01:
+		return false
+	var space := p.get_world_3d().direct_space_state
+	dir = Vector3(dir.x, 0.0, dir.z).normalized()
+	var low := p.state.position + Vector3(0, 0.45, 0)
+	var high := p.state.position + Vector3(0, 1.9, 0)
+	var hit_low := not space.intersect_ray(PhysicsRayQueryParameters3D.create(low, low + dir * 1.2, Sim.LAYER_WORLD)).is_empty()
+	var hit_high := not space.intersect_ray(PhysicsRayQueryParameters3D.create(high, high + dir * 1.6, Sim.LAYER_WORLD)).is_empty()
+	return hit_low and not hit_high
 
 
 ## Whether `pos` is far from any baked navmesh (no path can be had there).
@@ -867,7 +907,8 @@ func _traversal_inputs(p: SimPlayer, move: Vector3) -> int:
 	if on_floor and _traversal_jumps == 0:
 		_press(Action.JUMP)
 		_traversal_jumps = 1
-	elif _traversal == T.DOUBLE_JUMP_MANTLE and _traversal_jumps == 1 and not on_floor and s.velocity.y < 1.5:
+	elif _traversal == T.DOUBLE_JUMP_MANTLE and _traversal_jumps == 1 and not on_floor and s.velocity.y < 1.5 \
+			and _world.movement_config != null and _world.movement_config.air_jumps > 0:
 		_press(Action.JUMP)
 		_traversal_jumps = 2
 	return Held.JUMP
@@ -952,6 +993,8 @@ func _stuck_recovery(tick: int, p: SimPlayer, move: Vector3) -> Vector3:
 		_stuck_stage += 1
 		match _stuck_stage:
 			1:
+				# Pinned for a second and a half: one hop, as a person would
+				# (rare: only after no progress at all).
 				_press(Action.JUMP)
 			2:
 				_sidestep_until = tick + 30
@@ -1053,6 +1096,8 @@ func _manage_weapons_out_of_combat(p: SimPlayer) -> void:
 # --- Helpers ---
 
 func _press(action: int) -> void:
+	if action == Action.JUMP:
+		jumps += 1
 	_presses[action] = (_presses[action] + 1) & 0xFF
 
 

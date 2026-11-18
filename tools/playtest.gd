@@ -70,7 +70,7 @@ func _one_run(index: int, minutes: int) -> Dictionary:
 	server.add_local_spectator()
 	var r := {"ok": err == OK, "counts": {}, "kills": 0, "first_extract_s": -1.0, "standin_banked": 0, "stuck": [],
 			"squadmate": "", "nations": 0, "turned_on_me": "", "i_turned": false, "ff_warnings": 0, "deaths": {},
-			"may_turn": false, "grudge": false}
+			"may_turn": false, "grudge": false, "jumps_per_bot_min": 0.0}
 	var seated := false
 	var mate := 0
 	var trail := {}  ## id -> [[tick, position], ...] every 5 s
@@ -89,6 +89,11 @@ func _one_run(index: int, minutes: int) -> Dictionary:
 			h.request(w, STANDIN, "betray_alliance")  # a player turning on their squad
 		if server.phase == MatchPhase.PLAYING and w.tick % (5 * Sim.TICK_RATE) == 0:
 			_check_stuck(w, h, trail, r)
+	var jumps := 0
+	for b: Variant in server.bots.values():
+		if b is BotBrain:
+			jumps += b.jumps
+	r.jumps_per_bot_min = jumps / maxf(1.0, server.bots.size() * w_minutes(server))
 	r.ok = r.ok and server.phase == MatchPhase.POST_MATCH
 	r.standin_banked = int(h.banked_count.get(STANDIN, 0))
 	var n := {}
@@ -100,6 +105,11 @@ func _one_run(index: int, minutes: int) -> Dictionary:
 	server.queue_free()
 	await get_tree().physics_frame
 	return r
+
+
+## Minutes of match clock played (bots only move once it runs).
+func w_minutes(server: ServerSession) -> float:
+	return server.world.tick / float(Sim.TICK_RATE * 60)
 
 
 ## As Match._setup_squad: the AI take their nations' names and characters;
@@ -179,12 +189,12 @@ func _check_stuck(w: SimWorld, h: HuntRules, trail: Dictionary, r: Dictionary) -
 
 func _print_run(i: int, r: Dictionary) -> void:
 	var c: Dictionary = r.counts
-	print("PLAYTEST run %d: %s, nations %d, squadmate %s (may turn %s%s), takes %d, extracts %d, steals %d, kills %d, first extraction %s, stand-in banked %d, turned on stand-in: %s, stand-in turned: %s, friendly-fire warnings %d, stuck: %s" % [
+	print("PLAYTEST run %d: %s, nations %d, squadmate %s (may turn %s%s), takes %d, extracts %d, steals %d, kills %d, first extraction %s, stand-in banked %d, turned on stand-in: %s, stand-in turned: %s, friendly-fire warnings %d, jumps/bot/min %.2f, stuck: %s" % [
 			i + 1, "clock" if r.ok else "DID NOT FINISH", r.nations, r.squadmate, r.may_turn, ", grudge" if r.grudge else "",
 			c.get("take", 0), c.get("extract", 0), c.get("steal", 0), r.kills,
 			("%.0f s" % r.first_extract_s) if r.first_extract_s >= 0.0 else "none", r.standin_banked,
 			(r.turned_on_me + " (" + str(r.get("turn_reason", "")) + ")") if r.turned_on_me != "" else "no", r.i_turned,
-			r.ff_warnings, ", ".join(r.stuck) if not r.stuck.is_empty() else "nobody"])
+			r.ff_warnings, r.jumps_per_bot_min, ", ".join(r.stuck) if not r.stuck.is_empty() else "nobody"])
 	if not r.ok:
 		failures.append("run %d didn't play to its clock" % (i + 1))
 	if int(c.get("take", 0)) == 0 or int(c.get("extract", 0)) == 0:
@@ -211,6 +221,10 @@ func _print_campaign() -> void:
 			turns.append(i)
 			reasons[r.get("turn_reason", "")] = true
 	firsts.sort()
+	var jpm := 0.0
+	for r: Dictionary in summary:
+		jpm += r.jumps_per_bot_min
+	print("PLAYTEST bot jumps per bot per minute: %.2f" % (jpm / maxf(1.0, summary.size())))
 	print("PLAYTEST campaign: %d runs, %d different squadmates, turns on the stand-in in runs %s (reasons %s), median first extraction %s" % [
 			summary.size(), mates.size(), turns.map(func(i: int) -> int: return i + 1), reasons.keys(),
 			("%.0f s" % firsts[firsts.size() / 2]) if not firsts.is_empty() else "none"])
