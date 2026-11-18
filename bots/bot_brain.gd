@@ -977,7 +977,84 @@ func _zone_near(where: Vector3) -> int:
 	return -1
 
 
+## A longer watch over the short stages below: a bot that wants to move
+## but stays within 3 m for 15 s is in a pocket the stages can't free (they
+## keep resetting on small shuffles). It gives up on where it was going and
+## is set down on open navmesh several metres away (logged).
+const POCKET_TICKS := 900
+var _pocket_trail: Array = []  ## [tick, position] every second while trying to move
+var pocket_escapes: int = 0
+var _last_pocket_tick: int = -100000
+var _last_pocket_goal := Vector3.INF
+
+
+func _pocket_watch(tick: int, p: SimPlayer, wants_to_move: bool) -> void:
+	var pos := p.state.position
+	if tick % 60 != 0:
+		return
+	# Moments spent fighting don't reset the watch (a bot that keeps
+	# turning to shoot from a pocket is still in it), they just aren't counted.
+	if wants_to_move:
+		_pocket_trail.append([tick, pos])
+	while not _pocket_trail.is_empty() and tick - int(_pocket_trail[0][0]) > POCKET_TICKS:
+		_pocket_trail.pop_front()
+	if _pocket_trail.size() < POCKET_TICKS / 60 * 2 / 3 or tick - int(_pocket_trail[0][0]) < POCKET_TICKS - 60:
+		return
+	if (_pocket_trail[0][1] as Vector3).distance_to(pos) > 3.0:
+		return  # going somewhere (to and fro back to the same spot counts as stuck)
+	_pocket_trail.clear()
+	var h := _world.hunt
+	if h != null and (int(h.extract_progress.get(_id, 0)) > 0 or h.vault_unlocker == _id or h.cache_of(_id) != null):
+		return  # busy where it stands
+	if _aim_target != Vector3.INF and pos.distance_to(_aim_target) < 4.0:
+		return  # there: holding a pad or waiting at the vault
+	# Set down further along the way it was trying to go (past the ledge or
+	# gap the navmesh links over but feet can't take), else nearby.
+	var ahead := Vector3.INF
+	if goal == Goal.ROAM or _path_goal == Vector3.INF:
+		_path_goal = _nav.random_point()  # wandering: somewhere else, then
+	if _path_goal != Vector3.INF:
+		var fresh: Array = _nav.path(pos, _path_goal)
+		var my_d := pos.distance_to(_path_goal)
+		# The furthest path point within 20 m that is nearer the goal: a
+		# pocket is usually a stretch of bad navmesh, not one bad step.
+		for k in range(1, fresh.size()):
+			var q: Vector3 = fresh[k][0]
+			if q.distance_to(pos) > 20.0:
+				break
+			if q.distance_to(pos) > 5.0 and q.distance_to(_path_goal) < my_d - 3.0:
+				ahead = _nav.closest_point(q)
+	# A second pocket on the way to the same place soon after: give it up.
+	if ahead != Vector3.INF and tick - _last_pocket_tick < 3600 and _path_goal.distance_to(_last_pocket_goal) < 4.0:
+		ahead = Vector3.INF
+	_last_pocket_tick = tick
+	_last_pocket_goal = _path_goal
+	if _aim_target != Vector3.INF and ahead == Vector3.INF:
+		var zone := _zone_near(_aim_target)
+		if zone >= 0 and _world.hunt != null and _world.hunt.carried_by(_id) != null:
+			_blocked_zones[zone] = tick + BLOCKED_TICKS
+		else:
+			_avoid_target = _aim_target
+			_avoid_until = tick + PATIENCE_TICKS * 2
+		_aim_target = Vector3.INF
+	var best := ahead
+	for k in (12 if best == Vector3.INF else 0):
+		var a := TAU * (k + _rng.randf()) / 12.0
+		var r := _rng.randf_range(6.0, 12.0)
+		var c := _nav.closest_point(pos + Vector3(cos(a) * r, 2.0, sin(a) * r))
+		if c.distance_to(pos) > 4.0 and absf(c.y - pos.y) < 4.0:
+			best = c
+			break
+	if best != Vector3.INF:
+		_world.teleport(p, best + Vector3(0.0, 0.1, 0.0))
+		pocket_escapes += 1
+		print("BOT %d in a pocket at %s: set down at %s" % [_id, pos, best])
+	_path = []
+	_last_repath = -100000
+
+
 func _stuck_recovery(tick: int, p: SimPlayer, move: Vector3) -> Vector3:
+	_pocket_watch(tick, p, goal in [Goal.OBJECTIVE, Goal.ROAM, Goal.CHASE, Goal.PICKUP])
 	if tick < _sidestep_until:
 		return Vector3(-move.z, 0.0, move.x) if move.length_squared() > 0.01 else Vector3.RIGHT
 	if move.length_squared() < 0.01 or goal == Goal.ATTACK:
