@@ -31,6 +31,7 @@ func _run() -> void:
 	if Platform.user_args.has("--block") or Platform.user_args.has("--head") or Platform.user_args.has("--walkin") or Platform.user_args.has("--frisk") \
 			or Platform.user_args.has("--districts"):
 		Profile.career().choose_nation(0)
+		Profile.career().choose_path("freelance")  # no path pick over the shots
 	if Platform.user_args.has("--phase1") and dig:
 		Profile.career().choose_nation(0)  # a recruit of the Aurora Compact, on the first run
 	MatchConfig.pending = MatchConfig.for_place(GameMode.HUNT if dig else GameMode.CITY, "You")
@@ -41,6 +42,7 @@ func _run() -> void:
 	m.hud._touch = true
 	var me: SimPlayer = m.server.world.get_player(ServerSession.LOCAL_PLAYER_ID)
 	print("CITY WALK: player at %s, phase %s" % [me.state.position, m.server.phase])
+	_set_weather(Platform.user_args.has("--day"), Platform.user_args.has("--squall"))
 	if Platform.user_args.has("--ground-probe"):
 		await _ground_probe(me)
 		get_tree().quit(0)
@@ -1246,7 +1248,7 @@ func _pose(me: SimPlayer, at: Vector3, yaw: float, pitch: float) -> void:
 func _shot(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(out_dir.path_join(name + ".png"))
-	print("CITY WALK: %s" % name)
+	print("CITY WALK: %s (draw calls %d)" % [name, Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)])
 
 
 func _frames(n: int) -> void:
@@ -1399,6 +1401,26 @@ const BLOCK_VIEWS := [
 	["b7_gate", Vector3(0, 0.05, 24), PI, -0.04],
 	["b8_gate_hall", Vector3(1.5, 0.05, 36), PI, -0.08],
 ]
+
+
+## --day: the city at 13:00 (the daylight and the sky bands); --squall: the
+## methane squall at its height (rain, the haze closes in). Both shift the
+## Weather node (DustStorms) and the NPCs' clock, as the other tours do.
+func _set_weather(day: bool, squall: bool) -> void:
+	var weather: DustStorms = m.get_tree().root.find_child("Weather", true, false)
+	if weather == null or not (day or squall):
+		return
+	if day:
+		CityNpcs.hour_offset = fposmod(13.0 - GameClock.hour(Time.get_unix_time_from_system()), 24.0)
+		weather.hour_offset = CityNpcs.hour_offset
+	# Place the squall: at its height (--squall), or in the clear between two
+	# (no rain). The Weather node's clock is seconds since its _ready.
+	var at := fposmod(weather._time * Sim.TICK_DT - Survival.STORM_FIRST, Survival.STORM_EVERY)
+	var target := Survival.STORM_LENGTH * 0.5 if squall else Survival.STORM_LENGTH + (Survival.STORM_EVERY - Survival.STORM_LENGTH) * 0.5
+	var wait := fposmod(target - at, Survival.STORM_EVERY)
+	weather.tick_offset = roundi(wait / Sim.TICK_DT)
+	Survival.weather = true
+	print("CITY WALK: weather day %s squall %s" % [day, squall])
 
 
 func _block_tour(me: SimPlayer) -> void:

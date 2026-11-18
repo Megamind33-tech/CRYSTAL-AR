@@ -52,11 +52,15 @@ static func _make_rain() -> GPUParticles3D:
 	var streak := QuadMesh.new()
 	# Bold comic strokes: wide, pale methane-yellow, nearly opaque (cheap:
 	# one unshaded quad per drop).
-	streak.size = Vector2(0.07, 1.1)
+	streak.size = Vector2(0.09, 1.1)
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.albedo_color = Color(0.9, 0.86, 0.56, 0.75)
+	# A drop passing the lens fades out (no big bar across the picture).
+	mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+	mat.distance_fade_min_distance = 1.5
+	mat.distance_fade_max_distance = 4.0
 	mat.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
 	streak.material = mat
 	rain.draw_pass_1 = streak
