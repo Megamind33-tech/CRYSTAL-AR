@@ -1353,3 +1353,12 @@ DOCTRINE_MERIDIAN,"Meridian · shield doctrine: turrets and flak stronger with l
 DOCTRINE_VESPER,"Vesper · strike doctrine: strike jets much stronger and cheaper; crawlers extract faster · turrets and flak weaker, tanks frailer · own unit: the Raptor (strafes twice)"
 DOCTRINE_HALDEN,"Halden · armour doctrine: tanks much tougher and harder hitting, cheaper · drones weaker and dearer, jets dearer · own unit: the Bastion (its gun shoots aircraft)"
 ARMY_FEED_DESTROYED,destroyed a %s
+CAMP_HELIPAD,rotorcraft pad
+CAMP_HELIPAD_SUB,fly you and your squad back to camp
+CAMP_REPAIR,Repair the camp (credits for the damage)
+CAMP_FLY,Fly back to camp (the rotorcraft pad)
+CAMP_UPGRADE,Upgrade the %s
+CAMP_FEED_DESTROYED,destroyed the %s of %s's camp
+CAMP_FEED_REPAIRED,Camp repaired
+CAMP_FEED_FLEW,Flown back to camp
+CAMP_FEED_UPGRADED,%s upgraded to level %d

@@ -766,6 +766,12 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 			return squad.set_spread(world, hunter, str(args.get("spread", "")))
 		"call_unit":
 			return army.call_unit(world, self, hunter, str(args.get("unit", "")), args.get("target", Vector3.ZERO))
+		"repair_camp":
+			return war.enabled and war.builds.repair(world, self, hunter)
+		"upgrade_module":
+			return war.enabled and war.builds.upgrade(world, self, hunter, str(args.get("module", "")))
+		"fly_to_camp":
+			return war.enabled and war.builds.fly_to_camp(world, self, hunter)
 		"build":
 			return war.enabled and war.builds.build(world, self, hunter, str(args.get("module", "")))
 		"squad_strategy":

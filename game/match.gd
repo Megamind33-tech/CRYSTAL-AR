@@ -1244,6 +1244,28 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 					var hr: HuntRules = st.hunt
 					return hr.war.enabled and not hr.war.camps.is_empty() and NationArsenal.allowed(Profile.career().nation_id(), module) \
 							and hr.economy.credits.get(local_id(), 0) >= int(HuntCamps.MODULES[module].cost), "camp")
+	hunt_menu.add_row(func() -> String: return tr("CAMP_REPAIR"),
+			func() -> void: hunt_menu.request.call("repair_camp"),
+			func() -> bool:
+				var st: Dictionary = hunt_menu.state.call()
+				return not st.is_empty() and (st.hunt as HuntRules).war.enabled, "camp")
+	hunt_menu.add_row(func() -> String: return tr("CAMP_FLY"),
+			func() -> void: hunt_menu.request.call("fly_to_camp"),
+			func() -> bool:
+				var st: Dictionary = hunt_menu.state.call()
+				if st.is_empty():
+					return false
+				var hr: HuntRules = st.hunt
+				return hr.war.enabled and hr.war.builds.has(hr.war.builds._camp_of(hr, local_id()), "helipad"), "camp")
+	for module: String in HuntCamps.IDS:
+		hunt_menu.add_row(func() -> String: return tr("CAMP_UPGRADE") % tr("CAMP_" + module.to_upper()),
+				func() -> void: hunt_menu.request.call("upgrade_module", {"module": module}),
+				func() -> bool:
+					var st: Dictionary = hunt_menu.state.call()
+					if st.is_empty():
+						return false
+					var hr: HuntRules = st.hunt
+					return hr.war.enabled and hr.war.builds.has(hr.war.builds._camp_of(hr, local_id()), module), "camp")
 	# Your squad (HuntSquad): a plan in one tap, orders to everyone or to one
 	# role, the rules of engagement, together or spread out.
 	var my_squad := func() -> HuntSquad.Squad:
@@ -1693,6 +1715,17 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 					HuntHud.ALLY if h_side_is_mine(server.world.hunt.war.side_of(server.world.hunt, int(e.player))) else UiStyle.WARN)
 			return
 		"jet_strike":
+			return
+		"module_destroyed":
+			effects.explosion(e.position + Vector3(0, 2, 0), 6.0)
+			_kill_feed.add_note(_display_name(int(e.player)), tr("CAMP_FEED_DESTROYED") % [tr("CAMP_" + str(e.module).to_upper()),
+					_side_name(int(e.side))], UiStyle.WARN if h_side_is_mine(int(e.side)) else HuntHud.ALLY)
+			return
+		"camp_repaired", "camp_upgraded", "flew_to_camp":
+			if int(e.player) == me:
+				var line := tr("CAMP_FEED_REPAIRED") if e.action == "camp_repaired" else (tr("CAMP_FEED_FLEW") if e.action == "flew_to_camp"
+						else tr("CAMP_FEED_UPGRADED") % [tr("CAMP_" + str(e.module).to_upper()), int(e.level)])
+				_kill_feed.add_note("", line, HuntHud.ALLY, true)
 			return
 		"flak_fire":
 			effects.tracer(e.position, e.to)

@@ -257,6 +257,9 @@ func _strafe(world: SimWorld, hunt: HuntRules, c: Call, info: Dictionary, boost:
 		var q := Geometry3D.get_closest_point_to_segment(vp, a, b)
 		if Vector2(q.x - vp.x, q.z - vp.z).length() <= float(info.width):
 			damage_machine(world, hunt, c.owner, vi, float(info.damage) * boost)
+	if hunt.war.enabled:  # buildings along the run take it too
+		for k in 5:
+			hunt.war.builds.on_blast(world, hunt, c.owner, a.lerp(b, k / 4.0), float(info.width), float(info.damage) * boost * 0.5)
 	world._emit("hj:%d:%d" % [c.owner, world.tick], "hunt", {"action": "jet_strike", "player": c.owner,
 			"position": c.at, "treasure": 0, "kind": -1, "from": a, "to": b})
 
@@ -349,6 +352,8 @@ func _bots_call(world: SimWorld, hunt: HuntRules) -> void:
 ## A hitscan shot from `from` to `to` (where it ended): the first enemy
 ## aircraft or war machine on the line takes `damage`.
 func on_shot(world: SimWorld, hunt: HuntRules, shooter: int, from: Vector3, to: Vector3, damage: float) -> void:
+	if hunt.war.enabled:
+		hunt.war.builds.on_shot(world, hunt, shooter, to, damage)
 	var best_d := from.distance_to(to)
 	var hit_call: Call = null
 	var hit_machine := -1
@@ -432,6 +437,8 @@ func damage_machine(world: SimWorld, hunt: HuntRules, by: int, vi: int, damage: 
 func on_blast(world: SimWorld, hunt: HuntRules, owner: int, at: Vector3, radius: float, damage: float) -> void:
 	if radius <= 0.0:
 		return
+	if hunt.war.enabled:
+		hunt.war.builds.on_blast(world, hunt, owner, at, radius, damage)
 	for c in calls.duplicate():
 		if c.unit in AIR and _enemy(hunt, owner, c.owner):
 			var d := position_of(c, world.tick).distance_to(at)

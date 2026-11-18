@@ -286,3 +286,56 @@ func test_doctrine_tank_toughness() -> void:
 	var tough := 900.0 * NationArsenal.mod("halden", "tank", "hp")
 	var frail := 900.0 * NationArsenal.mod("aurora", "tank", "hp")
 	assert_gt(tough, frail * 1.8, "Halden's tank takes nearly twice Aurora's punishment")
+
+
+## Camp combat and upkeep: shots wear an enemy building down and destroy it
+## (its body gone); repairs cost credits; upgrades add power and health;
+## the rotorcraft pad flies you home.
+func _two_camps() -> void:
+	_start(HuntWar.Objective.HOLD)
+	for i in 2:
+		var c := HuntWar.Camp.new()
+		c.side = h.war.side_of(h, i + 1)
+		c.at = CAMPS[i]
+		h.war.camps.append(c)
+	h.army.rosters[2] = {}
+
+
+func test_buildings_take_damage_and_fall() -> void:
+	_two_camps()
+	h.economy.credits[2] = 1000
+	assert_true(h.request(world, 2, "build", {"module": "turret"}))
+	var b: HuntCamps.Built = h.war.builds.built[1]
+	var face := HuntCamps.socket_at(CAMPS[1], 0) + Vector3(-1.1, 1.5, 0)  # on its west face
+	h.war.builds.on_shot(world, h, 2, face, 100.0)
+	assert_eq(float(b.hp[0]), float(HuntCamps.MODULE_HP.turret), "its own side's shots don't hurt it")
+	h.war.builds.on_shot(world, h, 1, face, 100.0)
+	assert_eq(float(b.hp[0]), float(HuntCamps.MODULE_HP.turret) - 100.0, "an enemy shot does")
+	h.war.builds.on_shot(world, h, 1, face, 1000.0)
+	assert_false(b.modules.has(0), "destroyed")
+	await wait_physics_frames(2)
+	var sock := HuntCamps.socket_at(CAMPS[1], 0)
+	assert_true(world._ray(sock + Vector3(0, 6.0, 0), sock + Vector3(0, 0.6, 0)).is_empty(), "its body is gone")
+
+
+func test_repair_upgrade_and_the_pad() -> void:
+	_two_camps()
+	h.economy.credits[1] = 1000
+	assert_true(h.request(world, 1, "build", {"module": "med_bay"}))
+	var b: HuntCamps.Built = h.war.builds.built[0]
+	h.war.builds.damage_building(world, h, 2, 0, 0, 200.0)
+	var before: int = h.economy.credits[1]
+	assert_true(h.request(world, 1, "repair_camp"))
+	assert_eq(float(b.hp[0]), float(HuntCamps.MODULE_HP.med_bay), "repaired")
+	assert_eq(h.economy.credits[1], before - ceili(200.0 * HuntCamps.REPAIR_COST), "for credits")
+	assert_true(h.request(world, 1, "upgrade_module", {"module": "med_bay"}))
+	assert_eq(int(b.levels[0]), 1)
+	assert_gt(h.war.builds.max_hp(0, 0), float(HuntCamps.MODULE_HP.med_bay), "more health")
+	assert_gt(h.war.builds.power(0, 0), 1.0, "and more power")
+	assert_false(h.request(world, 1, "fly_to_camp"), "no pad, no flight")
+	h.economy.credits[1] = 1000
+	assert_true(h.request(world, 1, "build", {"module": "helipad"}))
+	world.teleport(world.players[1], Vector3(18, 0.05, -18))
+	assert_true(h.request(world, 1, "fly_to_camp"))
+	assert_lt(world.players[1].state.position.distance_to(CAMPS[0]), HuntCamps.SOCKET_RADIUS + 3.0, "home")
+	assert_false(h.request(world, 1, "fly_to_camp"), "not again so soon")

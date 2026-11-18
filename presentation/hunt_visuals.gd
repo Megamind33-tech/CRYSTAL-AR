@@ -598,13 +598,26 @@ func _sync_buildings(hunt: HuntRules) -> void:
 		var b: HuntCamps.Built = w.builds.built[ci]
 		var drawn: Dictionary = _camp_drawn[ci]
 		var c: HuntWar.Camp = w.camps[ci]
+		# Destroyed: gone from the field.
+		if not b.walls and drawn.has("walls"):
+			for n: Node in drawn["walls"]:
+				if is_instance_valid(n):
+					n.queue_free()
+			drawn.erase("walls")
+		for socket: Variant in drawn.keys():
+			if socket is int and not b.modules.has(socket):
+				if is_instance_valid(drawn[socket]):
+					(drawn[socket] as Node).queue_free()
+				drawn.erase(socket)
 		if b.walls and not drawn.has("walls"):
-			drawn["walls"] = true
+			var ring := []
 			for seg: Array in HuntCamps.wall_segments(c.at, b.gate_angle):
 				var wall := Comic.kit_instance("wall_segment", seg[0], seg[1], 1.0)
 				wall.scale = Vector3(1.27, 0.66, 0.6)
 				add_child(wall)
 				_war_nodes.append(wall)
+				ring.append(wall)
+			drawn["walls"] = ring
 		for socket: int in b.modules:
 			if drawn.has(socket):
 				continue
@@ -613,6 +626,11 @@ func _sync_buildings(hunt: HuntRules) -> void:
 			var node: Node3D
 			if m == "turret":
 				node = _turret_model(at)
+			elif m == "helipad":
+				node = Node3D.new()
+				node.position = at
+				node.add_child(Comic.kit_instance("districts/landing_pad", Vector3(0, 0.05, 0), 0.0, 0.3))
+				node.add_child(Comic.kit_instance("world/skyhopper", Vector3(0, 0.2, 0), 30.0, 0.8))
 			elif m == "air_defense" or m == "aegis_battery":
 				node = _flak_model(at, m == "aegis_battery")
 			else:
