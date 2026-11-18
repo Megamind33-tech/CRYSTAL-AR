@@ -95,15 +95,15 @@ func spawn_points() -> Array[Transform3D]:
 
 ## A run at the dig spawns hunters in the canyon; free roam, in the city.
 func spawn_points_for(game_mode: int) -> Array[Transform3D]:
-	return WorldLayout.dig_spawns() if game_mode == GameMode.HUNT else CityLayout.spawn_points()
+	return Battlegrounds.spawns() if game_mode == GameMode.HUNT else CityLayout.spawn_points()
 
 
 func pickup_spots() -> Array:
-	return WorldLayout.dig_pickups()
+	return Battlegrounds.pickups()
 
 
 func hunt_data() -> Dictionary:
-	return WorldLayout.dig_hunt_data()
+	return Battlegrounds.hunt_data()  # the run's site (Battlegrounds.current)
 
 
 ## Set by the match before BotNavigation bakes: free roam bakes around Dust
@@ -116,7 +116,7 @@ func nav_area() -> AABB:
 		# Raids at Dust Hollow only (Deep Furrow bakes on demand: farm_nav_area).
 		var h := WorldLayout.HOLLOW
 		return AABB(Vector3(h.x - 70, h.y - 20, h.z - 70), Vector3(140, 60, 140))
-	return WorldLayout.dig_nav_area()
+	return Battlegrounds.nav_area()
 
 
 func flag_bases() -> Array:

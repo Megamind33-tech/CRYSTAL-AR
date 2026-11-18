@@ -28,7 +28,7 @@ const STEP_DB := {"walk": -7.0, "jog": -3.0, "run": -1.0}
 const JOG_SPEED := 3.0
 const RUN_SPEED := 6.5
 const CROUCH_DB := -10.0  ## crouch-walking is quiet, not silent
-const STEP_JITTER_DB := 3.0  ## each step is a little louder or softer (no two alike)
+const STEP_JITTER_DB := 1.5  ## each step is a little louder or softer (the pitch varies more)
 const STEP_VARIANTS := 6  ## footstep_<surface>_1..6
 ## What's underfoot: the walk-in pieces by name (KitCollision), the rest by
 ## shape: the valley's ground is sand and gravel, the city's paving concrete.

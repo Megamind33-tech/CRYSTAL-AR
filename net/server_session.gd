@@ -713,6 +713,9 @@ func _update_phase() -> void:
 				if decided != 0:
 					_end_match(decided)
 				return
+			if world.hunt != null and world.hunt.war.winner_side >= 0:  # a war won outright
+				_end_match(world.hunt.war.winner_id(world, world.hunt))
+				return
 			var scores := _victory_scores()
 			var top := -999
 			for id in scores:

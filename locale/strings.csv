@@ -1283,3 +1283,22 @@ SQUAD_FEED_RULE,Squad rule: %s
 SQUAD_FEED_PLAN,Squad plan: %s
 SQUAD_FEED_DOWN,Your %s is down
 SQUAD_FEED_SPOTTED,Scout marks %s
+WAR_EXTRACT,EXTRACTION RUN
+WAR_EXTRACT_SUB,Get your cargo out · the best haul when the clock runs out wins
+WAR_HOLD,HOLD THE POINT
+WAR_HOLD_SUB,Stand on the point with no enemy on it · 5 minutes held wins the war
+WAR_DROPS,SUPPLY DROPS
+WAR_DROPS_SUB,Minerals drop round the site · extract 6 for your side to win
+WAR_CAMPS,CAMP WAR
+WAR_CAMPS_SUB,Sabotage enemy camp cores (hold interact) · guard your own · last camp standing wins
+WAR_WON,WAR WON
+WAR_WON_SUB,%s takes the field
+WAR_HOLD_LINE,Held %d:%02d · leader %d:%02d · %d min wins
+WAR_DROPS_LINE,Drops out %d/%d · leader %d
+WAR_CAMPS_LINE,Your camp %d/%d charges · %d enemy camps standing
+WAR_FEED_HOLDS,%s holds the point
+WAR_FEED_DROP,A supply drop has landed
+WAR_FEED_SABOTAGE,sabotaged %s's camp (%d left)
+WAR_POINT_LABEL,CONTROL POINT
+WAR_CAMP_LABEL,CAMP · %d
+WAR_CAMP_DOWN,CAMP DOWN

@@ -256,7 +256,7 @@ func _ready() -> void:
 				if Profile.career().loot_wait("convoy", int(Time.get_unix_time_from_system())) <= 0:
 					convoy.cargo = WorldLayout.CONVOY_CARGO.duplicate()
 			if config.game_mode == GameMode.HUNT:
-				var pad := WorldLayout.dig_pad()
+				var pad := Battlegrounds.arrival()  # the run's site
 				server.world.add_vehicle(pad + Vector3(6, 0.3, 0), PI * 0.5)
 			elif MatchConfig.spawn_at != Vector3.INF:
 				server.world.add_vehicle(MatchConfig.spawn_at + Vector3(5, 0.3, 0), PI)
@@ -296,7 +296,7 @@ func _ready() -> void:
 					MatchConfig.profile_uuid())
 			if config.map == GameMode.CITY_MAP:
 				if config.game_mode == GameMode.HUNT:
-					_arrival = WorldLayout.dig_pad() + Vector3(-5, 0.3, 0)  # beside the pad, the rover to the east
+					_arrival = Battlegrounds.arrival() + Vector3(-5, 0.3, 0)  # beside the pad, the rover to the east
 				elif MatchConfig.spawn_at != Vector3.INF:
 					_arrival = MatchConfig.spawn_at
 				MatchConfig.spawn_at = Vector3.INF
@@ -1404,6 +1404,28 @@ func _update_hunt_objective(h: HuntRules, tick: int) -> void:
 		hud.set_objective(tr("HUNT_COLLECTING") % [tr(res.name_key),
 				ceili((int(res.collect_ticks) - cache.progress) / float(Sim.TICK_RATE))], UiStyle.GOOD)
 		return
+	if h.war.enabled and h.war.objective != HuntWar.Objective.EXTRACT:
+		var mine := h.war.side_of(h, me)
+		var lead := h.war.leader_side()
+		match h.war.objective:
+			HuntWar.Objective.HOLD:
+				var held := int(h.war.hold.get(mine, 0)) / Sim.TICK_RATE
+				var best := int(h.war.hold.get(lead, 0)) / Sim.TICK_RATE if lead >= 0 else 0
+				hud.set_objective(tr("WAR_HOLD_LINE") % [held / 60, held % 60, best / 60, best % 60,
+						HuntWar.HOLD_SECONDS / 60], UiStyle.GOOD if h.war.holder == mine else UiStyle.ACCENT)
+			HuntWar.Objective.DROPS:
+				hud.set_objective(tr("WAR_DROPS_LINE") % [int(h.war.drops.get(mine, 0)), HuntWar.DROP_TARGET,
+						int(h.war.drops.get(lead, 0)) if lead >= 0 else 0], UiStyle.ACCENT)
+			HuntWar.Objective.CAMPS:
+				var ours := 0
+				var theirs := 0
+				for c in h.war.camps:
+					if c.side == mine:
+						ours = c.charges
+					elif c.charges > 0:
+						theirs += 1
+				hud.set_objective(tr("WAR_CAMPS_LINE") % [ours, HuntWar.CAMP_CHARGES, theirs], UiStyle.WARN if ours < HuntWar.CAMP_CHARGES else UiStyle.ACCENT)
+		return
 	if h.final_phase(tick):
 		var secs := ceili(h.ticks_left(tick) / float(Sim.TICK_RATE))
 		hud.set_objective(tr("HUNT_LAST_EXTRACTION") % secs if tick >= h.end_tick - HuntRules.LAST_EXTRACTION_TICKS
@@ -1632,6 +1654,24 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 		"vault_open":
 			_kill_feed.add_note("", tr("HUNT_FEED_VAULT_OPEN"), HuntVisuals.GRAND)
 			return
+		"war_objective":
+			var key: String = "WAR_" + str(e.objective).to_upper()
+			_hunt_banner(key, tr(key + "_SUB"), HuntHud.GRAND)
+			_kill_feed.add_note("", tr(key + "_SUB"), UiStyle.ACCENT)
+			return
+		"war_hold":
+			if int(e.side) >= 0:
+				_kill_feed.add_note("", tr("WAR_FEED_HOLDS") % _side_name(int(e.side)), UiStyle.ACCENT)
+			return
+		"war_drop":
+			_kill_feed.add_note("", tr("WAR_FEED_DROP"), HuntVisuals.CACHE)
+			return
+		"war_sabotage":
+			_kill_feed.add_note(_display_name(int(e.player)), tr("WAR_FEED_SABOTAGE") % [_side_name(int(e.side)), int(e.charges)], UiStyle.WARN)
+			return
+		"war_won":
+			_hunt_banner("WAR_WON", tr("WAR_WON_SUB") % _side_name(int(e.side)), HuntHud.GRAND)
+			return
 		"pit_rule":
 			var key: String = ["PIT_STANDARD", "PIT_ORE_SEAM", "PIT_ONE_PAD", "PIT_HOT_VAULT"][clampi(int(e.rule), 0, 3)]
 			_hunt_banner(key, tr(key + "_SUB"), HuntHud.GRAND)
@@ -1764,6 +1804,11 @@ func _bring_companion() -> void:
 	var h := server.world.hunt
 	if h.economy.bring_friend(server.world, ServerSession.LOCAL_PLAYER_ID, Career.PEOPLE[who].name, h.end_tick + 600):
 		_kill_feed.add_note(Career.PEOPLE[who].name, tr("HUNT_FEED_FRIEND_JOINS"), HuntHud.ALLY, true)
+
+
+## A war side's name: its nation, else the hunter.
+func _side_name(side: int) -> String:
+	return Nations.display_name(side - 100) if side >= 100 else _display_name(side)
 
 
 ## Your squad deploys with you (Career.squad, paid as it goes): AI

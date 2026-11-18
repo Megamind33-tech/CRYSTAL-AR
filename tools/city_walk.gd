@@ -38,6 +38,12 @@ func _run() -> void:
 	if Platform.user_args.has("--phase1") and dig:
 		Profile.career().choose_nation(0)  # a recruit of the Aurora Compact, on the first run
 	MatchConfig.pending = MatchConfig.for_place(GameMode.HUNT if dig else GameMode.CITY, "You")
+	var site := Platform.get_user_arg("--site", "")
+	if not site.is_empty():
+		Battlegrounds.current = site  # a run at another battleground
+	var war := Platform.get_user_arg("--war", "")
+	if not war.is_empty():
+		HuntWar.force_objective = HuntWar.IDS.find(war)
 	m = MATCH.instantiate()
 	add_child(m)
 	await _frames(200)
@@ -1280,6 +1286,18 @@ func _dig_run(me: SimPlayer) -> void:
 	m.server.world.damage_enabled = false  # posed camera: keep the bots off it
 	m.hunt_hud.touch = true
 	print("CITY WALK: run started, player at %s" % me.state.position)
+	if Platform.user_args.has("--war-shots"):
+		var hr: HuntRules = m.server.world.hunt
+		print("CITY WALK: site %s, objective %s, camps %d" % [Battlegrounds.current, HuntWar.IDS[hr.war.objective], hr.war.camps.size()])
+		var s := Battlegrounds.site(Battlegrounds.current)
+		var c: Vector2 = s[1]
+		await _aerial("w_site_" + Battlegrounds.current, c, Vector3(0, 170, 150))
+		if not hr.war.camps.is_empty():
+			var camp: Vector3 = hr.war.camps[0].at
+			await _pose(me, camp + Vector3(0, 0.3, 12), 0.0, 0.05)
+			await _shot("w_camp")
+		get_tree().quit(0)
+		return
 	await _shot("d1_arrival_pad")
 	if Platform.user_args.has("--squad"):
 		var hr: HuntRules = m.server.world.hunt

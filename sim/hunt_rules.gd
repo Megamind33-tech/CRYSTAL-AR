@@ -141,6 +141,7 @@ var personalities: Dictionary = {}
 ## Operational credits and mercenary contracts.
 var economy := HuntEconomy.new()
 var squad := HuntSquad.new()  ## the hunters' AI teammates
+var war := HuntWar.new()  ## what wins the run: sides, objectives (battlegrounds)
 ## Recovery Contract: victim id -> {"treasure", "position" (fuzzed), "tick"}.
 var recovery_clues: Dictionary = {}
 ## Last Extraction: the match's end tick (0: no clock, every pad stays open),
@@ -176,6 +177,7 @@ func configure(map: Dictionary, seed_value: int) -> void:
 	vault = map.get("vault", Vector3.ZERO)
 	trap = map.get("trap", Vector3.INF)
 	pit_rules = bool(map.get("pit_rules", false))
+	war.configure(map)
 	_rng.seed = seed_value
 	social.reset(seed_value)
 
@@ -217,6 +219,7 @@ func reset(world: SimWorld) -> void:
 	_seat_nations(world, ids)
 	if pit_rules:
 		_set_pit(world)
+	war.start(world, self)
 
 
 ## Seats every hunter in a nation and allies each nation's first two (one
@@ -422,6 +425,7 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 	social.step(world, ids)
 	economy.step(world)
 	squad.step(world, self)
+	war.step(world, self, ids, interacting)
 	_step_last_extraction(world)
 	# The alarm trap.
 	if trap != Vector3.INF:
@@ -1087,6 +1091,7 @@ func _bank(world: SimWorld, p: SimPlayer, t: Treasure) -> void:
 	if t.kind == Kind.RESOURCE:
 		credit = HuntResources.credits(t.resource)  # resources are what pays the expedition
 	economy.earn(world, p.net_id, credit, "extraction")
+	war.on_banked(world, self, p.net_id, t)
 	economy.end_contract(world, p.net_id, "extracted")  # a contract ends on extraction
 	extract_progress.erase(p.net_id)
 	t.carrier = 0

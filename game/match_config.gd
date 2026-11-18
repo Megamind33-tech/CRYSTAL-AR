@@ -159,7 +159,8 @@ static func for_place(game_mode: int, player_name: String) -> MatchConfig:
 		c.bots = 0
 		c.minutes = 0
 	else:
-		c.map = GameMode.CITY_MAP  # the run happens in Kasei Valley's canyon
+		c.map = GameMode.CITY_MAP  # the run happens in the valley: at a site of its own
+		Battlegrounds.current = Battlegrounds.for_run(int(Profile.career().d.runs))
 		c.bots = GameMode.HUNT_BOTS
 		c.minutes = GameMode.HUNT_MINUTES
 	return c

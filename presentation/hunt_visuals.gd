@@ -55,6 +55,7 @@ func _process(delta: float) -> void:
 func sync(hunt: HuntRules, tick: int, local_id: int, carrier_pos: Callable) -> void:
 	if not _built:
 		_build_static(hunt)
+	_sync_war(hunt, local_id)
 	var seen := {}
 	for t: HuntRules.Treasure in hunt.treasures:
 		seen[t.id] = true
@@ -484,3 +485,74 @@ func _glow(color: Color, alpha: float, energy: float) -> StandardMaterial3D:
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED if energy > 1.0 else BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	return m
+
+
+# --- War (HuntWar): the control point, the camps ---
+
+var _war_built := false
+var _point_label: Label3D
+var _camp_labels: Array[Label3D] = []
+const POINT_GOLD := Color(1.0, 0.8, 0.25)
+
+
+## A side's colour: its nation's, else ours or a rival's.
+func _side_color(hunt: HuntRules, side: int, local_id: int) -> Color:
+	if side >= 100:
+		return Nations.color(side - 100)
+	return OWN if side == hunt.war.side_of(hunt, local_id) else RIVAL
+
+
+func _sync_war(hunt: HuntRules, local_id: int) -> void:
+	var w := hunt.war
+	if not w.enabled or w.objective == HuntWar.Objective.EXTRACT or w.objective == HuntWar.Objective.DROPS:
+		return
+	if not _war_built:
+		_war_built = true
+		if w.objective == HuntWar.Objective.HOLD:
+			_mast(w.point, POINT_GOLD, HuntWar.HOLD_RADIUS)
+			_point_label = _war_label(w.point + Vector3(0, 7.5, 0), POINT_GOLD)
+		for c in w.camps:
+			_mast(c.at, _side_color(hunt, c.side, local_id), HuntWar.CAMP_RADIUS)
+			_camp_labels.append(_war_label(c.at + Vector3(0, 7.5, 0), _side_color(hunt, c.side, local_id)))
+	if _point_label != null:
+		var held := ""
+		for side: int in w.hold:
+			held += "  %d:%02d" % [int(w.hold[side]) / Sim.TICK_RATE / 60, int(w.hold[side]) / Sim.TICK_RATE % 60]
+		_point_label.text = tr("WAR_POINT_LABEL") + held
+		_point_label.modulate = _side_color(hunt, w.holder, local_id) if w.holder >= 0 else POINT_GOLD
+	for i in _camp_labels.size():
+		var c: HuntWar.Camp = w.camps[i]
+		_camp_labels[i].text = tr("WAR_CAMP_LABEL") % c.charges if c.charges > 0 else tr("WAR_CAMP_DOWN")
+
+
+## A flag mast on a ring (no body: you walk round it, nothing to snag on).
+func _mast(at: Vector3, color: Color, radius: float) -> void:
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = radius - 0.25
+	torus.outer_radius = radius
+	ring.mesh = torus
+	ring.position = at + Vector3(0, 0.1, 0)
+	ring.material_override = _glow(color, 1.0, 2.0)
+	add_child(ring)
+	var pole := MeshInstance3D.new()
+	pole.mesh = _box_mesh(Vector3(0.18, 6.0, 0.18))
+	pole.position = at + Vector3(0, 3.0, 0)
+	pole.material_override = _metal()
+	add_child(pole)
+	var flag := MeshInstance3D.new()
+	flag.mesh = _box_mesh(Vector3(1.6, 1.0, 0.06))
+	flag.position = at + Vector3(0.85, 5.4, 0)
+	flag.material_override = _glow(color, 0.9, 1.2)
+	add_child(flag)
+
+
+func _war_label(at: Vector3, color: Color) -> Label3D:
+	var l := Label3D.new()
+	l.font_size = 120
+	l.modulate = color
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.position = at
+	add_child(l)
+	return l
