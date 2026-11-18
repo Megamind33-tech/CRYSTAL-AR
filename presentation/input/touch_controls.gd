@@ -1,7 +1,8 @@
 class_name TouchControls
 extends Control
 ## On-screen touch controls with finger ownership classes (PLAN §3.11):
-## 1. move finger: floating joystick on the left (push to the top edge = sprint)
+## 1. move finger: floating joystick on the left; the gait chips (walk, jog,
+##    run, crouch: a column on the left edge) set how fast a full push goes
 ## 2. look fingers: started on empty space on the right
 ## 3. fire finger: combined fire + look; dragging it also turns the camera
 ## 4. button fingers: all other buttons, exclusive, never become look fingers
@@ -23,7 +24,6 @@ enum Kind { MOVE, LOOK, FIRE, BUTTON }
 
 const LOOK_RADIANS_PER_PIXEL := 0.0045
 const JOYSTICK_RADIUS := 110.0
-const SPRINT_THRESHOLD := 0.9
 
 var input: InputAdapter
 ## Aim assist slowdown on look fingers (AimAssist.slowdown).
@@ -176,7 +176,6 @@ func _draw_drive() -> void:
 const DEFAULT_BUTTONS := [
 	{"id": "fire", "label": "TOUCH_FIRE", "pos": Vector2(0.27, 0.31), "radius": 0.1, "kind": Kind.FIRE},
 	{"id": "jump", "label": "TOUCH_JUMP", "pos": Vector2(0.09, 0.12), "radius": 0.075, "press": PlayerCommand.Action.JUMP, "held": PlayerCommand.Held.JUMP},
-	{"id": "crouch", "label": "TOUCH_CROUCH", "pos": Vector2(0.29, 0.115), "radius": 0.055, "held": PlayerCommand.Held.CROUCH},
 	{"id": "scope", "label": "TOUCH_SCOPE", "pos": Vector2(0.48, 0.26), "radius": 0.065, "toggle": PlayerCommand.Held.AIM},
 	{"id": "grenade", "label": "TOUCH_GRENADE", "pos": Vector2(0.09, 0.36), "radius": 0.055, "press": PlayerCommand.Action.GRENADE},
 	{"id": "interact", "label": "TOUCH_INTERACT", "pos": Vector2(0.44, 0.49), "radius": 0.06, "press": PlayerCommand.Action.INTERACT,
@@ -184,10 +183,32 @@ const DEFAULT_BUTTONS := [
 ]
 ## Saved layouts older than this are dropped for the new defaults (v1 used
 ## fractions of the screen, v2 had Reload, Swap and Melee buttons).
-const LAYOUT_VERSION := 3
+const LAYOUT_VERSION := 4
+## Gait selector: a row along the bottom between the stick and the jump
+## button (walk, jog, run, crouch), GAIT_RADIUS screen heights wide, the first
+## centre GAIT_X from the left edge and GAIT_DX apart, GAIT_Y up from the
+## bottom (all in screen heights). Not part of the layout editor.
+const GAIT_X := 0.6
+const GAIT_DX := 0.105
+const GAIT_Y := 0.07
+const GAIT_RADIUS := 0.04
+const GAIT_IDS := ["walk", "jog", "run", "crouch"]
+const GAIT_OF := {"walk": InputAdapter.Gait.WALK, "jog": InputAdapter.Gait.JOG, "run": InputAdapter.Gait.RUN}
+const GAIT_LABEL := {"walk": "TOUCH_WALK", "jog": "TOUCH_JOG", "run": "TOUCH_RUN"}
+## Crouch (a toggle on the gait column): holds the crouch while on.
+var crouch_on: bool = false:
+	set(v):
+		if v != crouch_on:
+			crouch_on = v
+			if input != null:
+				if v:
+					input.touch_held |= PlayerCommand.Held.CROUCH
+				else:
+					input.touch_held &= ~PlayerCommand.Held.CROUCH
+			queue_redraw()
 ## Where the floating stick's resting hint sits: offset from the
 ## bottom-left corner, in screen heights.
-const STICK_HINT := Vector2(0.3, 0.3)
+const STICK_HINT := Vector2(0.17, 0.28)
 const MIN_SCALE := 0.6
 const ICONS := {
 	"fire": preload("res://art/ui/touch/fire.png"),
@@ -327,6 +348,7 @@ func release_all() -> void:
 	for index in _fingers.keys():
 		_on_up(index)
 	scope_on = false
+	crouch_on = false
 
 
 func _on_down(index: int, pos: Vector2) -> void:
@@ -353,6 +375,15 @@ func _on_down(index: int, pos: Vector2) -> void:
 			_fingers[index] = {"kind": Kind.BUTTON, "origin": pos, "pos": pos, "button": b}
 		else:
 			_fingers[index] = {"kind": Kind.LOOK, "origin": pos, "pos": pos}
+		queue_redraw()
+		return
+	var chip := gait_at(pos) if _gait_shown() else ""
+	if not chip.is_empty():
+		if chip == "crouch":
+			crouch_on = not crouch_on
+		else:
+			input.gait = GAIT_OF[chip]
+		_fingers[index] = {"kind": Kind.BUTTON, "origin": pos, "pos": pos, "button": {"id": "gait_" + chip}}
 		queue_redraw()
 		return
 	var button := _button_at(pos)
@@ -398,10 +429,6 @@ func _on_drag(index: int, pos: Vector2, relative: Vector2) -> void:
 			var v: Vector2 = (pos - f.origin) / JOYSTICK_RADIUS
 			v = v.limit_length(1.0)
 			input.touch_move = Vector2(v.x, -v.y)
-			if v.length() >= SPRINT_THRESHOLD and -v.y > 0.7:
-				input.touch_held |= PlayerCommand.Held.SPRINT
-			else:
-				input.touch_held &= ~PlayerCommand.Held.SPRINT
 		Kind.LOOK, Kind.FIRE:
 			var sens: float = Settings.get_value("input", "touch_sensitivity") * assist_scale * input.look_scale
 			input.add_look(-relative.x * LOOK_RADIANS_PER_PIXEL * sens,
@@ -421,13 +448,31 @@ func _on_up(index: int) -> void:
 	match f.kind:
 		Kind.MOVE:
 			input.touch_move = Vector2.ZERO
-			input.touch_held &= ~PlayerCommand.Held.SPRINT
 		Kind.FIRE:
 			input.touch_held &= ~PlayerCommand.Held.FIRE
 		Kind.BUTTON:
 			if f.button.has("held"):
 				input.touch_held &= ~int(f.button.held)
 	queue_redraw()
+
+
+## A gait chip's centre on screen.
+func _gait_center(id: String) -> Vector2:
+	var screen := _screen()
+	return Vector2((GAIT_X + GAIT_DX * GAIT_IDS.find(id)) * screen.y, screen.y * (1.0 - GAIT_Y))
+
+
+## The id of the gait chip under `pos` (generous, like the buttons) or "".
+func gait_at(pos: Vector2) -> String:
+	var r := _screen().y * GAIT_RADIUS * 1.2
+	for id: String in GAIT_IDS:
+		if pos.distance_to(_gait_center(id)) <= r:
+			return id
+	return ""
+
+
+func _gait_shown() -> bool:
+	return not driving and not editing
 
 
 func _button_at(pos: Vector2) -> Dictionary:
@@ -519,16 +564,15 @@ func _draw_controls() -> void:
 		_icon(b.id, center, r * (0.5 if b.id == "fire" else 0.66), Color(1, 1, 1, 0.95 if pressed else 0.88))
 		if editing and b.id == selected:
 			_sb.arc(center, r + 8.0, 0.0, TAU, 48, UiStyle.WARN, 3.0)
+	if _gait_shown():
+		_draw_gait(screen)
 	var moving := false
 	for f in _fingers.values():
 		if f.kind == Kind.MOVE:
 			moving = true
 			var offset: Vector2 = (f.pos - f.origin).limit_length(JOYSTICK_RADIUS)
-			var sprint := -offset.y / JOYSTICK_RADIUS >= SPRINT_THRESHOLD
 			_sb.circle(f.origin, JOYSTICK_RADIUS, Color(ComicUI.INK, 0.35))
 			_sb.arc(f.origin, JOYSTICK_RADIUS, 0.0, TAU, 64, Color(ComicUI.YELLOW, 0.6), 3.0)
-			_sb.arc(f.origin, JOYSTICK_RADIUS + 8.0, -PI * 0.5 - 0.35, -PI * 0.5 + 0.35, 16,
-					Color(UiStyle.WARN, 0.95 if sprint else 0.35), 4.0)
 			_sb.circle(f.origin + offset, 36.0, Color(ComicUI.YELLOW, 0.45))
 			_sb.arc(f.origin + offset, 36.0, 0.0, TAU, 40, Color(1, 1, 1, 0.5), 2.0)
 	if not moving:
@@ -537,9 +581,25 @@ func _draw_controls() -> void:
 		var hint := Vector2(STICK_HINT.x * screen.y, screen.y * (1.0 - STICK_HINT.y))
 		_sb.circle(hint, JOYSTICK_RADIUS * 0.8, Color(ComicUI.INK, 0.28))
 		_sb.arc(hint, JOYSTICK_RADIUS * 0.8, 0.0, TAU, 48, Color(ComicUI.YELLOW, 0.45), 2.5)
-		_sb.arc(hint, JOYSTICK_RADIUS * 0.8 + 7.0, -PI * 0.5 - 0.3, -PI * 0.5 + 0.3, 12, Color(UiStyle.WARN, 0.45), 3.0)
 		_sb.circle(hint, 30.0, Color(ComicUI.YELLOW, 0.22))
 		_sb.arc(hint, 30.0, 0.0, TAU, 32, Color(1, 1, 1, 0.35), 1.5)
+
+
+func _draw_gait(screen: Vector2) -> void:
+	var r := GAIT_RADIUS * screen.y
+	for id: String in GAIT_IDS:
+		var c := _gait_center(id)
+		var on: bool = crouch_on if id == "crouch" else (input != null and input.gait == GAIT_OF[id])
+		var accent: Color = ComicUI.CYAN if id == "crouch" else ComicUI.YELLOW
+		_sb.circle(c + Vector2(3, 4), r, Color(ComicUI.MAGENTA.darkened(0.6), 0.55))
+		_sb.circle(c, r, Color(accent, 0.55) if on else Color(ComicUI.INK, 0.62))
+		_sb.arc(c, r, 0.0, TAU, 40, ComicUI.INK, 5.0)
+		_sb.arc(c, r - 2.5, 0.0, TAU, 40, Color(accent, 1.0 if on else 0.7), 2.5)
+		if id == "crouch":
+			_icon("crouch", c, r * 0.62, Color(1, 1, 1, 0.95 if on else 0.8))
+		else:
+			ComicUI.draw_text(self, c + Vector2(0, r * 0.2), tr(GAIT_LABEL[id]), UiStyle.font_hud_bold,
+					roundi(r * 0.62), Color(1, 1, 1, 0.98 if on else 0.8), 1, 3)
 
 
 ## Icons that picture the action, so buttons read without text: white

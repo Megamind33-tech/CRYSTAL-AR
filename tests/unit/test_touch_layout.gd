@@ -26,7 +26,7 @@ func test_layout_overrides_and_clamps() -> void:
 	assert_almost_eq(l.jump[0], 1.7, 0.001, "kept on screen")
 	assert_almost_eq(l.jump[1], 0.04, 0.001, "kept on screen")
 	assert_almost_eq(l.jump[2], TouchControls.MAX_SCALE, 0.001, "size clamped")
-	assert_eq(l.scope[0], TouchControls.DEFAULT_BUTTONS[3].pos.x, "others keep their defaults")
+	assert_eq(l.scope[0], TouchControls.DEFAULT_BUTTONS[2].pos.x, "others keep their defaults")
 	tc.apply_layout({})
 	assert_eq(tc.layout().fire[2], 1.0, "reset")
 

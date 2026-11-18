@@ -13,6 +13,13 @@ var look_pitch: float = 0.0
 ## Set by touch controls.
 var touch_move := Vector2.ZERO
 var touch_held: int = 0
+## Touch gait (the walk / jog / run buttons): how far the stick's full push
+## goes. WALK caps the stick at a stroll, JOG is the full walk speed, RUN
+## holds sprint while moving. A partial push still scales within the gait.
+enum Gait { WALK, JOG, RUN }
+## A stroll in metres per second (the stick's WALK cap = this over walk_speed).
+const WALK_MPS := 1.8
+var gait: int = Gait.JOG
 var enabled: bool = true
 ## Mouse and touch look speed multiplier; the match lowers it while scoped
 ## so the zoomed view turns at the same on-screen speed.
@@ -68,6 +75,19 @@ func add_look(delta_yaw: float, delta_pitch: float) -> void:
 	look_pitch = clampf(look_pitch + delta_pitch, -PlayerCommand.PITCH_LIMIT, PlayerCommand.PITCH_LIMIT)
 
 
+## The stick's share of full speed for `raw` (touch stick, length 0..1) at
+## `gait`: WALK caps it at a stroll, JOG and RUN pass it through.
+static func gait_stick(raw: Vector2, gait_mode: int, walk_speed: float = 6.0) -> Vector2:
+	if gait_mode == Gait.WALK:
+		return raw.limit_length(1.0) * minf(WALK_MPS / walk_speed, 1.0)
+	return raw.limit_length(1.0)
+
+
+## RUN holds sprint, but only while the stick is pushed.
+static func gait_sprints(raw: Vector2, gait_mode: int) -> bool:
+	return gait_mode == Gait.RUN and raw.length() > 0.1
+
+
 func reset_held() -> void:
 	_mouse_fire = false
 	_mouse_aim = false
@@ -113,7 +133,7 @@ func build_command(tick: int) -> PlayerCommand:
 	if not enabled:
 		return c
 	var kb := Input.get_vector("move_left", "move_right", "move_back", "move_forward")
-	c.set_move((kb + touch_move).limit_length(1.0))
+	c.set_move((kb + gait_stick(touch_move, gait)).limit_length(1.0))
 	var held := touch_held
 	if assist_fire:
 		held |= Held.FIRE
@@ -123,7 +143,7 @@ func build_command(tick: int) -> PlayerCommand:
 		held |= Held.AIM
 	var sprint := _sprint_on if Settings.get_value("input", "sprint_toggle") else Input.is_action_pressed("sprint")
 	var crouch := _crouch_on if Settings.get_value("input", "crouch_toggle") else Input.is_action_pressed("crouch")
-	if sprint:
+	if sprint or gait_sprints(touch_move, gait):
 		held |= Held.SPRINT
 	if crouch:
 		held |= Held.CROUCH

@@ -1195,3 +1195,7 @@ CARD_GOV,GOVERNMENT
 CARD_FREE,FREELANCE
 CARD_YOUR_JOB,YOUR JOB
 CARD_NEXT,Next: press DEPLOY. You can drop it any time (small standing cost).
+# controls and hud
+TOUCH_WALK,Walk
+TOUCH_JOG,Jog
+TOUCH_RUN,Run
