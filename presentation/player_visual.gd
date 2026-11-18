@@ -85,11 +85,17 @@ func _enter_tree() -> void:
 	add_to_group("movers")  # doors open for anyone (TitanSettlement)
 
 
+## Soles sit this far up so feet stand on paving and lawns (laid a few cm
+## over the ground to keep them from flickering) instead of sinking in.
+const FEET_LIFT := 0.025
+
+
 func setup(display_name: String, is_bot: bool, p_color: Color, variant: int = 0, p_style: String = "") -> void:
 	color = p_color
 	rig_style = p_style if not p_style.is_empty() else style
 	rig = CharacterRig.create(rig_style, variant)
 	add_child(rig)
+	rig.position.y = FEET_LIFT
 	rig.setup(p_color)
 	_phase = get_instance_id() % 12  # spreads reduced-rate frames; not the shared RNG
 	nameplate_text = ("[BOT] " if is_bot else "") + display_name

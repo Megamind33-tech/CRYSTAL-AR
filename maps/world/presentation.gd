@@ -24,7 +24,7 @@ func _ready() -> void:
 	var pm := PlaneMesh.new()
 	pm.size = Vector2(CityLayout.HALF * 2, CityLayout.HALF * 2 - 10)
 	paving.mesh = pm
-	paving.position = CityLayout.ORIGIN + Vector3(0, 0.03, -5)
+	paving.position = CityLayout.ORIGIN + Vector3(0, 0.015, -5)
 	paving.material_override = Comic.env_material(load(TEX % ["concrete_slab_wall", "diff"]), 0.18, Color(0.72, 0.62, 0.58))
 	add_child(paving)
 	for p: Array in CityLayout.pieces():
@@ -85,7 +85,7 @@ func _city_life() -> void:
 		var pm := PlaneMesh.new()
 		pm.size = l[1]
 		mi.mesh = pm
-		mi.position = (l[0] as Vector3) + Vector3(0, 0.05, 0)
+		mi.position = (l[0] as Vector3) + Vector3(0, 0.03, 0)
 		mi.material_override = grass
 		add_child(mi)
 	var ti := 0
