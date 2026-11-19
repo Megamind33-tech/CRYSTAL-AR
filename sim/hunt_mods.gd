@@ -118,7 +118,7 @@ func _apply(world: SimWorld, hunt: HuntRules) -> void:
 
 ## The pads move (pad_shift): each to another cargo spot of the site.
 func step(world: SimWorld, hunt: HuntRules) -> void:
-	if not has("pad_shift") or world.tick < _next_shift or hunt.spots.is_empty():
+	if not has("pad_shift") or world.tick < _next_shift or hunt.spots.is_empty() or not hunt.zone_sides.is_empty():
 		return
 	_next_shift = world.tick + int(effects.pad_shift) * Sim.TICK_RATE
 	var r := RandomNumberGenerator.new()

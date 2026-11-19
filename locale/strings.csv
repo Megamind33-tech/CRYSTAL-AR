@@ -1447,3 +1447,7 @@ UNIT_HIVE,Hive swarm
 UNIT_AEGIS_DRONE,Aegis drone
 UNIT_NIGHTWING,Nightwing jet
 UNIT_HOWITZER,howitzer barrage
+WAR_PAD_YOURS,YOUR CAMP · EXTRACT HERE
+WAR_PAD_THEIRS,ENEMY CAMP PAD
+SQUAD_SPONSORED,Government squad
+SQUAD_SPONSORED_SUB,%s sends a squad with you till you make Corporal: they guard you on the plan

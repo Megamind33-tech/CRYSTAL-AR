@@ -111,8 +111,17 @@ func sync(hunt: HuntRules, tick: int, local_id: int, carrier_pos: Callable) -> v
 				_beams.erase(id)
 	if _trap != null:
 		_trap.visible = hunt.trap_rearm_tick == 0
-	# Last Extraction: closed pads go dark; the last one says so.
+	if str(hunt.zones) != _pads_key:
+		_build_pads(hunt)
+	# Last Extraction: closed pads go dark; the last one says so. In a war
+	# each camp's pad is its own: yours in your colour, theirs in theirs.
 	for i in _zone_labels.size():
+		if not hunt.zone_sides.is_empty() and i < hunt.zone_sides.size():
+			var mine := hunt.may_use_zone(i, local_id)
+			var col := _side_color(hunt, int(hunt.zone_sides[i]), local_id)
+			_zone_labels[i].modulate = col
+			_zone_labels[i].text = tr("WAR_PAD_YOURS") if mine else tr("WAR_PAD_THEIRS")
+			continue
 		var open := hunt.zone_open(i, tick)
 		_rings[i].visible = open
 		_zone_beams[i].visible = open
@@ -360,8 +369,39 @@ func _landing_site(z: Vector3) -> void:
 
 func _build_static(hunt: HuntRules) -> void:
 	_built = true
-	# Every pad's posts in one mesh and their lit tips in another (2 draw
-	# calls for all pads instead of 24).
+	_build_pads(hunt)
+	if hunt.trap != Vector3.INF:
+		_trap = MeshInstance3D.new()
+		var disc := CylinderMesh.new()
+		disc.top_radius = 0.6
+		disc.bottom_radius = 0.7
+		disc.height = 0.08
+		_trap.mesh = disc
+		_trap.position = hunt.trap + Vector3(0, 0.05, 0)
+		_trap.material_override = _glow(ALARM, 1.0, 3.0)
+		add_child(_trap)
+	RenderLayers.mark_dynamic(self)
+
+
+## The pads' look, built again when they move (a war gives each camp its own).
+var _pads_key := ""
+var _pad_nodes: Array[Node] = []
+
+
+## Every pad's posts in one mesh and their lit tips in another (2 draw
+## calls for all pads instead of 24).
+func _build_pads(hunt: HuntRules) -> void:
+	for n in _pad_nodes:
+		if is_instance_valid(n):
+			n.queue_free()
+	_pad_nodes.clear()
+	_rings.clear()
+	_zone_labels.clear()
+	_zone_beams.clear()
+	_pickups.clear()
+	_pickup_base.clear()
+	_pads_key = str(hunt.zones)
+	var before := get_child_count()
 	var posts := SurfaceTool.new()
 	posts.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var tips := SurfaceTool.new()
@@ -405,16 +445,8 @@ func _build_static(hunt: HuntRules) -> void:
 		tip_mi.material_override = _glow(OWN, 1.0, 3.0)
 		tip_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(tip_mi)
-	if hunt.trap != Vector3.INF:
-		_trap = MeshInstance3D.new()
-		var disc := CylinderMesh.new()
-		disc.top_radius = 0.6
-		disc.bottom_radius = 0.7
-		disc.height = 0.08
-		_trap.mesh = disc
-		_trap.position = hunt.trap + Vector3(0, 0.05, 0)
-		_trap.material_override = _glow(ALARM, 1.0, 3.0)
-		add_child(_trap)
+	for i in range(before, get_child_count()):
+		_pad_nodes.append(get_child(i))
 	RenderLayers.mark_dynamic(self)
 
 

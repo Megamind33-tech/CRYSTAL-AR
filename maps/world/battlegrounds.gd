@@ -131,10 +131,12 @@ static func _layout(id: String) -> Dictionary:
 	var c: Vector2 = s[1]
 	var r: float = s[2]
 	var spots: Array[Vector3] = []
+	# The mining: in no man's land between the camps (inner rings), so a
+	# load has to be carried home across open ground to your camp's pad.
 	for k in 8:
-		spots.append(_place(c, r * 0.4, k * TAU / 8.0 + 0.2))
+		spots.append(_place(c, r * 0.22, k * TAU / 8.0 + 0.2))
 	for k in 8:
-		spots.append(_place(c, r * 0.75, k * TAU / 8.0 + 0.6))
+		spots.append(_place(c, r * 0.5, k * TAU / 8.0 + 0.6))
 	var zones: Array[Vector3] = []
 	for k in 3:
 		zones.append(_place(c, r * 1.05, k * TAU / 3.0 + 0.9))

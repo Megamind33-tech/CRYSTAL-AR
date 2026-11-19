@@ -2169,7 +2169,8 @@ func _send_kit() -> void:
 	var roles := ",".join(PackedStringArray(c.squad_deploy()))
 	Profile.save()  # the squad's pay left the wallet
 	Log.i("match", "online: bringing army %s, squad [%s]" % [",".join(parts), roles])
-	hunt_menu.request.call("bring_kit", {"army": ",".join(parts), "roles": roles})
+	hunt_menu.request.call("bring_kit", {"army": ",".join(parts), "roles": roles,
+			"plan": Career.SPONSORED_PLAN if c.sponsored() else ""})
 
 
 ## A squad order's mark and point: on a client the host works the mark out
@@ -2303,6 +2304,12 @@ func _bring_squad() -> void:
 	if server.world.hunt.squad.form(server.world, ServerSession.LOCAL_PLAYER_ID, roles):
 		Profile.save()
 		_kill_feed.add_note("", tr("SQUAD_FEED_DEPLOYS") % roles.size(), HuntHud.ALLY, true)
+		if Profile.career().sponsored():
+			# A recruit's government squad: never alone, never without a plan.
+			server.world.hunt.request(server.world, ServerSession.LOCAL_PLAYER_ID, "squad_strategy",
+					{"strategy": Career.SPONSORED_PLAN})
+			_hunt_banner("SQUAD_SPONSORED", tr("SQUAD_SPONSORED_SUB") % Nations.display_name(Profile.career().nation()),
+					HuntHud.ALLY)
 
 
 ## After a deployment's results: back to Tharsis Gate (once).

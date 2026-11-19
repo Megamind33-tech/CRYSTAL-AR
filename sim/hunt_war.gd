@@ -144,6 +144,7 @@ func start(world: SimWorld, hunt: HuntRules) -> void:
 	if (objective == Objective.CONVOY or objective == Objective.LAST_STANDING) and sides.size() < 2:
 		objective = Objective.EXTRACT
 	builds.start(world, self)
+	camp_pads(world, hunt)
 	next_drop_tick = world.tick + DROP_EVERY / 3
 	match objective:
 		Objective.CONVOY:
@@ -446,6 +447,28 @@ func _step_territory(world: SimWorld, hunt: HuntRules, ids: Array) -> void:
 
 # --- Duels and four-way wars; alliances between sides ---
 
+## Each camp owns its extraction pad, inside its walls on the gate side:
+## mining is out in no man's land, and what you mine goes home to your camp
+## to be extracted (rivals can't use your pad: they must take your camp).
+const PAD_RADIUS := 11.5
+
+
+func camp_pads(world: SimWorld, hunt: HuntRules) -> void:
+	if camps.is_empty():
+		return
+	var pads: Array[Vector3] = []
+	var sides := []
+	for c in camps:
+		var to_mid := point - c.at
+		var a := atan2(to_mid.z, to_mid.x) if Vector2(to_mid.x, to_mid.z).length() > 0.1 else 0.0
+		var at := c.at + Vector3(cos(a), 0.0, sin(a)) * PAD_RADIUS
+		pads.append(hunt._floor_at(world, at + Vector3.UP * 2.0))
+		sides.append(c.side)
+	hunt.zones = pads
+	hunt.zone_sides = sides
+	hunt.final_zone = -1
+
+
 ## Someone joined after the war began (online) and their side has no camp:
 ## a free camp spot becomes theirs, else they join the side with fewest.
 func _seat_late(world: SimWorld, hunt: HuntRules, ids: Array) -> void:
@@ -460,6 +483,7 @@ func _seat_late(world: SimWorld, hunt: HuntRules, ids: Array) -> void:
 			c.at = camp_spots[camps.size()]
 			camps.append(c)
 			builds._plots(self)
+			camp_pads(world, hunt)
 			if objective == Objective.LAST_STANDING:
 				lives[c.side] = SIDE_LIVES
 			continue

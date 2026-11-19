@@ -472,7 +472,7 @@ func _hunt_objective(p: SimPlayer) -> Vector3:
 	if best != Vector3.INF:
 		return best
 	if late:
-		return h.nearest_zone(at, tick) if secs_left > HUNT_LAST_CAMP_SECONDS else Vector3.INF
+		return h.nearest_zone(at, tick, _id) if secs_left > HUNT_LAST_CAMP_SECONDS else Vector3.INF
 	if grand != null and grand.carrier != 0 and grand.carrier != _id:
 		var c: SimPlayer = _world.players.get(grand.carrier)
 		if c != null and h.is_revealed(grand.carrier, _world.tick):
@@ -696,7 +696,7 @@ func _hunt_contracts(p: SimPlayer) -> void:
 ## Last Extraction: whether a treasure at `item` can still reach an open pad
 ## before the bell (running speed, plus the extraction time and a margin).
 func _can_bank_in_time(at: Vector3, item: Vector3, secs_left: float, tick: int) -> bool:
-	var zone := _world.hunt.nearest_zone(item, tick + int(secs_left * Sim.TICK_RATE * 0.5))
+	var zone := _world.hunt.nearest_zone(item, tick + int(secs_left * Sim.TICK_RATE * 0.5), _id)
 	if zone == Vector3.INF:
 		return false
 	var metres := at.distance_to(item) + item.distance_to(zone)
@@ -961,7 +961,7 @@ func _patient(p: SimPlayer, target: Vector3) -> Vector3:
 func _reachable_zone(h: HuntRules, at: Vector3, tick: int) -> Vector3:
 	var best := Vector3.INF
 	for i in h.zones.size():
-		if not h.zone_open(i, tick) or int(_blocked_zones.get(i, -1)) > tick:
+		if not h.zone_open(i, tick) or int(_blocked_zones.get(i, -1)) > tick or not h.may_use_zone(i, _id):
 			continue
 		if best == Vector3.INF or at.distance_squared_to(h.zones[i]) < at.distance_squared_to(best):
 			best = h.zones[i]

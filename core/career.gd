@@ -1958,7 +1958,26 @@ func squad_remove(i: int) -> bool:
 
 
 ## The squad that can deploy now: as many as the wallet pays for, paid.
+## A recruit (the first rank) who serves a nation never deploys alone: the
+## government sends a squad with them, free, on a plan, until they're
+## promoted. Their own squad (if they hired one) comes too, paid as usual.
+const SPONSORED_SQUAD := ["gunner", "medic", "scout"]
+const SPONSORED_PLAN := "bodyguard"
+
+
+func sponsored() -> bool:
+	return rank() == 0 and not nation_id().is_empty()
+
+
 func squad_deploy() -> Array:
+	if sponsored():
+		var roles := SPONSORED_SQUAD.duplicate()
+		for r: String in d.team:  # their own hires join the sponsored ones (up to a full squad)
+			if roles.size() >= HuntSquad.MAX_SIZE or d.wallet < SQUAD_COST:
+				break
+			d.wallet -= SQUAD_COST
+			roles.append(r)
+		return roles
 	var out := []
 	for r: String in d.team:
 		if d.wallet < SQUAD_COST:

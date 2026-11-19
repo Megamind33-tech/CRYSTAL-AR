@@ -111,6 +111,10 @@ class Treasure:
 
 var spots: Array[Vector3] = []
 var zones: Array[Vector3] = []
+## In a war each camp owns its pad (HuntWar.camp_pads): zone_sides[i] is
+## the side that may extract at zones[i]. Empty: every pad is everyone's.
+var zone_sides: Array = []
+var _map_zones: Array[Vector3] = []  ## the map's own pads (outside wars)
 var vault := Vector3.ZERO
 var trap := Vector3.INF  ## Vector3.INF: the map has no trap
 var trap_rearm_tick: int = 0  ## 0 = armed
@@ -178,6 +182,7 @@ var _next_id: int = 1
 func configure(map: Dictionary, seed_value: int) -> void:
 	spots.assign(map.get("treasure_spots", []))
 	zones.assign(map.get("extraction_zones", []))
+	_map_zones = zones.duplicate()
 	vault = map.get("vault", Vector3.ZERO)
 	trap = map.get("trap", Vector3.INF)
 	pit_rules = bool(map.get("pit_rules", false))
@@ -206,6 +211,8 @@ func reset(world: SimWorld) -> void:
 	brought.clear()
 	end_tick = 0
 	final_zone = -1
+	zones = _map_zones.duplicate()
+	zone_sides.clear()
 	_announced = 0
 	social.reset(world.match_seed)
 	trap_rearm_tick = 0
@@ -415,10 +422,10 @@ func step(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 			else:
 				_drop(world, c)
 			continue
-		if _in_zone(c.state.position, tick):
+		if _in_zone(c.state.position, tick, c.net_id):
 			# An extraction machine of yours at the pad (HuntArmy): faster; in a
 			# war a heavy load (the relic, resources) goes out only beside one.
-			var boost := army.extraction_boost(world, self, c.net_id, nearest_zone(c.state.position, tick))
+			var boost := army.extraction_boost(world, self, c.net_id, nearest_zone(c.state.position, tick, c.net_id))
 			if war.blocks_extract(t):
 				continue  # a King war: the relic stays in play
 			if war.enabled and _heavy(t) and boost == 0:
@@ -516,12 +523,15 @@ func is_revealed(net_id: int, tick: int) -> bool:
 	return revealed_until.get(net_id, 0) > tick
 
 
-## The nearest extraction pad still open at `tick` (-1: ignore closures).
-func nearest_zone(from: Vector3, tick: int = -1) -> Vector3:
+## The nearest extraction pad still open at `tick` (-1: ignore closures)
+## that `who` may use (in a war: their own camp's; 0: any).
+func nearest_zone(from: Vector3, tick: int = -1, who: int = 0) -> Vector3:
 	var best := Vector3.INF
 	for i in zones.size():
 		var z := zones[i]
 		if tick >= 0 and not zone_open(i, tick):
+			continue
+		if not may_use_zone(i, who):
 			continue
 		if best == Vector3.INF or from.distance_squared_to(z) < from.distance_squared_to(best):
 			best = z
@@ -724,7 +734,16 @@ func vault_ticks() -> int:
 	return VAULT_UNLOCK_TICKS / 2 if pit_rules and pit_rule == PitRule.HOT_VAULT else VAULT_UNLOCK_TICKS
 
 
+## Whether `who` may extract at pad `i`: in a war only at their own camp's.
+func may_use_zone(i: int, who: int) -> bool:
+	if zone_sides.is_empty() or who == 0 or i >= zone_sides.size():
+		return true
+	return int(zone_sides[i]) == war.side_of(self, who) or war.sides_allied(int(zone_sides[i]), war.side_of(self, who))
+
+
 func zone_open(i: int, tick: int) -> bool:
+	if not zone_sides.is_empty():
+		return true  # every camp's pad works till the end (each side has its one)
 	if pit_rules and pit_rule == PitRule.ONE_PAD and final_zone >= 0:
 		return i == final_zone  # the cave-in: the one pad that works
 	if end_tick <= 0 or tick < end_tick - LAST_EXTRACTION_TICKS:
@@ -752,7 +771,7 @@ func _step_last_extraction(world: SimWorld) -> void:
 		_announced = 2
 		for id: int in extract_progress.keys():
 			var c: SimPlayer = world.players.get(id)
-			if c == null or not _in_zone(c.state.position, tick):
+			if c == null or not _in_zone(c.state.position, tick, c.net_id):
 				extract_progress.erase(id)  # its pad just closed
 		world._emit("hl:%d" % tick, "hunt", {"action": "last_extraction", "player": 0, "treasure": 0, "kind": -1,
 				"position": zones[final_zone], "zone": final_zone})
@@ -830,7 +849,8 @@ func field_state(world: SimWorld) -> Dictionary:
 	var cs := []
 	for c in army.calls:
 		cs.append([c.unit, c.owner, c.nation, c.at, c.from, c.start_tick, c.end_tick, c.offset, c.level])
-	return {"t": ts, "calls": cs, "end": end_tick, "final": final_zone, "trap": trap_rearm_tick}
+	return {"t": ts, "calls": cs, "end": end_tick, "final": final_zone, "trap": trap_rearm_tick, "zones": zones,
+			"zsides": zone_sides}
 
 
 var _mirror_calls: Dictionary = {}  ## a client's mirror: "owner:start:offset" -> Call (stable for the visuals)
@@ -839,6 +859,13 @@ var _mirror_calls: Dictionary = {}  ## a client's mirror: "owner:start:offset" -
 ## A client's mirror: the host's field (field_state). Bad data is ignored.
 func apply_field(d: Dictionary) -> void:
 	end_tick = int(d.get("end", end_tick))
+	if d.get("zones") is Array:
+		var zs: Array[Vector3] = []
+		for z: Variant in (d.zones as Array).slice(0, 8):
+			if z is Vector3:
+				zs.append(z)
+		zones = zs
+	zone_sides = (d.get("zsides") as Array).slice(0, 8) if d.get("zsides") is Array else []
 	final_zone = int(d.get("final", -1))
 	trap_rearm_tick = int(d.get("trap", 0))
 	var keep: Array[Treasure] = []
@@ -1013,7 +1040,10 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 		"merc_order":
 			return economy.order(world, hunter, str(args.get("order", "")))
 		"bring_kit":
-			return bring_kit(world, hunter, str(args.get("army", "")), str(args.get("roles", "")))
+			var ok := bring_kit(world, hunter, str(args.get("army", "")), str(args.get("roles", "")))
+			if ok and HuntSquad.STRATEGY_IDS.has(str(args.get("plan", ""))) and squad.squad_of(hunter) != null:
+				squad.set_strategy(world, hunter, str(args.plan), _plan_places(world, hunter))
+			return ok
 		"squad_invite":
 			return squad.invite(world, self, hunter, int(args.get("target", 0)))
 		"squad_answer":
@@ -1353,7 +1383,7 @@ func _step_holds(world: SimWorld, ids: Array, interacting: Dictionary) -> void:
 		var d: SimPlayer = world.players.get(v.driver)
 		if d == null or carried_by(v.driver) != null:
 			continue  # (a carrier extracts by the usual count)
-		if _in_zone(v.position, world.tick):
+		if _in_zone(v.position, world.tick, v.driver):
 			var ticks: int = extract_progress.get(v.driver, 0) + 1 + army.extraction_boost(world, self, v.driver, v.position)
 			extract_progress[v.driver] = ticks
 			if ticks >= EXTRACT_TICKS:
@@ -1436,9 +1466,11 @@ func loot_item(t: Treasure, hunter: int) -> String:
 	return "cargo_case" if t.owner == hunter else "stolen_cargo"
 
 
-func _in_zone(pos: Vector3, tick: int = -1) -> bool:
+func _in_zone(pos: Vector3, tick: int = -1, who: int = 0) -> bool:
 	for i in zones.size():
 		if tick >= 0 and not zone_open(i, tick):
+			continue
+		if not may_use_zone(i, who):
 			continue
 		var z := zones[i]
 		var d := pos - z

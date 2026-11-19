@@ -233,8 +233,8 @@ func _draw_radar(world: SimWorld, h: HuntRules, me: SimPlayer, yaw: float) -> vo
 	var carrying := h.carried_by(me_id) != null
 	for i in h.zones.size():
 		var open := h.zone_open(i, tick)
-		if not open:
-			continue
+		if not open or not h.may_use_zone(i, me_id):
+			continue  # (in a war only your camp's pad is yours)
 		_blip(h.zones[i] - pos, yaw, "pad", PAD if carrying else Color(PAD, 0.55), carrying or h.final_phase(tick))
 	# The vault.
 	_blip(h.vault - pos, yaw, "vault", Color(GRAND, 0.8), false)
@@ -450,7 +450,7 @@ func _draw_compass(h: HuntRules, me: SimPlayer, yaw: float, tick: int) -> void:
 	var target := Vector3.INF
 	var col := ComicUI.PAPER
 	if h.carried_by(me.net_id) != null:
-		target = h.nearest_zone(pos, tick)
+		target = h.nearest_zone(pos, tick, me.net_id)
 		col = PAD
 	else:
 		var best := INF

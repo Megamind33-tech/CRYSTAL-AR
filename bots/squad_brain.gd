@@ -40,7 +40,7 @@ func _choose_goal(tick: int, p: SimPlayer) -> void:
 	# Carrying the leader's cargo: to a pad, whatever else is going on.
 	if h.carried_by(_id) != null:
 		target_id = 0
-		_set_objective(h.nearest_zone(p.state.position, tick))
+		_set_objective(h.nearest_zone(p.state.position, tick, _id))
 		return
 	var target: SimPlayer = _world.players.get(target_id)
 	if target != null and (h.friendly(_id, target_id) or target_id == employer):
@@ -100,7 +100,7 @@ func _squad_station(tick: int, p: SimPlayer, m: HuntSquad.Member, sq: HuntSquad.
 		SqOrder.HOLD, SqOrder.MOVE:
 			spot = m.hold_at
 		SqOrder.GUARD_PAD:
-			spot = _ring(h.nearest_zone(lead, tick), PAD_RING, m.slot, sq.members.size(), 0.0)
+			spot = _ring(h.nearest_zone(lead, tick, employer), PAD_RING, m.slot, sq.members.size(), 0.0)
 		SqOrder.ESCORT:
 			spot = _ring(lead, 2.2, m.slot, sq.members.size(), boss.state.yaw)
 		SqOrder.FETCH:

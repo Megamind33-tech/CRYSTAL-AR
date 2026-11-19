@@ -533,3 +533,41 @@ func test_new_units_act() -> void:
 	assert_true(h.request(world, 1, "call_unit", {"unit": "nightwing", "target": sock}), "Vesper's own")
 	h.army.calls = h.army.calls.filter(func(c: HuntArmy.Call) -> bool: return c.unit == "nightwing")
 	assert_false(h.army.shoot_air(world, h, 2, sock + Vector3(0, 30, 0), 500.0, 50.0), "flak can't see the Nightwing")
+
+
+## Each camp owns its pad: you extract at yours, never at a rival's; the
+## mining is out in no man's land between the camps.
+func test_camps_own_their_extraction() -> void:
+	for i in 2:
+		var c := HuntWar.Camp.new()
+		c.side = h.war.side_of(h, i + 1)
+		c.at = CAMPS[i]
+		h.war.camps.append(c)
+	h.war.camp_pads(world, h)
+	assert_eq(h.zones.size(), 2, "one pad per camp")
+	assert_true(h.may_use_zone(0, 1), "yours")
+	assert_false(h.may_use_zone(1, 1), "not a rival's")
+	assert_true(h.may_use_zone(1, 2))
+	assert_lt(h.zones[0].distance_to(CAMPS[0]), HuntCamps.WALL_RADIUS, "inside your walls")
+	assert_eq(h.nearest_zone(CAMPS[1], -1, 1), h.zones[0], "you head home, even from beside a rival's pad")
+	for id: String in Battlegrounds.IDS:
+		if id == "rustwood" or id == "deep_furrow":
+			continue
+		var d := Battlegrounds.hunt_data(id)
+		var mid: Vector3 = d.war_point
+		var nearest_camp := INF
+		for c: Vector3 in d.war_camps:
+			nearest_camp = minf(nearest_camp, Vector2(c.x - mid.x, c.z - mid.z).length())
+		for s: Vector3 in d.treasure_spots:
+			assert_lt(Vector2(s.x - mid.x, s.z - mid.z).length(), nearest_camp * 0.75, "%s: mining in no man's land" % id)
+
+
+func test_recruits_never_deploy_alone() -> void:
+	var c := Career.new()
+	c.d.war_xp = 0
+	c.d.nation = "halden"
+	assert_eq(c.nation_id(), "halden")
+	assert_true(c.sponsored(), "a recruit who serves a nation")
+	assert_eq(c.squad_deploy(), Career.SPONSORED_SQUAD, "a government squad, free")
+	c.d.war_xp = 99999
+	assert_false(c.sponsored(), "promoted: on their own terms")
