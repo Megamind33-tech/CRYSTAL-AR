@@ -16,10 +16,11 @@ const SITES := [
 	["outback", Vector2(320, 390), 95.0],
 	["sinlap", Vector2(-445, 330), 90.0],
 	["north_dunes", Vector2(250, -455), 70.0],
-	["anvil", Vector2(-330, -380), 75.0],
-	["wreck_field", Vector2(-500, -60), 80.0],
+	["anvil", Vector2(-180, -250), 26.0],  # on the Anvil's flat top
+	["wreck_field", Vector2(-340, -40), 70.0],
+	["deep_furrow", Vector2.ZERO, 0.0],  # underground: hand-placed in the farm's halls
 ]
-const IDS := ["rustwood", "crater", "far_mesa", "outback", "sinlap", "north_dunes", "anvil", "wreck_field"]
+const IDS := ["rustwood", "crater", "far_mesa", "outback", "sinlap", "north_dunes", "anvil", "wreck_field", "deep_furrow"]
 ## The site the coming run is fought at (the match sets it before the world
 ## loads: the gameplay scene, the navigation and the spawns read it).
 static var current: String = "rustwood"
@@ -47,18 +48,24 @@ static func hunt_data(id: String = current) -> Dictionary:
 				WorldTerrain.at(260.0, 232.0)]
 		d["war"] = true
 		return d
+	if id == "deep_furrow":
+		return _furrow().data
 	return _layout(id).data
 
 
 static func spawns(id: String = current) -> Array[Transform3D]:
 	if id == "rustwood":
 		return WorldLayout.dig_spawns()
+	if id == "deep_furrow":
+		return _furrow().spawns
 	return _layout(id).spawns
 
 
 static func pickups(id: String = current) -> Array:
 	if id == "rustwood":
 		return WorldLayout.dig_pickups()
+	if id == "deep_furrow":
+		return _furrow().pickups
 	return _layout(id).pickups
 
 
@@ -73,10 +80,45 @@ static func arrival(id: String = current) -> Vector3:
 static func nav_area(id: String = current) -> AABB:
 	if id == "rustwood":
 		return WorldLayout.dig_nav_area()
+	if id == "deep_furrow":
+		return WorldLayout.farm_nav_area()
 	var s := site(id)
 	var c: Vector2 = s[1]
 	var r: float = float(s[2]) + 45.0
 	return AABB(Vector3(c.x - r, -60.0, c.y - r), Vector3(r * 2.0, 160.0, r * 2.0))
+
+
+## Deep Furrow, 200 m under the Anvil: a close-quarters duel in the farm's
+## long hall. Cargo among the beds, pads at both ends and the middle, a camp
+## in each corner; you come down the lift (its bottom is the arrival).
+static func _furrow() -> Dictionary:
+	if _cache.has("deep_furrow"):
+		return _cache["deep_furrow"]
+	var o := WorldLayout.farm_origin()
+	var f := func(x: float, z: float) -> Vector3: return o + Vector3(x, 0.0, z)
+	var spots: Array[Vector3] = []
+	for z in [-24.0, -14.0, -4.0, 6.0]:
+		spots.append(f.call(-4.0, z))
+		spots.append(f.call(4.0, z + 4.0))
+	var zones: Array[Vector3] = [f.call(0.0, -28.0), f.call(0.0, 2.0), f.call(0.0, 30.0)]
+	var camps: Array[Vector3] = [f.call(-8.0, -27.0), f.call(8.0, -27.0), f.call(-8.0, 31.0), f.call(8.0, 31.0)]
+	var spawn_list: Array[Transform3D] = []
+	for camp in camps:
+		for k in 2:
+			var at: Vector3 = camp + Vector3(0.0, 0.3, (2.0 if k == 0 else -2.0) * signf(camp.z - o.z) * -1.0)
+			var face := 0.0 if camp.z > o.z else PI
+			spawn_list.append(Transform3D(Basis(Vector3.UP, face), at))
+	var out := {
+		"data": {"treasure_spots": spots, "extraction_zones": zones, "vault": f.call(0.0, -10.0), "pit_rules": true,
+				"war": true, "duel": true, "war_point": f.call(0.0, 0.0), "war_camps": camps},
+		"spawns": spawn_list,
+		"pickups": [
+			{"weapon": &"mag_pistol", "position": spots[2], "respawn_ticks": 2400},
+			{"weapon": &"grenade", "position": spots[5], "respawn_ticks": 1800},
+		],
+	}
+	_cache["deep_furrow"] = out
+	return out
 
 
 ## The site laid out: rings of cargo spots, pads further out, camps furthest,

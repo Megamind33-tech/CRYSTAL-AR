@@ -76,9 +76,12 @@ stays, and grows alongside.
 7. Campaign: `Career.d.territory` maps each site to a nation. The winning
    nation of a war takes the site, an AI nation takes another, and every site
    your nation holds pays $80 a run. Shown at the army depot. **Done.**
-8. More battlegrounds: the Anvil's top and the wreck field join the rotation
-   (8 sites). **Deep Furrow underground is not done yet:** the halls need
-   their own site data (spots, pads and camps under the farm).
+8. More battlegrounds: the Anvil's flat top, the wreck field (open ground
+   between Galleria and Skyport) and Deep Furrow underground: a duel in the
+   farm's long hall (cargo among the beds, pads at both ends and the middle,
+   a camp in each corner, breathable air). 9 sites in the rotation, each
+   checked in a rendered run. **Done.** Note: army aircraft can still be
+   called at Deep Furrow; they fly above the ground, not in the hall.
 
 ## Keep and grow (the other ways to play)
 

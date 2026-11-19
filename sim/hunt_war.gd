@@ -84,12 +84,15 @@ var builds := HuntCamps.new()  ## what the sides build at their camps
 var _rng := RandomNumberGenerator.new()
 ## Tools and screenshots: every run gets this objective (-1: rolled).
 static var force_objective: int = -1
+## The site is too tight for four nations (Deep Furrow): always a duel.
+var always_duel := false
 
 
 func configure(map: Dictionary) -> void:
 	enabled = bool(map.get("war", false))
 	point = map.get("war_point", Vector3.ZERO)
 	camp_spots.assign(map.get("war_camps", []))
+	always_duel = bool(map.get("duel", false))
 
 
 ## A new run: roll the objective (from the match seed, on its own stream)

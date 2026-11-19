@@ -133,6 +133,8 @@ func _ready() -> void:
 	if config.map == GameMode.CITY_MAP:
 		Survival.air_zones.append(Vector3(CityLayout.ORIGIN.x, CityLayout.ORIGIN.z, 72.0))  # the city's dome
 		Survival.air_boxes.append(WorldLayout.farm_air())  # Deep Furrow
+	elif Battlegrounds.current == "deep_furrow":  # a run in the farm's halls: breathable
+		Survival.air_boxes.append(WorldLayout.farm_air())
 	pickups.spots = gameplay.pickup_spots()
 	_flag_bases = gameplay.flag_bases() if gameplay.has_method("flag_bases") else []
 	if gameplay.has_method("jump_pads"):

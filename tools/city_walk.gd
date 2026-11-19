@@ -1291,7 +1291,19 @@ func _dig_run(me: SimPlayer) -> void:
 		print("CITY WALK: site %s, objective %s, camps %d" % [Battlegrounds.current, HuntWar.IDS[hr.war.objective], hr.war.camps.size()])
 		var s := Battlegrounds.site(Battlegrounds.current)
 		var c: Vector2 = s[1]
-		await _aerial("w_site_" + Battlegrounds.current, c, Vector3(0, 170, 150))
+		if Battlegrounds.current == "deep_furrow":  # underground: a view down the hall
+			var cam := Camera3D.new()
+			add_child(cam)
+			var o := WorldLayout.farm_origin()
+			cam.position = o + Vector3(0, 6, 34)
+			cam.look_at(o + Vector3(0, 0, -20))
+			cam.current = true
+			m.hud.visible = false
+			await _frames(40)
+			await _shot("w_site_deep_furrow")
+		else:
+			var high := Battlegrounds.current == "anvil"  # a mesa top: closer, or the haze hides it
+			await _aerial("w_site_" + Battlegrounds.current, c, Vector3(0, 55, 70) if high else Vector3(0, 170, 150))
 		if Platform.user_args.has("--aa"):
 			# Air defence at work: your camp's flak and aegis against a rival's
 			# gunship and drone; a tank of yours beside them.

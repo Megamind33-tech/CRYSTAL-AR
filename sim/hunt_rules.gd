@@ -238,7 +238,7 @@ func _seat_nations(world: SimWorld, ids: Array) -> void:
 	nations = Nations.seat(hunters, home_nations, world.match_seed)
 	# A war is a duel (two nations) or a four-way war: in a duel the AI are
 	# seated with you or with one rival nation.
-	if war.enabled and HuntWar.duel_for(world.match_seed):
+	if war.enabled and (war.always_duel or HuntWar.duel_for(world.match_seed)):
 		var mine := -1
 		for id: int in hunters:
 			if home_nations.has(id):
