@@ -379,6 +379,8 @@ func _start() -> void:
 func _on_started(settings: Dictionary) -> void:
 	config.map = settings.map
 	config.game_mode = settings.mode
+	if config.game_mode == GameMode.HUNT:
+		config.map = GameMode.HUNT_MAP  # THE HUNT is fought on its own map, host and members alike
 	config.minutes = settings.minutes
 	config.bots = session.bots
 	config.bot_difficulty = session.bot_difficulty

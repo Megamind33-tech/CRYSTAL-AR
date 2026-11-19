@@ -147,6 +147,14 @@ class Reader:
 	func vel() -> Vector3:
 		return Vector3(i16() / VEL_SCALE, i16() / VEL_SCALE, i16() / VEL_SCALE)
 
+	## `n` raw bytes.
+	func raw(n: int) -> PackedByteArray:
+		if n < 0 or not _need(n):
+			ok = false
+			return PackedByteArray()
+		_p += n
+		return _d.slice(_p - n, _p)
+
 	func str8(max_len: int = 255) -> String:
 		var n := u8()
 		if n > max_len or not _need(n):

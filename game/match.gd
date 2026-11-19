@@ -1382,6 +1382,8 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 
 ## Informant: our newest report of `kind`, in words (with its confidence).
 func _intel_text(kind: String) -> String:
+	if server == null or server.world.hunt == null:
+		return ""
 	var h := server.world.hunt
 	for r: Dictionary in h.economy.intel_of(local_id(), server.world.tick):
 		if r.kind != kind:
@@ -1622,7 +1624,8 @@ func _on_local_death(e: Dictionary) -> void:
 	if lost.items.is_empty() and lost.gear.is_empty():
 		return
 	config.primary = 0
-	server.set_primary(local_id(), 0)  # your nation re-issues the Pulse
+	if server != null:
+		server.set_primary(local_id(), 0)  # your nation re-issues the Pulse
 	Profile.save()
 	var n := 0
 	for k: String in lost.items:
@@ -1765,7 +1768,7 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			return
 		"unit_called":
 			_kill_feed.add_note(_display_name(int(e.player)), tr("ARMY_FEED_CALLED") % tr("UNIT_" + str(e.unit).to_upper()),
-					HuntHud.ALLY if h_side_is_mine(server.world.hunt.war.side_of(server.world.hunt, int(e.player))) else UiStyle.WARN)
+					HuntHud.ALLY if _player_on_my_side(int(e.player)) else UiStyle.WARN)
 			return
 		"jet_strike":
 			return
@@ -1787,13 +1790,13 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			effects.explosion(e.position + Vector3(0, 1.5, 0), 7.0)
 			audio.play_at("explosion", e.position, "World", 3)
 			_kill_feed.add_note(_display_name(int(e.player)), tr("ARMY_FEED_DESTROYED") % tr("UNIT_" + str(e.unit).to_upper()),
-					HuntHud.ALLY if h_side_is_mine(server.world.hunt.war.side_of(server.world.hunt, int(e.player))) else UiStyle.WARN)
+					HuntHud.ALLY if _player_on_my_side(int(e.player)) else UiStyle.WARN)
 			return
 		"unit_downed":
 			effects.explosion(e.position, 5.0 if str(e.unit) in HuntArmy.JETS or str(e.unit) == "gunship" else 2.5)
 			audio.play_at("explosion", e.position, "World", 3)
 			_kill_feed.add_note(_display_name(int(e.player)), tr("ARMY_FEED_DOWNED") % tr("UNIT_" + str(e.unit).to_upper()),
-					HuntHud.ALLY if h_side_is_mine(server.world.hunt.war.side_of(server.world.hunt, int(e.player))) else UiStyle.WARN)
+					HuntHud.ALLY if _player_on_my_side(int(e.player)) else UiStyle.WARN)
 			return
 		"camp_built":
 			if h_side_is_mine(int(e.side)):
@@ -1984,6 +1987,12 @@ func _bring_companion() -> void:
 func h_side_is_mine(side: int) -> bool:
 	var h: HuntRules = server.world.hunt if server != null else null
 	return h != null and h.war.side_of(h, local_id()) == side
+
+
+## Whether `id` fights on your side (false on a client: the war is host-side).
+func _player_on_my_side(id: int) -> bool:
+	var h: HuntRules = server.world.hunt if server != null else null
+	return h != null and h.war.side_of(h, id) == h.war.side_of(h, local_id())
 
 
 ## A war side's name: its nation, else the hunter.
@@ -2234,7 +2243,7 @@ func _visual_for(id: int, display_name: String, is_bot: bool, character: int, co
 	if nation != Nations.NONE:
 		v.nameplate_color = Nations.color(nation).lightened(0.25)
 		v.nameplate_nation = nation
-		v.nameplate_squad = id != local_id() and server.world.hunt.social.allied(local_id(), id)
+		v.nameplate_squad = id != local_id() and server != null and server.world.hunt != null and server.world.hunt.social.allied(local_id(), id)
 	return v
 
 

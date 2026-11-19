@@ -369,6 +369,8 @@ func _handle_message(_id: int, data: PackedByteArray) -> void:
 		Protocol.Msg.EVENT:
 			var e := Protocol.decode_event_message(data)
 			if not e.is_empty():
+				if e.type == "hunt":
+					Log.d("client", "hunt event %s" % e.get("action", ""))
 				_events.append(e)
 
 

@@ -31,7 +31,9 @@ const MAX_NAME_BYTES := 48
 const MAX_RESULT_ROWS := 32
 
 
-enum Event { FIRE = 1, EXPLOSION = 2, HIT = 3, DEATH = 4, SPAWN = 5, PICKUP = 6, FLAG = 7, WAVE = 8 }
+## The largest HUNT event sent (bytes); bigger ones stay on the host.
+const MAX_HUNT_EVENT := 4096
+enum Event { FIRE = 1, EXPLOSION = 2, HIT = 3, DEATH = 4, SPAWN = 5, PICKUP = 6, FLAG = 7, WAVE = 8, HUNT = 9 }
 
 
 ## Weapon wire index (Weapons.ALL order).
@@ -370,6 +372,13 @@ static func write_event(w: Wire.Writer, e: Dictionary) -> bool:
 		"wave":
 			w.u8(Event.WAVE).u8(0 if e.action == "start" else 1).u8(mini(e.wave, 255)).u32(e.tick) \
 					.u8(mini(e.get("enemies", 0), 255))
+		"hunt":
+			# THE HUNT's events are many and varied (pits, wars, camps, army,
+			# squads): sent whole, as plain data (never objects).
+			var data := var_to_bytes(e)
+			if data.size() > MAX_HUNT_EVENT:
+				return false
+			w.u8(Event.HUNT).u16(data.size()).bytes(data)
 		_:
 			return false
 	return true
@@ -464,6 +473,16 @@ static func read_event(r: Wire.Reader) -> Dictionary:
 			var tick := r.u32()
 			return {"type": "wave", "id": "w:%d:%d" % [wave, tick], "action": "cleared" if cleared else "start",
 					"wave": wave, "tick": tick, "enemies": r.u8()}
+		Event.HUNT:
+			var n := r.u16()
+			if n < 4 or n > MAX_HUNT_EVENT:
+				r.ok = false
+				return {}
+			var v: Variant = bytes_to_var(r.raw(n))  # refuses objects
+			if not r.ok or not v is Dictionary or str((v as Dictionary).get("type", "")) != "hunt":
+				r.ok = false
+				return {}
+			return v
 	r.ok = false
 	return {}
 

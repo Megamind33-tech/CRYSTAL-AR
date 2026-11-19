@@ -128,14 +128,12 @@ static func make(p_mode: int, p_name: String, p_bots: int = 0, p_address: String
 	if not p_address.is_empty():
 		c.address = p_address
 	if c.game_mode == GameMode.HUNT:
-		if p_mode == Mode.OFFLINE:
-			# THE HUNT: its own map, five AI rivals, a 12-minute clock.
-			c.map = GameMode.HUNT_MAP
-			c.minutes = GameMode.HUNT_MINUTES
-			if not Platform.get_user_arg("--bots").is_valid_int():
-				c.bots = GameMode.HUNT_BOTS
-		else:
-			c.game_mode = GameMode.FFA  # not playable over the network yet
+		# THE HUNT: its own map, AI rivals, a 12-minute clock; over the
+		# network too (the host runs it; members get its events).
+		c.map = GameMode.HUNT_MAP
+		c.minutes = GameMode.HUNT_MINUTES
+		if p_mode == Mode.OFFLINE and not Platform.get_user_arg("--bots").is_valid_int():
+			c.bots = GameMode.HUNT_BOTS
 	return c
 
 

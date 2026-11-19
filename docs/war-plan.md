@@ -69,10 +69,20 @@ stays, and grows alongside.
 3. Command upgrades: mark target, map orders, more plans, leader abilities. **Done.**
 4. Match modifiers deck, including players' own JSON mods. **Done.**
 5. Four-way wars and duels, with alliances and betrayals. **Done.**
-6. **Online: not done.** HUNT is still offline only: the network layer
-   doesn't carry its mode yet (`NETWORK_MODE_COUNT`). Human leaders and squad
-   members need HUNT's state (war, camps, army, squads) replicated, and
-   requests sent from clients. This is its own netcode project.
+6. Online, in steps:
+   1. **Done:** the network carries THE HUNT. A host can pick it in the
+      lobby (the city stays single player); everyone loads the hunt map;
+      every HUNT event goes to clients whole (`Protocol.Event.HUNT`, plain
+      data, at most 4 KB, never objects); client-side match code no longer
+      touches the host-only HUNT state. Checked with a headless host and a
+      joined client: 35 events of 14 kinds arrived, no script errors.
+   2. Next: sync the war and camp state to clients (objective, scores,
+      camps and their buildings), so their HUD and visuals show it.
+   3. Clients send their orders (call units, build, squad commands) to the
+      host as requests.
+   4. Human players join a squad.
+   Note: networked runs use the classic hunt map, not the valley's
+   battlegrounds (the site isn't sent yet).
 7. Campaign: `Career.d.territory` maps each site to a nation. The winning
    nation of a war takes the site, an AI nation takes another, and every site
    your nation holds pays $80 a run. Shown at the army depot. **Done.**

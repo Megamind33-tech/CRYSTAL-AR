@@ -11,9 +11,10 @@ const IDS := ["ffa", "tdm", "ctf", "waves", "hunt", "city"]
 const NAME_KEYS := ["MODE_FFA", "MODE_TDM", "MODE_CTF", "MODE_WAVES", "MODE_HUNT", "MODE_CITY"]
 ## Short names for the mode choice buttons.
 const CHIP_KEYS := ["MODE_FFA", "MODE_TDM_SHORT", "MODE_CTF_SHORT", "MODE_WAVES", "MODE_HUNT", "MODE_CITY"]
-## Modes a host can run over the network: THE HUNT is single player in its
-## first milestone (its treasures aren't replicated to clients yet).
-const NETWORK_MODE_COUNT := 4
+## Modes a host can run over the network: THE HUNT joined (its events go to
+## clients; its full state, camps, army and squads, is still host-side).
+## The city stays single player.
+const NETWORK_MODE_COUNT := 5
 ## THE HUNT: five AI rival hunters, a 12-minute match on its own map.
 const HUNT_BOTS := 5
 const HUNT_MINUTES := 12

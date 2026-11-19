@@ -45,3 +45,18 @@ func test_loadout_message_and_hello_primary() -> void:
 	assert_true(Protocol.Msg.LOADOUT in Protocol.CLIENT_MESSAGES)
 	var hello := Protocol.decode_hello(Protocol.encode_hello("c", "b", "u", "Name", 0, 1, 2, 2))
 	assert_eq(hello.primary, 2)
+func test_hunt_events_cross_the_wire() -> void:
+	var e := {"type": "hunt", "id": "hw:12", "tick": 12, "action": "unit_called", "player": 3, "unit": "tank",
+			"position": Vector3(1.5, 2.0, -3.25), "treasure": 0, "kind": -1, "mods": ["low_gravity"]}
+	var back := Protocol.decode_event_message(Protocol.encode_event_message(7, e))
+	assert_eq(back.get("action"), "unit_called")
+	assert_eq(back.get("unit"), "tank")
+	assert_eq(back.get("position"), Vector3(1.5, 2.0, -3.25))
+	assert_eq(back.get("mods"), ["low_gravity"])
+
+
+func test_hunt_event_garbage_is_refused() -> void:
+	var w := Wire.Writer.new().u8(Protocol.Msg.EVENT).u32(7).u8(Protocol.Event.HUNT).u16(3)
+	w.bytes(PackedByteArray([1, 2, 3]))
+	var back := Protocol.decode_event_message(w.data())
+	assert_true(back.is_empty() or back.get("type") != "hunt", "junk never becomes an event")

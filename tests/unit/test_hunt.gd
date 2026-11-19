@@ -262,7 +262,8 @@ func test_human_and_bot_follow_the_same_rules() -> void:
 func test_mode_wiring() -> void:
 	assert_eq(GameMode.IDS[GameMode.HUNT], "hunt")
 	assert_false(GameMode.is_team_mode(GameMode.HUNT), "every hunter for themselves")
-	assert_false(GameMode.networkable(GameMode.HUNT), "single player in this milestone")
+	assert_true(GameMode.networkable(GameMode.HUNT), "a host can run THE HUNT")
+	assert_false(GameMode.networkable(GameMode.CITY), "the city stays single player")
 	assert_gt(GameMode.score_limit(GameMode.HUNT), 100000, "only the clock ends a hunt")
 	assert_eq(GameMode.HUNT_BOTS, 5)
 	assert_eq(GameMode.HUNT_MINUTES, 12)
