@@ -443,6 +443,10 @@ func _physics_process(_delta: float) -> void:
 		commands[id] = hunt_mercs[id].command_for(world.tick, world.get_player(id))
 	var t_sim := Time.get_ticks_usec()
 	world.step(commands, stalled)
+	if networked and world.hunt != null and world.hunt.war.enabled and world.tick % Sim.TICK_RATE == 0:
+		# THE HUNT online: the war and its camps, once a second, to every client.
+		_send_reliable_event({"type": "hunt", "action": "war_state", "id": "hws:%d" % world.tick, "tick": world.tick,
+				"player": 0, "treasure": 0, "kind": -1, "state": world.hunt.war.to_state(world, world.hunt)})
 	last_sim_usec = Time.get_ticks_usec() - t_sim
 	var score_changed := false
 	for e in world.drain_events():

@@ -131,6 +131,9 @@ static func make(p_mode: int, p_name: String, p_bots: int = 0, p_address: String
 		# THE HUNT: its own map, AI rivals, a 12-minute clock; over the
 		# network too (the host runs it; members get its events).
 		c.map = GameMode.HUNT_MAP
+		if p_mode != Mode.OFFLINE:  # online: the valley, at the next battleground
+			Battlegrounds.current = Battlegrounds.for_run(int(Profile.career().d.runs))
+			c.map = Maps.with_site(GameMode.CITY_MAP, Battlegrounds.current)
 		c.minutes = GameMode.HUNT_MINUTES
 		if p_mode == Mode.OFFLINE and not Platform.get_user_arg("--bots").is_valid_int():
 			c.bots = GameMode.HUNT_BOTS

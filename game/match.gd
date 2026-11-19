@@ -37,6 +37,10 @@ var effects := Effects.new()
 var pickups := PickupVisuals.new()
 var flag_visuals := FlagVisuals.new()
 var hunt_visuals := HuntVisuals.new()  ## THE HUNT: treasures, beams, extraction pads
+## THE HUNT online, on a client: the host's war as last sent (HuntWar.apply_state).
+var _war_mirror: HuntRules
+## The map id as announced (with a battleground for THE HUNT online).
+var _map_tag := ""
 var hunt_menu: HuntMenu  ## THE HUNT: the phone (jobs, crew, deals, intel)
 var hunt_hud: HuntHud  ## THE HUNT: radar, cash, wanted stars, mission text, banners
 var city: CityMode  ## THE HUNT: Tharsis Gate (terminals, gate)
@@ -122,6 +126,11 @@ func _ready() -> void:
 	MatchConfig.pending = null
 	if not Maps.has(config.map):
 		config.map = Maps.DEFAULT
+	# THE HUNT online: "city@<site>": the valley, at that battleground.
+	_map_tag = config.map
+	if not Maps.site_of(config.map).is_empty():
+		Battlegrounds.current = Maps.site_of(config.map)
+		config.map = Maps.base(config.map)
 	var load_start := Time.get_ticks_msec()
 	Log.i("match", "starting: %s" % Log.describe(config, ["team_plan", "reconnect_token"]))
 	var gameplay := Maps.gameplay(config.map)
@@ -206,7 +215,7 @@ func _ready() -> void:
 	else:
 		server = ServerSession.new()
 		server.name = "Server"
-		server.map_id = config.map
+		server.map_id = _map_tag
 		if Platform.get_user_arg("--time-limit").is_valid_int():  # dev: short matches
 			server.time_limit_ticks = Platform.get_user_arg("--time-limit").to_int() * Sim.TICK_RATE
 		elif config.minutes > 0:
@@ -351,7 +360,7 @@ func _start_client(token: int) -> bool:
 	add_child(client)
 	client.joined.connect(func() -> void:
 		# Clients load the map before joining (prediction needs its collision).
-		if client.map_id != config.map:
+		if client.map_id != _map_tag:
 			Log.i("match", "the host runs map %s, we loaded %s%s" % [client.map_id, config.map,
 					": reloading with it" if Maps.has(client.map_id) and not config.map_retried else ""])
 			client.leave()
@@ -969,6 +978,9 @@ func _render_client(delta: float) -> void:
 	pickups.sync(client.items, client.spot_ticks)
 	if _game_mode() == GameMode.CTF:
 		flag_visuals.sync(client.flags, _flag_bases, _flag_carrier_at)
+	if _war_mirror != null:  # THE HUNT online: the host's war and camps
+		hunt_visuals.hunt_local_pos = s.position
+		hunt_visuals.sync_war(_war_mirror, client.local_id)
 	_update_pickup_prompt(s, client.items)
 	var server_state := client.server_state if client.server_state != null else s
 	# Health, shield and death come from the server; movement and ammo are predicted.
@@ -1162,8 +1174,59 @@ func _update_objective() -> void:
 			hud.set_objective(tr("WAVES_NEXT") % [w.wave + 1, ceili(w.next / float(Sim.TICK_RATE))], UiStyle.ACCENT)
 	elif mode == GameMode.HUNT and server != null and server.world.hunt != null:
 		_update_hunt_objective(server.world.hunt, server.world.tick)
+	elif mode == GameMode.HUNT and client != null and _war_mirror != null:
+		if not _war_objective(_war_mirror, client.local_id, roundi(client.clock.server_time())):
+			hud.set_objective("")
 	else:
 		hud.set_objective("")
+
+
+## A war's objective line (not plain extraction): true if it set one. Reads
+## the host's war, or on a client the mirror of it.
+func _war_objective(h: HuntRules, me: int, tick: int) -> bool:
+	if not h.war.enabled or h.war.objective == HuntWar.Objective.EXTRACT:
+		return false
+	var mine := h.war.side_of(h, me)
+	var lead := h.war.leader_side()
+	match h.war.objective:
+		HuntWar.Objective.HOLD:
+			var held := int(h.war.hold.get(mine, 0)) / Sim.TICK_RATE
+			var best := int(h.war.hold.get(lead, 0)) / Sim.TICK_RATE if lead >= 0 else 0
+			hud.set_objective(tr("WAR_HOLD_LINE") % [held / 60, held % 60, best / 60, best % 60,
+					HuntWar.HOLD_SECONDS / 60], UiStyle.GOOD if h.war.holder == mine else UiStyle.ACCENT)
+		HuntWar.Objective.DROPS:
+			hud.set_objective(tr("WAR_DROPS_LINE") % [int(h.war.drops.get(mine, 0)), HuntWar.DROP_TARGET,
+					int(h.war.drops.get(lead, 0)) if lead >= 0 else 0], UiStyle.ACCENT)
+		HuntWar.Objective.CAMPS:
+			var ours := 0
+			var theirs := 0
+			for c in h.war.camps:
+				if c.side == mine:
+					ours = c.charges
+				elif c.charges > 0:
+					theirs += 1
+			hud.set_objective(tr("WAR_CAMPS_LINE") % [ours, HuntWar.CAMP_CHARGES, theirs], UiStyle.WARN if ours < HuntWar.CAMP_CHARGES else UiStyle.ACCENT)
+		HuntWar.Objective.KING:
+			var held := int(h.war.king.get(mine, 0)) / Sim.TICK_RATE
+			var best := int(h.war.king.get(lead, 0)) / Sim.TICK_RATE if lead >= 0 else 0
+			hud.set_objective(tr("WAR_KING_LINE") % [held, best, HuntWar.KING_SECONDS], UiStyle.ACCENT)
+		HuntWar.Objective.CONVOY:
+			hud.set_objective(tr("WAR_CONVOY_LINE") % (_side_name(h.war.convoy_pusher) if h.war.convoy_pusher >= 0 else tr("WAR_NOBODY")),
+					UiStyle.GOOD if h.war.convoy_pusher == mine else UiStyle.ACCENT)
+		HuntWar.Objective.TERRITORY:
+			var held := 0
+			for f: Array in h.war.flags:
+				held += 1 if int(f[1]) == mine else 0
+			hud.set_objective(tr("WAR_TERRITORY_LINE") % [held, h.war.flags.size(), int(h.war.territory.get(mine, 0)),
+					int(h.war.territory.get(lead, 0)) if lead >= 0 else 0, HuntWar.TERRITORY_TARGET], UiStyle.ACCENT)
+		HuntWar.Objective.LAST_STANDING:
+			hud.set_objective(tr("WAR_LAST_LINE") % [int(h.war.lives.get(mine, 0)), h.war.lives.size() - h.war.out_sides.size()],
+					UiStyle.WARN)
+		HuntWar.Objective.RACE:
+			var left := maxi(h.war.race_end_tick - tick, 0) / Sim.TICK_RATE
+			hud.set_objective(tr("WAR_RACE_LINE") % [int(h.war.drops.get(mine, 0)), int(h.war.drops.get(lead, 0)) if lead >= 0 else 0,
+					left / 60, left % 60], UiStyle.ACCENT)
+	return true
 
 
 ## THE HUNT's contracts menu: each row is a HuntRules.request(), the same
@@ -1486,47 +1549,7 @@ func _update_hunt_objective(h: HuntRules, tick: int) -> void:
 		hud.set_objective(tr("HUNT_COLLECTING") % [tr(res.name_key),
 				ceili((int(res.collect_ticks) - cache.progress) / float(Sim.TICK_RATE))], UiStyle.GOOD)
 		return
-	if h.war.enabled and h.war.objective != HuntWar.Objective.EXTRACT:
-		var mine := h.war.side_of(h, me)
-		var lead := h.war.leader_side()
-		match h.war.objective:
-			HuntWar.Objective.HOLD:
-				var held := int(h.war.hold.get(mine, 0)) / Sim.TICK_RATE
-				var best := int(h.war.hold.get(lead, 0)) / Sim.TICK_RATE if lead >= 0 else 0
-				hud.set_objective(tr("WAR_HOLD_LINE") % [held / 60, held % 60, best / 60, best % 60,
-						HuntWar.HOLD_SECONDS / 60], UiStyle.GOOD if h.war.holder == mine else UiStyle.ACCENT)
-			HuntWar.Objective.DROPS:
-				hud.set_objective(tr("WAR_DROPS_LINE") % [int(h.war.drops.get(mine, 0)), HuntWar.DROP_TARGET,
-						int(h.war.drops.get(lead, 0)) if lead >= 0 else 0], UiStyle.ACCENT)
-			HuntWar.Objective.CAMPS:
-				var ours := 0
-				var theirs := 0
-				for c in h.war.camps:
-					if c.side == mine:
-						ours = c.charges
-					elif c.charges > 0:
-						theirs += 1
-				hud.set_objective(tr("WAR_CAMPS_LINE") % [ours, HuntWar.CAMP_CHARGES, theirs], UiStyle.WARN if ours < HuntWar.CAMP_CHARGES else UiStyle.ACCENT)
-			HuntWar.Objective.KING:
-				var held := int(h.war.king.get(mine, 0)) / Sim.TICK_RATE
-				var best := int(h.war.king.get(lead, 0)) / Sim.TICK_RATE if lead >= 0 else 0
-				hud.set_objective(tr("WAR_KING_LINE") % [held, best, HuntWar.KING_SECONDS], UiStyle.ACCENT)
-			HuntWar.Objective.CONVOY:
-				hud.set_objective(tr("WAR_CONVOY_LINE") % (_side_name(h.war.convoy_pusher) if h.war.convoy_pusher >= 0 else tr("WAR_NOBODY")),
-						UiStyle.GOOD if h.war.convoy_pusher == mine else UiStyle.ACCENT)
-			HuntWar.Objective.TERRITORY:
-				var held := 0
-				for f: Array in h.war.flags:
-					held += 1 if int(f[1]) == mine else 0
-				hud.set_objective(tr("WAR_TERRITORY_LINE") % [held, h.war.flags.size(), int(h.war.territory.get(mine, 0)),
-						int(h.war.territory.get(lead, 0)) if lead >= 0 else 0, HuntWar.TERRITORY_TARGET], UiStyle.ACCENT)
-			HuntWar.Objective.LAST_STANDING:
-				hud.set_objective(tr("WAR_LAST_LINE") % [int(h.war.lives.get(mine, 0)), h.war.lives.size() - h.war.out_sides.size()],
-						UiStyle.WARN)
-			HuntWar.Objective.RACE:
-				var left := maxi(h.war.race_end_tick - tick, 0) / Sim.TICK_RATE
-				hud.set_objective(tr("WAR_RACE_LINE") % [int(h.war.drops.get(mine, 0)), int(h.war.drops.get(lead, 0)) if lead >= 0 else 0,
-						left / 60, left % 60], UiStyle.ACCENT)
+	if _war_objective(h, me, tick):
 		return
 	if h.final_phase(tick):
 		var secs := ceili(h.ticks_left(tick) / float(Sim.TICK_RATE))
@@ -1634,6 +1657,12 @@ func _on_local_death(e: Dictionary) -> void:
 
 
 func _on_hunt_event(e: Dictionary, me: int) -> void:
+	if e.get("action") == "war_state":
+		if server == null and e.get("state") is Dictionary:
+			if _war_mirror == null:
+				_war_mirror = HuntRules.new()
+			_war_mirror.war.apply_state(e.state)
+		return
 	var who := _display_name(e.player) if e.player != 0 else ""
 	var color := HuntVisuals.GRAND if e.kind == HuntRules.Kind.GRAND else (HuntVisuals.ALARM if e.kind == HuntRules.Kind.PROOF \
 			else (HuntVisuals.OWN if e.get("owner", 0) == me else HuntVisuals.RIVAL))

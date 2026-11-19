@@ -754,12 +754,12 @@ func _refresh_games() -> void:
 ## "LAN · In lobby · Mode · Map"; green while in the lobby, orange playing.
 func _game_row(kind: String, title: String, mode: String, map: String, players: int, max_players: int,
 		lobby: bool) -> MenuTile:
-	var map_name := tr(Maps.LIST[map].name) if Maps.has(map) else map
+	var map_name := tr(Maps.LIST[Maps.base(map)].name) if Maps.has(map) else map
 	var mode_name := tr(GameMode.NAME_KEYS[GameMode.from_id(mode)])
 	var heading := title + ("  ·  %d/%d" % [players, max_players] if max_players > 0 else "")
 	var details := " · ".join(PackedStringArray([tr("MENU_TAG_LAN" if kind == "lan" else "MENU_TAG_ONLINE"),
 			tr("MENU_IN_LOBBY" if lobby else "MENU_IN_MATCH"), mode_name, map_name]))
-	var thumb: Texture2D = load(Maps.LIST[map].thumb) if Maps.has(map) and Maps.LIST[map].has("thumb") else null
+	var thumb: Texture2D = load(Maps.LIST[Maps.base(map)].thumb) if Maps.has(map) and Maps.LIST[Maps.base(map)].has("thumb") else null
 	var row := MenuTile.make(heading, details, kind, thumb)
 	row.set_meta("ui_key", heading + " · " + details)
 	row.accent = UiStyle.GOOD if lobby else UiStyle.WARN

@@ -371,6 +371,9 @@ func _start() -> void:
 	_starting = true
 	_start_button.disabled = true
 	Platform.perf_log("LOBBY starting with %d players" % session.members.size())
+	if session.game_mode == GameMode.HUNT:
+		# THE HUNT online: the valley, at the next battleground (everyone loads it).
+		session.map_id = Maps.with_site(GameMode.CITY_MAP, Battlegrounds.for_run(int(Profile.career().d.runs)))
 	session.start()
 
 
@@ -379,8 +382,6 @@ func _start() -> void:
 func _on_started(settings: Dictionary) -> void:
 	config.map = settings.map
 	config.game_mode = settings.mode
-	if config.game_mode == GameMode.HUNT:
-		config.map = GameMode.HUNT_MAP  # THE HUNT is fought on its own map, host and members alike
 	config.minutes = settings.minutes
 	config.bots = session.bots
 	config.bot_difficulty = session.bot_difficulty

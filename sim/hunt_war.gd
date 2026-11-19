@@ -86,6 +86,9 @@ var _rng := RandomNumberGenerator.new()
 static var force_objective: int = -1
 ## The site is too tight for four nations (Deep Furrow): always a duel.
 var always_duel := false
+## A client's mirror of the host's war (apply_state): hunter -> side, as the
+## host worked it out (the client has no nations or squads of its own).
+var side_map: Dictionary = {}
 
 
 func configure(map: Dictionary) -> void:
@@ -159,6 +162,8 @@ func start(world: SimWorld, hunt: HuntRules) -> void:
 
 ## Whose side `id` fights for.
 func side_of(hunt: HuntRules, id: int) -> int:
+	if not side_map.is_empty():
+		return int(side_map.get(id, id))
 	var who := hunt.squad.leader_of(id) if hunt.squad.is_member(id) else id
 	if hunt.nations.has(who):
 		return 100 + int(hunt.nations[who])  # a nation (apart from hunter ids)
@@ -434,6 +439,82 @@ func _step_territory(world: SimWorld, hunt: HuntRules, ids: Array) -> void:
 
 
 # --- Duels and four-way wars; alliances between sides ---
+
+# --- Online: the war's state for clients (plain data, never objects) ---
+
+## What a client needs to show the war: the objective and its scores, the
+## camps and what's built at them, and every hunter's side.
+func to_state(world: SimWorld, hunt: HuntRules) -> Dictionary:
+	var sides := {}
+	for id: int in world.players:
+		sides[id] = side_of(hunt, id)
+	var cs := []
+	for i in camps.size():
+		var c := camps[i]
+		var e := {"side": c.side, "at": c.at, "charges": c.charges}
+		if i < builds.built.size():
+			var b: HuntCamps.Built = builds.built[i]
+			e["modules"] = b.modules.duplicate()
+			e["hp"] = b.hp.duplicate()
+			e["levels"] = b.levels.duplicate()
+			e["walls"] = b.walls
+			e["gate"] = b.gate_angle
+		cs.append(e)
+	return {"enabled": enabled, "objective": objective, "point": point, "hold": hold, "holder": holder, "drops": drops,
+			"winner": winner_side, "king": king, "convoy": convoy, "pusher": convoy_pusher, "flags": flags,
+			"territory": territory, "lives": lives, "out": out_sides, "race_end": race_end_tick, "allies": side_allies,
+			"sides": sides, "camps": cs}
+
+
+## A client: becomes a copy of the host's war (to_state). Bad data is ignored.
+func apply_state(d: Dictionary) -> void:
+	enabled = bool(d.get("enabled", false))
+	objective = clampi(int(d.get("objective", 0)), 0, IDS.size() - 1)
+	point = _v3(d.get("point"))
+	hold = _dict(d.get("hold"))
+	holder = int(d.get("holder", -1))
+	drops = _dict(d.get("drops"))
+	winner_side = int(d.get("winner", -1))
+	king = _dict(d.get("king"))
+	convoy = _v3(d.get("convoy"))
+	convoy_pusher = int(d.get("pusher", -1))
+	flags = d.get("flags", []) if d.get("flags") is Array else []
+	territory = _dict(d.get("territory"))
+	lives = _dict(d.get("lives"))
+	out_sides = d.get("out", []) if d.get("out") is Array else []
+	race_end_tick = int(d.get("race_end", 0))
+	side_allies = _dict(d.get("allies"))
+	side_map = _dict(d.get("sides"))
+	var cs: Array = d.get("camps", []) if d.get("camps") is Array else []
+	camps.clear()
+	builds.built.clear()
+	for e: Variant in cs.slice(0, 8):
+		if not e is Dictionary:
+			continue
+		var c := Camp.new()
+		c.side = int(e.get("side", 0))
+		c.at = _v3(e.get("at"))
+		c.charges = int(e.get("charges", 0))
+		camps.append(c)
+		var b := HuntCamps.Built.new()
+		for k: Variant in _dict(e.get("modules")):
+			var m := str(e.modules[k])
+			if HuntCamps.MODULES.has(m) and (k is int):
+				b.modules[k] = m
+		b.hp = _dict(e.get("hp"))
+		b.levels = _dict(e.get("levels"))
+		b.walls = bool(e.get("walls", false))
+		b.gate_angle = float(e.get("gate", 0.0))
+		builds.built.append(b)
+
+
+static func _v3(v: Variant) -> Vector3:
+	return v if v is Vector3 else Vector3.ZERO
+
+
+static func _dict(v: Variant) -> Dictionary:
+	return v if v is Dictionary else {}
+
 
 static func duel_for(seed_value: int) -> bool:
 	var r := RandomNumberGenerator.new()

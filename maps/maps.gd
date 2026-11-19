@@ -56,16 +56,35 @@ const LIST := {
 }
 
 
+## THE HUNT online: "city@<site>" is the valley map with the battleground a
+## networked run is fought at (Battlegrounds), so clients load the same one.
+const SITE_SEP := "@"
+
+
 static func has(id: String) -> bool:
-	return LIST.has(id)
+	return LIST.has(base(id)) and (site_of(id).is_empty() or site_of(id) in Battlegrounds.IDS)
+
+
+## The map part of an id ("city@crater" -> "city").
+static func base(id: String) -> String:
+	return id.get_slice(SITE_SEP, 0)
+
+
+## The battleground part ("" for none).
+static func site_of(id: String) -> String:
+	return id.get_slice(SITE_SEP, 1) if id.contains(SITE_SEP) else ""
+
+
+static func with_site(map: String, site: String) -> String:
+	return map + SITE_SEP + site
 
 
 static func gameplay(id: String) -> Node3D:
-	return (load(LIST[id].gameplay) as PackedScene).instantiate()
+	return (load(LIST[base(id)].gameplay) as PackedScene).instantiate()
 
 
 static func presentation(id: String) -> Node3D:
-	return (load(LIST[id].presentation) as PackedScene).instantiate()
+	return (load(LIST[base(id)].presentation) as PackedScene).instantiate()
 
 
 ## `--map ID` from the command line if valid, else `fallback` (if valid),

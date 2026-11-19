@@ -25,7 +25,7 @@ static var _held: Array[Resource] = []
 static func paths(map_id: String) -> PackedStringArray:
 	var out := PackedStringArray()
 	if Maps.has(map_id):
-		var info: Dictionary = Maps.LIST[map_id]
+		var info: Dictionary = Maps.LIST[Maps.base(map_id)]
 		for scene: String in [info.gameplay, info.presentation]:
 			for dep in _dependencies(scene):
 				if dep.get_extension() in ["res", "tres", "glb", "gltf", "fbx", "tscn", "scn", "mesh"] and not out.has(dep):

@@ -76,13 +76,18 @@ stays, and grows alongside.
       data, at most 4 KB, never objects); client-side match code no longer
       touches the host-only HUNT state. Checked with a headless host and a
       joined client: 35 events of 14 kinds arrived, no script errors.
-   2. Next: sync the war and camp state to clients (objective, scores,
-      camps and their buildings), so their HUD and visuals show it.
+   2. **Done:** the host sends the war's state once a second
+      (`HuntWar.to_state`: objective, scores, every hunter's side, camps
+      and what's built at them). Clients keep a mirror (`apply_state`) that
+      drives the war objective line and the war markers, camps, walls and
+      buildings. Networked runs are now fought at the valley's battlegrounds:
+      the map id carries the site (`city@crater`), so everyone loads the
+      same one. Checked live: a client at Rustwood got 175 updates in three
+      minutes (a king war, 4 camps, 6 buildings), no script errors.
+      Not mirrored yet: army units in the air, flak aiming, fog of war.
    3. Clients send their orders (call units, build, squad commands) to the
       host as requests.
    4. Human players join a squad.
-   Note: networked runs use the classic hunt map, not the valley's
-   battlegrounds (the site isn't sent yet).
 7. Campaign: `Career.d.territory` maps each site to a nation. The winning
    nation of a war takes the site, an AI nation takes another, and every site
    your nation holds pays $80 a run. Shown at the army depot. **Done.**

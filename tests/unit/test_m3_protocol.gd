@@ -60,3 +60,40 @@ func test_hunt_event_garbage_is_refused() -> void:
 	w.bytes(PackedByteArray([1, 2, 3]))
 	var back := Protocol.decode_event_message(w.data())
 	assert_true(back.is_empty() or back.get("type") != "hunt", "junk never becomes an event")
+
+
+func test_war_state_round_trips_to_a_client_mirror() -> void:
+	var host := HuntWar.new()
+	host.enabled = true
+	host.objective = HuntWar.Objective.HOLD
+	host.hold = {101: 600, 102: 120}
+	host.holder = 101
+	var c := HuntWar.Camp.new()
+	c.side = 101
+	c.at = Vector3(10, 0, 5)
+	host.camps.append(c)
+	var b := HuntCamps.Built.new()
+	b.modules = {0: "turret", 2: "air_defense"}
+	b.walls = true
+	host.builds.built.append(b)
+	var state := {"enabled": true, "objective": host.objective, "hold": host.hold, "holder": 101, "sides": {3: 101, 4: 102},
+			"camps": [{"side": 101, "at": c.at, "charges": 3, "modules": b.modules, "walls": true, "gate": 0.5}]}
+	var e := {"type": "hunt", "id": "hws:60", "tick": 60, "action": "war_state", "player": 0, "treasure": 0, "kind": -1,
+			"state": state}
+	var back := Protocol.decode_event_message(Protocol.encode_event_message(1, e))
+	var mirror := HuntRules.new()
+	mirror.war.apply_state(back.state)
+	assert_eq(mirror.war.objective, HuntWar.Objective.HOLD)
+	assert_eq(mirror.war.side_of(mirror, 3), 101, "sides come from the host")
+	assert_eq(mirror.war.leader_side(), 101)
+	assert_eq(mirror.war.camps.size(), 1)
+	assert_eq(mirror.war.builds.built[0].modules, {0: "turret", 2: "air_defense"})
+	assert_true(mirror.war.builds.built[0].walls)
+
+
+func test_site_tagged_maps() -> void:
+	assert_true(Maps.has("city@crater"))
+	assert_false(Maps.has("city@nowhere"), "unknown sites refused")
+	assert_eq(Maps.base("city@crater"), "city")
+	assert_eq(Maps.site_of("city@crater"), "crater")
+	assert_eq(Maps.site_of("station"), "")

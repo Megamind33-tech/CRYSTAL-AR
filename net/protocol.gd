@@ -32,7 +32,7 @@ const MAX_RESULT_ROWS := 32
 
 
 ## The largest HUNT event sent (bytes); bigger ones stay on the host.
-const MAX_HUNT_EVENT := 4096
+const MAX_HUNT_EVENT := 16384
 enum Event { FIRE = 1, EXPLOSION = 2, HIT = 3, DEATH = 4, SPAWN = 5, PICKUP = 6, FLAG = 7, WAVE = 8, HUNT = 9 }
 
 
@@ -478,7 +478,11 @@ static func read_event(r: Wire.Reader) -> Dictionary:
 			if n < 4 or n > MAX_HUNT_EVENT:
 				r.ok = false
 				return {}
-			var v: Variant = bytes_to_var(r.raw(n))  # refuses objects
+			var raw := r.raw(n)
+			if not r.ok or (raw.decode_u32(0) & 0xFFFF) != TYPE_DICTIONARY:
+				r.ok = false  # not ours (or junk): never handed to the decoder
+				return {}
+			var v: Variant = bytes_to_var(raw)  # refuses objects
 			if not r.ok or not v is Dictionary or str((v as Dictionary).get("type", "")) != "hunt":
 				r.ok = false
 				return {}

@@ -508,6 +508,11 @@ func _side_color(hunt: HuntRules, side: int, local_id: int) -> Color:
 	return OWN if side == hunt.war.side_of(hunt, local_id) else RIVAL
 
 
+## A client (online): only the war, from the host's state (HuntWar.apply_state).
+func sync_war(hunt: HuntRules, local_id: int) -> void:
+	_sync_war(hunt, local_id)
+
+
 func _sync_war(hunt: HuntRules, local_id: int) -> void:
 	var w := hunt.war
 	if not w.enabled:
