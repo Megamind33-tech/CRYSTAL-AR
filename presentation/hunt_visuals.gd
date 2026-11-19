@@ -879,7 +879,23 @@ func _sync_army(hunt: HuntRules, tick: int) -> void:
 
 ## A unit in the sky: the gunship is a Skyhopper; drones and the jet are
 ## built in the kit's style.
+## The army's own models (tools/blender/build_army_kit.py), comic-shaded and
+## inked; units that share a body share its model.
+const ARMY_MODELS := {"attack_drone": "attack_drone", "scout_drone": "scout_drone", "emp_drone": "emp_drone",
+		"aegis_drone": "aegis_drone", "swarm": "swarm_drone", "hive": "swarm_drone", "strike_jet": "strike_jet",
+		"raptor": "raptor", "bomber": "bomber", "nightwing": "nightwing"}
+## Their size in the sky (the swarm's and hive's drones are small).
+const ARMY_SCALE := {"hive": 0.8, "swarm": 1.0}
+
+
 func _unit_model(unit: String) -> Node3D:
+	if ARMY_MODELS.has(unit):
+		var root := Node3D.new()
+		var body := Comic.kit_instance("army/" + str(ARMY_MODELS[unit]), Vector3.ZERO, 0.0, float(ARMY_SCALE.get(unit, 1.0)))
+		if not unit in HuntArmy.JETS:
+			body.material_override = Comic.kit_material(0.008)  # small: a thin line, or the ink swamps it
+		root.add_child(body)
+		return root
 	if unit == "gunship":
 		return Comic.kit_instance("world/skyhopper", Vector3.ZERO, 0.0, 1.3)
 	if unit == "medevac":

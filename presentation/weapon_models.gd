@@ -104,8 +104,74 @@ static func grenade(height: float) -> Node3D:
 	return root
 
 
+## Each weapon's look in the comic style: livery (its light panels) and
+## accent (energy parts, glowing), on gunmetal. Shared per weapon.
+const LIVERY := {
+	&"pulse_rifle": [Color(0.93, 0.55, 0.16), Color(0.35, 0.95, 1.0)],
+	&"mag_pistol": [Color(0.86, 0.84, 0.78), Color(1.0, 0.45, 0.2)],
+	&"arc_launcher": [Color(0.95, 0.78, 0.18), Color(1.0, 0.5, 0.15)],
+	&"burst_rifle": [Color(0.42, 0.62, 0.38), Color(0.6, 1.0, 0.45)],
+	&"rail_sniper": [Color(0.22, 0.55, 0.78), Color(0.35, 0.95, 1.0)],
+	&"scatter_gun": [Color(0.78, 0.25, 0.2), Color(1.0, 0.75, 0.25)],
+	&"flux_smg": [Color(0.55, 0.35, 0.8), Color(0.95, 0.4, 1.0)],
+	&"frag_grenade": [Color(0.45, 0.55, 0.3), Color(1.0, 0.35, 0.2)],
+}
+const WEAPON_SHADER := preload("res://presentation/comic/comic_weapon.gdshader")
+const OUTLINE := 0.0035  ## ink width for guns (metres at 1 m)
+static var _mats: Dictionary = {}  ## "name:surface source" -> ShaderMaterial
+
+
+## The comic material standing in for `src` (the model's own) on `name`.
+static func _comic(name: String, src: Material) -> Material:
+	var std := src as BaseMaterial3D
+	if std == null or std.albedo_texture == null:
+		return src
+	var key := "%s:%d" % [name, std.get_instance_id()]
+	if not _mats.has(key):
+		var m := ShaderMaterial.new()
+		m.shader = WEAPON_SHADER
+		m.set_shader_parameter("albedo_tex", std.albedo_texture)
+		if std.normal_enabled and std.normal_texture != null:
+			m.set_shader_parameter("normal_tex", std.normal_texture)
+			m.set_shader_parameter("has_normal", true)
+		var look: Array = LIVERY.get(StringName(name), [Color(0.8, 0.6, 0.3), Color(0.4, 0.9, 1.0)])
+		m.set_shader_parameter("livery_cut", _cut(std.albedo_texture))
+		if MODELS.has(StringName(name)):
+			var handle: Vector2 = MODELS[StringName(name)][3]
+			var muzzle_cut := -SOURCE_HALF + 0.12 * SOURCE_HALF * 2.0
+			m.set_shader_parameter("under", handle.y + 0.04)
+			m.set_shader_parameter("barrel", muzzle_cut)
+			m.set_shader_parameter("over", 9.0 if name == "mag_pistol" else 0.24)  # the pistol's slide keeps its paint
+		m.set_shader_parameter("livery", look[0])
+		m.set_shader_parameter("accent", look[1])
+		m.next_pass = Comic.outline(OUTLINE)
+		_mats[key] = m
+	return _mats[key]
+
+
+## Where the livery starts on a texture: the brightness that leaves about
+## only the darkest seams bare (the parts come from the shape: the shader) (blurred, as the shader reads).
+static func _cut(tex: Texture2D) -> float:
+	var img := tex.get_image()
+	if img == null:
+		return 0.25
+	if img.is_compressed():
+		img.decompress()
+	img.resize(32, 32, Image.INTERPOLATE_BILINEAR)
+	var ls: Array[float] = []
+	for y in 32:
+		for x in 32:
+			var c := img.get_pixel(x, y)
+			ls.append(c.r * 0.299 + c.g * 0.587 + c.b * 0.114)
+	ls.sort()
+	return clampf(ls[int(ls.size() * 0.12)], 0.05, 0.5)
+
+
 static func _load(name: String) -> Node3D:
 	var model: Node3D = (load(DIR + name + ".glb") as PackedScene).instantiate()
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		for i in mi.mesh.get_surface_count():
+			mi.set_surface_override_material(i, _comic(name, mi.get_active_material(i)))
 	var far_mesh: Mesh = load(far_path(DIR + name + ".glb")) if ResourceLoader.exists(far_path(DIR + name + ".glb")) else null
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -116,7 +182,7 @@ static func _load(name: String) -> Node3D:
 		far.mesh = far_mesh
 		far.transform = mi.transform
 		far.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		far.set_surface_override_material(0, mi.get_active_material(0))
+		far.set_surface_override_material(0, mi.get_active_material(0))  # the comic one
 		far.visibility_range_begin = FAR_RANGE
 		far.visibility_range_begin_margin = FAR_MARGIN
 		mi.visibility_range_end = FAR_RANGE
