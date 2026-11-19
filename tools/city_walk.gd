@@ -1286,6 +1286,11 @@ func _dig_run(me: SimPlayer) -> void:
 	m.server.world.damage_enabled = false  # posed camera: keep the bots off it
 	m.hunt_hud.touch = true
 	print("CITY WALK: run started, player at %s" % me.state.position)
+	if Platform.user_args.has("--vram"):
+		await _frames(120)
+		_vram_report()
+		get_tree().quit(0)
+		return
 	if Platform.user_args.has("--war-shots"):
 		var hr: HuntRules = m.server.world.hunt
 		print("CITY WALK: site %s, objective %s, camps %d" % [Battlegrounds.current, HuntWar.IDS[hr.war.objective], hr.war.camps.size()])
@@ -2260,3 +2265,79 @@ func _lowest_foot(v: Node, feet: Vector3) -> float:
 			if n.contains("toe") or n.contains("foot"):
 				low = minf(low, (sk.global_transform * sk.get_bone_global_pose(b)).origin.y - feet.y)
 	return low
+
+
+## Video memory now: totals, then every texture the scene's materials use,
+## largest first (an estimate: the format's bytes a pixel, mipmaps included).
+func _vram_report() -> void:
+	var mib := func(b: float) -> String: return "%.1f MiB" % (b / 1048576.0)
+	print("VRAM: video %s, textures %s, buffers %s" % [mib.call(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)),
+			mib.call(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)),
+			mib.call(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED))])
+	var seen := {}
+	var add_mat := func(mat: Material, add_mat_ref: Callable) -> void:
+		while mat != null:
+			for prop in mat.get_property_list():
+				var v: Variant = mat.get(prop.name)
+				if v is Texture2D:
+					seen[v] = true
+			if mat is ShaderMaterial:
+				for u in (mat as ShaderMaterial).shader.get_shader_uniform_list() if (mat as ShaderMaterial).shader != null else []:
+					var v: Variant = (mat as ShaderMaterial).get_shader_parameter(u.name)
+					if v is Texture2D:
+						seen[v] = true
+			mat = mat.next_pass
+	for n: Node in get_tree().root.find_children("*", "", true, false):
+		if n is GeometryInstance3D:
+			var g := n as GeometryInstance3D
+			add_mat.call(g.material_override, add_mat)
+			if g is MeshInstance3D and (g as MeshInstance3D).mesh != null:
+				var mi := g as MeshInstance3D
+				for k in mi.mesh.get_surface_count():
+					add_mat.call(mi.get_active_material(k), add_mat)
+		elif n is CanvasItem and n.get("texture") is Texture2D:
+			seen[n.get("texture")] = true
+	var rows := []
+	for t: Texture2D in seen:
+		var bpp := 4.0
+		if t is CompressedTexture2D:
+			var f := (t as CompressedTexture2D).get_image().get_format() if false else -1
+			bpp = 1.0 if (t as CompressedTexture2D).load_path.contains("s3tc") or (t as CompressedTexture2D).load_path.contains("bptc") \
+					or (t as CompressedTexture2D).load_path.contains("etc2") or (t as CompressedTexture2D).load_path.contains("astc") else 4.0
+		var bytes := float(t.get_width() * t.get_height()) * bpp * 1.33
+		rows.append([bytes, t.get_width(), t.get_height(), bpp, t.resource_path])
+	rows.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
+	var total := 0.0
+	for r: Array in rows:
+		total += r[0]
+	print("VRAM: %d textures in use, about %s" % [rows.size(), mib.call(total)])
+	# Meshes: vertices x stride (position, normal, tangent, colour, uv ~ 48 B) + indices.
+	var meshes := {}
+	for n: Node in get_tree().root.find_children("*", "", true, false):
+		var m: Mesh = null
+		if n is MeshInstance3D:
+			m = (n as MeshInstance3D).mesh
+		elif n is MultiMeshInstance3D and (n as MultiMeshInstance3D).multimesh != null:
+			m = (n as MultiMeshInstance3D).multimesh.mesh
+		if m == null or meshes.has(m):
+			continue
+		var b := 0.0
+		for k in m.get_surface_count():
+			var arr := m.surface_get_arrays(k)
+			var nv := (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+			var ni := (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() if arr[Mesh.ARRAY_INDEX] != null else 0
+			var stride := 12.0 + (4.0 if arr[Mesh.ARRAY_NORMAL] != null else 0.0) + (4.0 if arr[Mesh.ARRAY_TANGENT] != null else 0.0) \
+					+ (16.0 if arr[Mesh.ARRAY_COLOR] != null else 0.0) + (8.0 if arr[Mesh.ARRAY_TEX_UV] != null else 0.0) \
+					+ (8.0 if arr[Mesh.ARRAY_TEX_UV2] != null else 0.0) + (24.0 if arr[Mesh.ARRAY_BONES] != null else 0.0)
+			b += nv * stride + ni * 4.0
+		meshes[m] = [b, n.get_path()]
+	var mrows := meshes.values()
+	mrows.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
+	var mt := 0.0
+	for r: Array in mrows:
+		mt += r[0]
+	print("VRAM: %d meshes, about %s" % [mrows.size(), mib.call(mt)])
+	for r: Array in mrows.slice(0, 30):
+		print("VRAM mesh %10s  %s" % [mib.call(r[0]), r[1]])
+	for r: Array in rows.slice(0, 60):
+		print("VRAM  %10s  %4dx%-4d %s B/px  %s" % [mib.call(r[0]), r[1], r[2], r[3], r[4]])

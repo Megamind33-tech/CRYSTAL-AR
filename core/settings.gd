@@ -321,9 +321,9 @@ const QUALITY := {
 	"medium": {"render_scale": 0.6, "shadows": false, "glow": true, "effects": 0.7, "upscale": "fsr", "msaa": 0,
 			"fxaa": false, "shadow_size": 1024, "soft_shadows": 0, "aniso": 2, "lod": 2.0, "detail": "medium", "probe": true, "lights": false},
 	"high": {"render_scale": 1.0, "shadows": true, "glow": true, "effects": 1.0, "upscale": "bilinear", "msaa": 1,
-			"fxaa": false, "shadow_size": 4096, "soft_shadows": 2, "aniso": 3, "lod": 1.0, "detail": "high", "ssao": true, "probe": true, "lights": true},
+			"fxaa": false, "shadow_size": 2048, "soft_shadows": 2, "aniso": 3, "lod": 1.0, "detail": "high", "ssao": true, "probe": true, "lights": true},
 	"ultra": {"render_scale": 1.0, "shadows": true, "glow": true, "effects": 1.0, "upscale": "bilinear", "msaa": 2,
-			"fxaa": false, "shadow_size": 4096, "soft_shadows": 4, "aniso": 4, "lod": 0.5, "detail": "high", "ssao": true, "probe": true, "lights": true},
+			"fxaa": false, "shadow_size": 2048, "soft_shadows": 4, "aniso": 4, "lod": 0.5, "detail": "high", "ssao": true, "probe": true, "lights": true},
 }
 ## Phone-only changes to a preset's extras. The reflection probe costs the
 ## Mi 11X ~0.9 ms of GPU time, so phones leave it off on Medium; desktops

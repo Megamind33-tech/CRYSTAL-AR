@@ -63,7 +63,10 @@ var _s: float = 1.0
 ## Items shown as their real 3D model, rendered once off-screen.
 const MODEL_OF := {"pulse_rifle": &"pulse_rifle", "burst_rifle": &"burst_rifle", "scatter_gun": &"scatter_gun",
 		"flux_smg": &"flux_smg", "frag_grenade": &"frag_grenade"}
-var _models := {}  ## item -> SubViewport
+var _models := {}  ## item -> SubViewport (only while its picture renders)
+## Item -> its picture, baked once and shared by every shelf (the render
+## and its buffers are freed as soon as the picture is copied).
+static var _baked := {}
 var _redraws: int = 0
 
 
@@ -633,6 +636,8 @@ func _draw_item(item: String, r: Rect2) -> void:
 
 ## The item's 3D model side on (a small transparent render, made once).
 func _model_icon(key: String) -> Texture2D:
+	if _baked.has(key):
+		return _baked[key]
 	if _models.has(key):
 		return (_models[key] as SubViewport).get_texture()
 	var vp := SubViewport.new()
@@ -688,6 +693,7 @@ func _model_icon(key: String) -> Texture2D:
 	cam.look_at_from_position(c + Vector3(1.0, 0.0, 0.0), c, Vector3.UP)
 	_models[key] = vp
 	_redraws = 4  # draw again once it has rendered
+	_bake.call_deferred(key, vp)
 	return vp.get_texture()
 
 
@@ -698,6 +704,8 @@ const ITEM_MODEL := "res://art/items/%s.glb"
 ## An item's model in a small studio: three-quarter view, a warm key light
 ## with shadows, a cool fill, a rim from behind. Rendered once.
 func _item_icon(key: String) -> Texture2D:
+	if _baked.has(key):
+		return _baked[key]
 	if _models.has(key):
 		return (_models[key] as SubViewport).get_texture()
 	var vp := SubViewport.new()
@@ -766,7 +774,24 @@ func _item_icon(key: String) -> Texture2D:
 	add_child(vp)
 	_models[key] = vp
 	_redraws = 4
+	_bake.call_deferred(key, vp)
 	return vp.get_texture()
+
+
+## Once `vp` has drawn its picture: keep a copy, free the render (its 3D
+## world, MSAA buffers, sky and lights held video memory for nothing).
+func _bake(key: String, vp: SubViewport) -> void:
+	for i in 3:
+		await RenderingServer.frame_post_draw
+	if not is_instance_valid(vp):
+		return
+	var img := vp.get_texture().get_image()
+	if img != null and not img.is_empty():
+		_baked[key] = ImageTexture.create_from_image(img)
+	_models.erase(key)
+	vp.queue_free()
+	_redraws = 2
+	queue_redraw()
 
 
 func _process(_delta: float) -> void:

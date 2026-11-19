@@ -64,7 +64,7 @@ func test_saved_tier_meshes_match_the_full_ones() -> void:
 			assert_null(m.surface_get_material(0), c + ": no material (the tier's comes with the rig)")
 
 
-## Each tier's material: 2K PBR, 1K PBR (512 normal/MR), one small flat texture on the
+## Each tier's material: 1K PBR (capped from 2K: video memory), 1K PBR (512 normal/MR), one small flat texture on the
 ## stylized shader.
 func test_tier_materials() -> void:
 	for c: String in CharacterRig.SELECTABLE:
@@ -72,7 +72,7 @@ func test_tier_materials() -> void:
 		var medium: ShaderMaterial = load(MeshyRig.tier_material_path(c, "medium"))
 		var low: ShaderMaterial = load(MeshyRig.tier_material_path(c, "low"))
 		assert_eq(high.shader, MeshyRig.SHADER)
-		assert_eq((high.get_shader_parameter("albedo_tex") as Texture2D).get_width(), 2048, c + ": high 2K")
+		assert_eq((high.get_shader_parameter("albedo_tex") as Texture2D).get_width(), 1024, c + ": high 1K (video memory)")
 		assert_eq((medium.get_shader_parameter("albedo_tex") as Texture2D).get_width(), 1024, c + ": medium 1K")
 		# Normal and metal/rough maps import at 512 (video memory; the cel shading hides it).
 		assert_eq((medium.get_shader_parameter("normal_tex") as Texture2D).get_width(), 512, c + ": medium normal 512")
