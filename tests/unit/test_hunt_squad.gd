@@ -167,3 +167,15 @@ func test_people_make_a_squad() -> void:
 	assert_false(h.request(w, 7, "squad_answer", {"accept": true}), "no invitation left")
 	assert_true(h.request(w, 7, "squad_leave"))
 	assert_false(h.friendly(LEADER, 7))
+
+
+func test_a_mark_from_aim_sees_everyone() -> void:
+	var rival: SimPlayer = world.players[RIVAL]
+	var me: SimPlayer = world.players[LEADER]
+	var dir := (rival.state.position - me.state.position)
+	dir.y = 0.0
+	assert_eq(h.mark_along(world, LEADER, dir), RIVAL, "the hunter on the aim line")
+	assert_eq(h.mark_along(world, LEADER, -dir), RIVAL, "nobody on the line: the nearest rival")
+	assert_eq(h.mark_along(world, LEADER, "junk"), 0)
+	assert_true(h.request(world, LEADER, "squad_order", {"order": "attack", "target": HuntRules.MARK_BY_AIM, "aim_dir": dir}))
+	assert_eq(h.squad.squad_of(LEADER).members[0].target, RIVAL)

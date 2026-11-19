@@ -983,6 +983,7 @@ func _render_client(delta: float) -> void:
 		flag_visuals.sync(client.flags, _flag_bases, _flag_carrier_at)
 	if _war_mirror != null:  # THE HUNT online: the host's cargo, army, war and camps
 		hunt_visuals.hunt_local_pos = s.position
+		hunt_visuals.smooth_cargo = true
 		hunt_visuals.sync(_war_mirror, roundi(client.clock.server_time()), client.local_id, _flag_carrier_at)
 	_update_pickup_prompt(s, client.items)
 	var server_state := client.server_state if client.server_state != null else s
@@ -1376,7 +1377,7 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 					return sq != null and sq.strategy != plan, "squad")
 	for order: String in HuntSquad.ORDER_IDS:
 		hunt_menu.add_row(func() -> String: return tr("SQUAD_ALL") % tr("SQUAD_ORDER_" + order.to_upper()),
-				func() -> void: hunt_menu.request.call("squad_order", {"order": order, "target": _mark(), "point": _aim_point()}),
+				func() -> void: hunt_menu.request.call("squad_order", _order_args({"order": order})),
 				func() -> bool:
 					var st: Dictionary = hunt_menu.state.call()
 					return my_squad.call() != null or (not st.is_empty() \
@@ -1385,8 +1386,7 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 		for order: String in ["follow", "hold", "move", "fetch", "attack"]:
 			hunt_menu.add_row(func() -> String: return tr("SQUAD_ONE") % [tr("SQUAD_ROLE_" + role.to_upper()),
 						tr("SQUAD_ORDER_" + order.to_upper())],
-					func() -> void: hunt_menu.request.call("squad_order", {"order": order, "role": role, "target": _mark(),
-							"point": _aim_point()}),
+					func() -> void: hunt_menu.request.call("squad_order", _order_args({"order": order, "role": role})),
 					func() -> bool:
 						var sq: HuntSquad.Squad = my_squad.call()
 						if sq == null:
@@ -2124,9 +2124,9 @@ func _test_squad_step(me: int) -> void:
 		Log.i("match", "test squad: joining %d" % int(sq.invites[me].from))
 		hunt_menu.request.call("squad_answer", {"accept": true})
 	elif not sq.human_members(me).is_empty() and _test_squad % 5 == 0:
-		Log.i("match", "test squad: leading %s, ordering hold" % [sq.human_members(me)])
-		hunt_menu.request.call("squad_order", {"order": "hold", "point": _aim_point()})
-	elif _test_squad == 3 and me % 2 == 0 and sq.human_leader(me) == 0:
+		Log.i("match", "test squad: leading %s, ordering attack (marked from our aim)" % [sq.human_members(me)])
+		hunt_menu.request.call("squad_order", _order_args({"order": "attack"}))
+	elif _test_squad == 8 and me % 2 == 0 and sq.human_leader(me) == 0:
 		var to := 0  # the other test client: the newest person in the match
 		for r: Dictionary in client.roster:
 			if not r.get("bot", false) and int(r.id) != me and int(r.id) > to:
@@ -2166,6 +2166,18 @@ func _send_kit() -> void:
 	Profile.save()  # the squad's pay left the wallet
 	Log.i("match", "online: bringing army %s, squad [%s]" % [",".join(parts), roles])
 	hunt_menu.request.call("bring_kit", {"army": ",".join(parts), "roles": roles})
+
+
+## A squad order's mark and point: on a client the host works the mark out
+## from our aim (it knows where everyone is; we see only who's near).
+func _order_args(args: Dictionary) -> Dictionary:
+	args["point"] = _aim_point()
+	if server == null:
+		args["target"] = HuntRules.MARK_BY_AIM
+		args["aim_dir"] = Basis.from_euler(Vector3(input.look_pitch, input.look_yaw, 0.0)) * Vector3.FORWARD
+	else:
+		args["target"] = _mark()
+	return args
 
 
 ## Online, a client's mark: the hunter nearest the line we aim along, from

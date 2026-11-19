@@ -117,6 +117,14 @@ stays, and grows alongside.
       nation's unique units, known roles only). Aiming at a hunter marks
       them on a client too. Checked live: kit accepted, a rendered client
       shows the cargo it carries, no script errors.
+   6. **Done:** smoother and sharper online. Cargo and army updates go 4
+      times a second (`ServerSession.FIELD_RATE`), and cases on the ground
+      glide between updates (`HuntVisuals.smooth_cargo`; over 12 m they
+      jump: a case gone home, a new one). A client's squad orders send its
+      aim (`target: MARK_BY_AIM`, `aim_dir`) and the host marks the hunter
+      on that line from everyone's real positions (`HuntRules.mark_along`),
+      so hunters out of the client's view can be marked. Cost: about 8 kB/s
+      more per client.
 
 7. Campaign: `Career.d.territory` maps each site to a nation. The winning
    nation of a war takes the site, an AI nation takes another, and every site

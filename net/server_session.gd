@@ -84,6 +84,8 @@ var networked: bool = false
 ## Most combatants (humans + bots) this session admits: 16 dedicated,
 ## 8 PC listen host, 4 phone host (PLAN §3.5.1).
 var map_id: String = Maps.DEFAULT  ## sent in WELCOME and beacons
+## THE HUNT online: field updates (cargo, army) a second.
+const FIELD_RATE := 4
 var time_limit_ticks: int = Balance.MODES.default_time_limit_ticks
 var max_combatants: int = Protocol.MAX_PEERS
 var lobby_after_match: bool = false
@@ -443,6 +445,11 @@ func _physics_process(_delta: float) -> void:
 		commands[id] = hunt_mercs[id].command_for(world.tick, world.get_player(id))
 	var t_sim := Time.get_ticks_usec()
 	world.step(commands, stalled)
+	if networked and world.hunt != null and world.tick % (Sim.TICK_RATE / FIELD_RATE) == 0 \
+			and world.tick % Sim.TICK_RATE != 0:
+		# THE HUNT online: the cargo and the army, more often than the rest.
+		_send_reliable_event({"type": "hunt", "action": "field_state", "id": "hfs:%d" % world.tick, "tick": world.tick,
+				"player": 0, "treasure": 0, "kind": -1, "state": world.hunt.field_state(world)})
 	if networked and world.hunt != null and world.tick % Sim.TICK_RATE == 0:
 		# THE HUNT online, once a second: the war and its camps to everyone;
 		# each player's own credits, army, squad and offers to them alone.

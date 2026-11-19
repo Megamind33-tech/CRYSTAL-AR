@@ -52,6 +52,13 @@ func _process(delta: float) -> void:
 
 ## `local_id`: whose assignments count as "ours". `carrier_pos`:
 ## Callable(id) -> Vector3 for where a carrier is drawn (INF if unknown).
+## Online (a client): cases on the ground glide to where the host says;
+## further than SMOOTH_SNAP they jump (home again, a new case).
+var smooth_cargo := false
+const SMOOTH_SNAP := 12.0
+const SMOOTH_RATE := 10.0
+
+
 func sync(hunt: HuntRules, tick: int, local_id: int, carrier_pos: Callable) -> void:
 	if not _built:
 		_build_static(hunt)
@@ -76,7 +83,12 @@ func sync(hunt: HuntRules, tick: int, local_id: int, carrier_pos: Callable) -> v
 			if at != Vector3.INF:
 				pos = at
 			pos += Vector3(0, CARRIED_LIFT - 0.55, 0)
-		node.position = pos
+		if smooth_cargo and t.carrier == 0 and node.position.distance_to(pos) < SMOOTH_SNAP:
+			# Online: glide between the host's updates (a few a second) instead of jumping.
+			node.position = node.position.lerp(pos, clampf(get_process_delta_time() * SMOOTH_RATE, 0.0, 1.0))
+		else:
+			node.position = pos
+		pos = node.position
 		if t.kind == HuntRules.Kind.GRAND:
 			_update_lock_label(node, hunt, t)
 		# Beams: our own treasures and the grand one, while on the ground or

@@ -788,6 +788,39 @@ const KIT_MAX_EACH := 4
 const KIT_MAX_CP := 16  ## the top rank's command points
 
 
+## A client's mark worked out here: "target": MARK_BY_AIM, "aim_dir".
+const MARK_BY_AIM := -1
+const MARK_REACH := 250.0  ## metres along the aim
+const MARK_OFF := 3.0  ## metres off the aim line
+
+
+## The rival hunter nearest the line `id` aims along (`dir`, from their eye),
+## else the nearest rival; 0 if none.
+func mark_along(world: SimWorld, id: int, dir: Variant) -> int:
+	var me: SimPlayer = world.players.get(id)
+	if me == null or not dir is Vector3 or (dir as Vector3).length() < 0.5:
+		return 0
+	var d: Vector3 = (dir as Vector3).normalized()
+	var eye := me.state.position + Vector3(0, 1.6, 0)
+	var best := 0
+	var best_off := MARK_OFF
+	var nearest := 0
+	var nearest_d := INF
+	for other: int in world.players:
+		var o: SimPlayer = world.players[other]
+		if other == id or not o.state.alive or _aux(other) or friendly(id, other):
+			continue
+		var to := o.state.position + Vector3(0, 1.0, 0) - eye
+		var along := to.dot(d)
+		if along > 0.0 and along < MARK_REACH and (to - d * along).length() < best_off:
+			best_off = (to - d * along).length()
+			best = other
+		if to.length() < nearest_d:
+			nearest_d = to.length()
+			nearest = other
+	return best if best != 0 else nearest
+
+
 ## THE HUNT online: the field everyone sees (plain data): the cargo, the army
 ## in the air, the pads' clock. Sent once a second.
 func field_state(world: SimWorld) -> Dictionary:
@@ -988,7 +1021,11 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 		"squad_leave":
 			return squad.leave(world, self, hunter)
 		"squad_order":
-			return squad.order(world, hunter, str(args.get("order", "")), str(args.get("role", "")), int(args.get("target", 0)),
+			var target := int(args.get("target", 0))
+			if target == MARK_BY_AIM:  # online: marked from the leader's aim (the host sees everyone)
+				target = mark_along(world, hunter, args.get("aim_dir", Vector3.ZERO))
+				Log.d("hunt", "%d's mark from their aim: %d" % [hunter, target])
+			return squad.order(world, hunter, str(args.get("order", "")), str(args.get("role", "")), target,
 					args.get("point", Vector3.INF))
 		"squad_ability":
 			return squad.ability(world, self, hunter, str(args.get("ability", "")), args.get("point", Vector3.INF))
