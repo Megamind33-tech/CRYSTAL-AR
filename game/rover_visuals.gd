@@ -119,7 +119,7 @@ func _fly_pose(i: int, v: SimVehicle, mi: MeshInstance3D, at: Vector3, world: Si
 ## A tank's turret: where its driver looks (you, driving it), else a slow
 ## watchful sweep.
 func _aim_turret(v: SimVehicle, mi: MeshInstance3D, m: Node, delta: float) -> void:
-	if v.model != VehicleSim.TANK:
+	if v.model != VehicleSim.TANK and v.model != VehicleSim.BASTION:
 		return
 	var turret := mi.get_node_or_null("Armour/Turret") as Node3D
 	if turret == null:
@@ -139,13 +139,15 @@ func _armour(i: int, model: int) -> void:
 	var old := mi.get_node_or_null("Armour")
 	if old != null:
 		old.queue_free()
-	if model != VehicleSim.TANK:
+	if model != VehicleSim.TANK and model != VehicleSim.BASTION:
 		return  # the crawler's body is its own model (army/crawler)
 	# The tank's turret: its own piece on the hull's ring, so it can turn.
 	var root := Node3D.new()
 	root.name = "Armour"
 	mi.add_child(root)
-	var turret := Comic.kit_instance("army/tank_turret", Vector3(0, 1.36, 0.15), 0.0)
+	var bastion := model == VehicleSim.BASTION
+	var turret := Comic.kit_instance("army/bastion_turret" if bastion else "army/tank_turret",
+			Vector3(0, 1.62, 0.25) if bastion else Vector3(0, 1.36, 0.15), 0.0)
 	turret.name = "Turret"
 	root.add_child(turret)
 

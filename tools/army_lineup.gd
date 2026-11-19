@@ -41,10 +41,21 @@ func _ready() -> void:
 		for f: Array in hv._flak:
 			(f[1] as Node3D).rotation.y = PI - 0.6
 			(f[2] as Node3D).rotation.x = 0.5
+	if OS.get_cmdline_user_args().has("--heavy"):  # the tank and Halden's Bastion side by side
+		for c in get_children():
+			if c is MeshInstance3D or c is HuntVisuals:
+				c.queue_free()
+		for q: Array in [["tank", "tank_turret", Vector3(-3.0, -1.5, 0), Vector3(0, 1.36, 0.15)],
+				["bastion", "bastion_turret", Vector3(3.5, -1.5, 0), Vector3(0, 1.62, 0.25)]]:
+			var hull := Comic.kit_instance("army/" + str(q[0]), q[2], 215.0)
+			hull.add_child(Comic.kit_instance("army/" + str(q[1]), q[3], 15.0))
+			add_child(hull)
 	var cam := Camera3D.new()
 	cam.position = Vector3(0.5, 1.5, 9) if not OS.get_cmdline_user_args().has("--ground") else Vector3(2.5, 4.5, 15)
+	if OS.get_cmdline_user_args().has("--heavy"):
+		cam.position = Vector3(0.3, 3.5, 11)
 	cam.fov = 60
-	if OS.get_cmdline_user_args().has("--ground"):
+	if OS.get_cmdline_user_args().has("--ground") or OS.get_cmdline_user_args().has("--heavy"):
 		cam.rotation_degrees.x = -14
 	add_child(cam)
 	cam.current = true

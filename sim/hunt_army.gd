@@ -139,7 +139,7 @@ func call_unit(world: SimWorld, hunt: HuntRules, id: int, unit: String, target: 
 		var yaw := p.state.yaw
 		var at := p.state.position + Vector3(-sin(yaw), 0.0, -cos(yaw)) * 6.0 + Vector3(0, 0.4, 0)
 		var v := world.add_vehicle(at, yaw)
-		v.model = VehicleSim.CRAWLER if unit == "crawler" else VehicleSim.TANK
+		v.model = VehicleSim.CRAWLER if unit == "crawler" else (VehicleSim.BASTION if unit == "bastion" else VehicleSim.TANK)
 		v.owner = id
 		machines[world.vehicles.size() - 1] = [id, unit, lv]
 		machine_hp[world.vehicles.size() - 1] = float(MACHINE_HP[unit]) * NationArsenal.mod(NationArsenal.of(hunt, id),

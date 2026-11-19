@@ -276,6 +276,46 @@ def tank_turret():
     finish("tank_turret")
 
 
+def bastion():
+    reset()
+    # Halden's heavy tank: wider and longer, slab armour, deep skirts; dark
+    # steel with red bands.
+    for s in (-1, 1):
+        track(1.15 * s, 5.4, 0.9, 0.65)
+        rb("skirt", (0.18, 5.0, 0.75), (1.55 * s, 0, 0.85), "gunmetal", bevel=0.05)
+        for k in range(4):  # bolted armour plates on the skirt
+            rb("plate", (0.08, 1.05, 0.5), (1.66 * s, -1.8 + k * 1.2, 0.9), "dark", bevel=0.02)
+        rb("band", (0.2, 0.3, 0.78), (1.56 * s, 1.6, 0.85), "red", bevel=0.0)
+    rb("hull", (2.4, 5.2, 0.75), (0, 0, 1.25), "gunmetal", bevel=0.14, taper=(0.9, 0.92))
+    rb("glacis", (2.3, 1.2, 0.55), (0, 2.4, 1.05), "gunmetal", bevel=0.12, rot=(R(-24), 0, 0))
+    rb("dozer", (2.6, 0.3, 0.6), (0, 3.0, 0.55), "dark", bevel=0.06)
+    rb("engine_deck", (1.9, 1.3, 0.2), (0, -1.9, 1.7), "dark", bevel=0.04)
+    for x in (-0.6, 0.0, 0.6):
+        rb("grille", (0.3, 1.1, 0.05), (x, -1.9, 1.82), "gunmetal", bevel=0.0)
+    for x in (-0.8, 0.8):
+        rb("light", (0.25, 0.08, 0.15), (x, 2.95, 1.25), "light", bevel=0.02)
+        cyl("smoke", 0.09, 0.4, (x * 1.15, 1.5, 1.75), "dark", verts=8, rot=(R(-30), 0, 0))
+    finish("bastion")
+
+
+def bastion_turret():
+    reset()  # origin: the turret ring
+    rb("turret", (2.0, 2.3, 0.85), (0, -0.15, 0.42), "gunmetal", bevel=0.16, taper=(0.78, 0.85))
+    rb("band", (2.02, 0.3, 0.3), (0, -0.6, 0.55), "red", bevel=0.02)
+    rb("mantlet", (1.0, 0.45, 0.6), (0, 1.1, 0.42), "dark", bevel=0.08)
+    for x in (-0.22, 0.22):  # the twin cannon
+        cyl("gun", 0.09, 2.8, (x, 2.5, 0.45), "dark", verts=10, rot=(R(90), 0, 0))
+        cyl("muzzle", 0.14, 0.35, (x, 3.85, 0.45), "gunmetal", verts=10, rot=(R(90), 0, 0))
+    for s in (-1, 1):  # anti-air autocannons on the turret's sides (its gun shoots aircraft)
+        rb("aa_mount", (0.35, 0.6, 0.45), (1.12 * s, 0.0, 0.75), "gunmetal", bevel=0.05)
+        for z in (0.68, 0.84):
+            cyl("aa_gun", 0.05, 1.3, (1.12 * s, 0.75, z), "dark", verts=6, rot=(R(70), 0, 0))
+    cyl("radar_mast", 0.05, 0.6, (-0.55, -0.85, 1.1), "dark", verts=6)
+    rb("radar", (0.7, 0.12, 0.35), (-0.55, -0.85, 1.45), "light", bevel=0.03)
+    cyl("hatch", 0.3, 0.1, (0.45, -0.5, 0.88), "dark", verts=10)
+    finish("bastion_turret")
+
+
 def crawler():
     reset()
     for s in (-1, 1):
@@ -382,7 +422,7 @@ def aegis_dish():
 
 
 for build in (attack_drone, scout_drone, emp_drone, aegis_drone, swarm_drone, strike_jet, raptor, bomber, nightwing,
-              tank, tank_turret, crawler, turret_base, turret_head, aegis_dish):
+              tank, tank_turret, bastion, bastion_turret, crawler, turret_base, turret_head, aegis_dish):
     build()
 for aegis in (False, True):
     flak_base(aegis)

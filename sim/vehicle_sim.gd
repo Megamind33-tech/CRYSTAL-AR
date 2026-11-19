@@ -31,9 +31,13 @@ const MODELS := [
 			"half": Vector2(1.35, 3.2), "kit": "army/crawler", "army": true},
 	{"name": "Tank", "max": 15.0, "rev": 5.0, "accel": 6.0, "turn": 1.1, "slots": 2, "price": 0,
 			"half": Vector2(1.2, 2.2), "kit": "army/tank", "army": true},
+	# Halden's own: heavier, slower, a twin cannon and anti-air guns.
+	{"name": "Bastion tank", "max": 12.0, "rev": 4.0, "accel": 5.0, "turn": 0.9, "slots": 2, "price": 0,
+			"half": Vector2(1.45, 2.6), "kit": "army/bastion", "army": true},
 ]
 const CRAWLER := 4
 const TANK := 5
+const BASTION := 6
 ## The jet that was sold before the rotorcraft became the only aircraft
 ## (its price is refunded to anyone who owned one: Career.normalize).
 const RETIRED_JET_PRICE := 24000
