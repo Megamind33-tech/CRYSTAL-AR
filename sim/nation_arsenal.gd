@@ -15,24 +15,33 @@ const ARSENALS := {
 		"scout_drone": {"hp": 1.3, "cost": 0.8}, "attack_drone": {"damage": 1.3, "hp": 1.2, "cost": 0.85},
 		"gunship": {"damage": 1.15, "cost": 0.9}, "swarm": {"damage": 1.0},
 		"tank": {"hp": 0.75, "damage": 0.85, "cost": 1.25}, "crawler": {"cost": 1.1},
-	}},
+		"emp_drone": {"hp": 1.3, "cost": 0.8, "range": 1.2}, "medevac": {"cost": 0.85}, "hive": {"damage": 1.0},
+		"mortar": {"damage": 0.85}, "bomber": {"cost": 1.2},
+	}, "unique2": "hive"},
 	"meridian": {"doctrine": "DOCTRINE_MERIDIAN", "unique": "aegis_battery", "mods": {
 		"turret": {"damage": 1.3, "range": 1.25}, "air_defense": {"damage": 1.3, "range": 1.3, "cost": 0.8},
 		"walls": {"cost": 0.7}, "med_bay": {"cost": 0.8}, "barracks": {"cost": 0.8},
 		"strike_jet": {"damage": 0.75}, "gunship": {"hp": 0.85},
-	}},
+		"medevac": {"damage": 1.3, "hp": 1.2}, "recon_sat": {"cost": 0.75}, "aegis_drone": {"damage": 1.0},
+		"bomber": {"damage": 0.8}, "mortar": {"cost": 0.9},
+	}, "unique2": "aegis_drone"},
 	"vesper": {"doctrine": "DOCTRINE_VESPER", "unique": "raptor", "mods": {
 		"strike_jet": {"damage": 1.35, "cost": 0.8}, "raptor": {"damage": 1.0}, "crawler": {"extract": 2.0},  # (extract: one more step a tick)
 		"attack_drone": {"damage": 1.1},
 		"turret": {"damage": 0.75}, "air_defense": {"damage": 0.7}, "tank": {"hp": 0.85},
-	}},
+		"bomber": {"damage": 1.2, "cost": 0.85}, "nightwing": {"damage": 1.0}, "emp_drone": {"cost": 0.9},
+		"mortar": {"damage": 0.8}, "medevac": {"hp": 0.8},
+	}, "unique2": "nightwing"},
 	"halden": {"doctrine": "DOCTRINE_HALDEN", "unique": "bastion", "mods": {
 		"tank": {"hp": 1.45, "damage": 1.25, "cost": 0.85}, "bastion": {"damage": 1.0}, "crawler": {"hp": 1.3},
 		"scout_drone": {"cost": 1.2}, "attack_drone": {"damage": 0.75, "cost": 1.2}, "strike_jet": {"cost": 1.3},
-	}},
+		"mortar": {"damage": 1.3, "cost": 0.8}, "howitzer": {"damage": 1.0}, "emp_drone": {"cost": 1.3},
+		"bomber": {"cost": 1.3}, "medevac": {"cost": 1.15},
+	}, "unique2": "howitzer"},
 }
 ## The unique units: which nation fields each.
-const UNIQUE := {"swarm": "aurora", "aegis_battery": "meridian", "raptor": "vesper", "bastion": "halden"}
+const UNIQUE := {"swarm": "aurora", "aegis_battery": "meridian", "raptor": "vesper", "bastion": "halden",
+		"hive": "aurora", "aegis_drone": "meridian", "nightwing": "vesper", "howitzer": "halden"}
 
 
 ## A nation's multiplier `stat` for `unit` (1.0 for none, or no nation).

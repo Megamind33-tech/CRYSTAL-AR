@@ -1348,10 +1348,10 @@ CAMP_AIR_DEFENSE_SUB,shoots down enemy drones gunships and jets
 CAMP_AEGIS_BATTERY,Aegis battery
 CAMP_AEGIS_BATTERY_SUB,Meridian's heavy flak · long reach
 ARMY_FEED_DOWNED,shot down a %s
-DOCTRINE_AURORA,"Aurora · drone doctrine: drones hit harder and last longer, cheaper; gunships cheaper · tanks weaker and dearer · own unit: the drone swarm"
-DOCTRINE_MERIDIAN,"Meridian · shield doctrine: turrets and flak stronger with longer reach; camp building cheaper · strike jets weaker, gunships frailer · own unit: the Aegis battery"
-DOCTRINE_VESPER,"Vesper · strike doctrine: strike jets much stronger and cheaper; crawlers extract faster · turrets and flak weaker, tanks frailer · own unit: the Raptor (strafes twice)"
-DOCTRINE_HALDEN,"Halden · armour doctrine: tanks much tougher and harder hitting, cheaper · drones weaker and dearer, jets dearer · own unit: the Bastion (its gun shoots aircraft)"
+DOCTRINE_AURORA,"Aurora · drone doctrine: drones hit harder and last longer, cheaper; gunships cheaper · tanks weaker and dearer · own units: the drone swarm and the hive (six drones) · EMP drones cheaper"
+DOCTRINE_MERIDIAN,"Meridian · shield doctrine: turrets and flak stronger with longer reach; camp building cheaper · strike jets weaker, gunships frailer · own units: the Aegis battery and the Aegis drone (shields its side below) · medevacs stronger"
+DOCTRINE_VESPER,"Vesper · strike doctrine: strike jets much stronger and cheaper; crawlers extract faster · turrets and flak weaker, tanks frailer · own units: the Raptor (strafes twice) and the Nightwing (flak can't see it) · bombers stronger, cheaper"
+DOCTRINE_HALDEN,"Halden · armour doctrine: tanks much tougher and harder hitting, cheaper · drones weaker and dearer, jets dearer · own units: the Bastion (its gun shoots aircraft) and the howitzer (heavy shells) · mortars stronger, cheaper"
 ARMY_FEED_DESTROYED,destroyed a %s
 CAMP_HELIPAD,rotorcraft pad
 CAMP_HELIPAD_SUB,fly you and your squad back to camp
@@ -1438,3 +1438,12 @@ SQUAD_INVITED,Squad invitation
 SQUAD_INVITED_SUB,%s wants you in their squad: answer on your phone
 SQUAD_LEADER_ORDERS,%s orders: %s
 SQUAD_LEADER_ORDERS_FEED,orders: %s
+UNIT_MEDEVAC,medevac rotorcraft
+UNIT_MORTAR,mortar salvo
+UNIT_EMP_DRONE,EMP drone
+UNIT_RECON_SAT,recon satellite pass
+UNIT_BOMBER,bomber
+UNIT_HIVE,Hive swarm
+UNIT_AEGIS_DRONE,Aegis drone
+UNIT_NIGHTWING,Nightwing jet
+UNIT_HOWITZER,howitzer barrage

@@ -1346,6 +1346,26 @@ func _dig_run(me: SimPlayer) -> void:
 			await _frames(90)  # the jet's still flying in
 			await _pose(me, me.state.position, me.state.yaw, 0.35)
 			await _shot("w_army")
+			if Platform.user_args.has("--arsenal"):
+				# The wider arsenal overhead: bomber, medevac, EMP drone, a mortar salvo.
+				hr.home_nations[me.net_id] = Nations.index_of("aurora")
+				hr.army.deploy(me.net_id, {"bomber": [1, 0], "medevac": [1, 0], "emp_drone": [1, 0], "mortar": [1, 0],
+						"hive": [1, 0]})
+				var near := me.state.position + Vector3(-sin(me.state.yaw), 0, -cos(me.state.yaw)) * 18.0
+				for u: String in ["medevac", "emp_drone", "hive", "mortar", "bomber"]:
+					print("CITY WALK: call %s: %s" % [u, hr.request(w, me.net_id, "call_unit", {"unit": u, "target": near})])
+				await _frames(200)
+				var cam := Camera3D.new()
+				add_child(cam)
+				cam.position = near + Vector3(30, 6, 30)
+				cam.look_at(near + Vector3(0, 18, 0))
+				cam.fov = 70.0
+				cam.current = true
+				m.hud.visible = false
+				for cl: Node in get_tree().root.find_children("*", "CanvasLayer", true, false):
+					(cl as CanvasLayer).visible = false
+				await _frames(20)
+				await _shot("w_arsenal")
 			get_tree().quit(0)
 			return
 		if not hr.war.camps.is_empty():

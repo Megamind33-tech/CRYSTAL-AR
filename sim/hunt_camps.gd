@@ -191,10 +191,10 @@ func step(world: SimWorld, hunt: HuntRules, ids: Array) -> void:
 			var at := socket_at(c.at, socket)
 			match m:
 				"turret":
-					if tick % int(info.every) == 0:
+					if tick % int(info.every) == 0 and not hunt.army.jammed(world, hunt, int(b.builders[socket]), at):
 						_turret(world, hunt, c, at, int(b.builders[socket]), info)
 				"air_defense", "aegis_battery":
-					if tick % int(info.every) == 0:
+					if tick % int(info.every) == 0 and not hunt.army.jammed(world, hunt, int(b.builders[socket]), at):
 						var who := int(b.builders[socket])
 						var n := NationArsenal.of(hunt, who)
 						hunt.army.shoot_air(world, hunt, who, at + Vector3(0, 3.0, 0),

@@ -1898,6 +1898,10 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			return
 		"jet_strike":
 			return
+		"shell_hit":
+			effects.explosion(e.position + Vector3(0, 0.5, 0), 7.0 if str(e.get("unit", "")) == "howitzer" else 5.0)
+			audio.play_at("explosion", e.position, "World", 3)
+			return
 		"module_destroyed":
 			effects.explosion(e.position + Vector3(0, 2, 0), 6.0)
 			_kill_feed.add_note(_display_name(int(e.player)), tr("CAMP_FEED_DESTROYED") % [tr("CAMP_" + str(e.module).to_upper()),

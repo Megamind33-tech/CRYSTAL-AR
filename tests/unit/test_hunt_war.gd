@@ -480,3 +480,56 @@ func test_a_late_joiner_gets_a_camp() -> void:
 	w._seat_late(world, h, [1000, 3, 4])
 	assert_true(w.joined.has(4), "no spot left: joins a side")
 	assert_true(w.builds._camp_of(h, 4) >= 0)
+
+
+func test_the_wider_arsenal() -> void:
+	for n: String in NationArsenal.ARSENALS:
+		var two: String = NationArsenal.ARSENALS[n].unique2
+		assert_true(NationArsenal.allowed(n, two), "%s fields its second unit" % n)
+		for other: String in NationArsenal.ARSENALS:
+			if other != n:
+				assert_false(NationArsenal.allowed(other, two), "%s's %s is its own" % [n, two])
+	for u: String in Career.UNIT_IDS:
+		assert_true(u == "hauler" or HuntArmy.UNITS.has(u) or u == "crawler", "%s has its effects" % u)
+		assert_true(Career.UNITS.has(u))
+	for u: String in HuntArmy.AIR:
+		assert_true(HuntArmy.HIT_RADIUS.has(u), "%s can be hit" % u)
+
+
+## The wider arsenal at work: shells land, medevacs heal, EMP silences
+## flak, flak can't see the Nightwing, a recon pass shows everyone.
+func test_new_units_act() -> void:
+	h.army.rosters[2] = {}
+	var rival: SimPlayer = world.players[2]
+	var me: SimPlayer = world.players[1]
+	world.teleport(rival, Vector3(12, 0.05, 10))
+	h.army.deploy(1, {"mortar": [1, 0], "medevac": [1, 0], "recon_sat": [1, 0], "emp_drone": [1, 0], "nightwing": [1, 0]})
+	# Mortar: shells land round the target.
+	rival.state.shield = 0.0
+	var hp := rival.state.health
+	assert_true(h.request(world, 1, "call_unit", {"unit": "mortar", "target": rival.state.position}))
+	_step(HuntArmy.UNITS.mortar.delay + HuntArmy.UNITS.mortar.every * HuntArmy.UNITS.mortar.shells + 2)
+	assert_lt(rival.state.health, hp, "the salvo hurts")
+	assert_true(h.army.calls.is_empty(), "the salvo is over")
+	# Medevac: heals its own side below.
+	me.state.health = 40.0
+	assert_true(h.request(world, 1, "call_unit", {"unit": "medevac", "target": me.state.position}))
+	_step(130)
+	assert_gt(me.state.health, 40.0, "healed")
+	# Recon satellite: the rival is shown, wherever they are.
+	world.teleport(rival, Vector3(-150, 0.05, -150))
+	assert_true(h.request(world, 1, "call_unit", {"unit": "recon_sat", "target": Vector3.ZERO}))
+	_step(61)
+	assert_true(h.is_revealed(2, world.tick), "everyone shown")
+	# EMP: the rival's flak under it goes quiet; and it can't see a Nightwing.
+	var sock := Vector3(30, 0, 30)
+	assert_false(h.army.jammed(world, h, 2, sock))
+	assert_true(h.request(world, 1, "call_unit", {"unit": "emp_drone", "target": sock}))
+	assert_true(h.army.jammed(world, h, 2, sock), "jammed under the EMP drone")
+	assert_false(h.army.jammed(world, h, 1, sock), "not its own side")
+	assert_false(h.request(world, 1, "call_unit", {"unit": "nightwing", "target": sock}), "not Vesper: no Nightwing")
+	h.army.deploy(1, {"nightwing": [1, 0]})
+	h.home_nations[1] = Nations.index_of("vesper")
+	assert_true(h.request(world, 1, "call_unit", {"unit": "nightwing", "target": sock}), "Vesper's own")
+	h.army.calls = h.army.calls.filter(func(c: HuntArmy.Call) -> bool: return c.unit == "nightwing")
+	assert_false(h.army.shoot_air(world, h, 2, sock + Vector3(0, 30, 0), 500.0, 50.0), "flak can't see the Nightwing")

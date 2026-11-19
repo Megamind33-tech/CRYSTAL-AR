@@ -136,6 +136,32 @@ stays, and grows alongside.
    checked in a rendered run. **Done.** Note: army aircraft can still be
    called at Deep Furrow; they fly above the ground, not in the hall.
 
+## The wider arsenal (built)
+
+Nine more units, 18 in all (`HuntArmy.UNITS`, `Career.UNITS`):
+
+| Unit | Rank | What it does |
+|---|---|---|
+| medevac | 1 | a rotorcraft over the target heals your side below |
+| mortar | 1 | six shells land round the target (hits camps, machines) |
+| EMP drone | 2 | enemy turrets, flak and tank guns under it go quiet |
+| recon satellite | 3 | every enemy on the field shown for 15 s (can't be shot) |
+| bomber | 5 | a heavy wide carpet run; wrecks camps |
+
+A second unit of each nation's own:
+
+| Nation | Unit | What it does |
+|---|---|---|
+| Aurora | Hive | a swarm of six small drones |
+| Meridian | Aegis drone | shields your side below |
+| Vesper | Nightwing | a jet flak can't see |
+| Halden | howitzer | eight heavy shells |
+
+Each nation's doctrine also covers the new units (Aurora: cheap, tough EMP
+drones; Meridian: strong medevacs, cheap recon; Vesper: strong, cheap
+bombers; Halden: strong, cheap mortars, dear EMP drones). Rival AI bring
+one of mortar, EMP drone, medevac or bomber besides their usual.
+
 ## Keep and grow (the other ways to play)
 
 - **Underground matches:** brought into the war as battlegrounds

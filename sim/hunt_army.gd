@@ -6,6 +6,15 @@ extends RefCounted
 ##   scout_drone: reveals enemies round the target for a while
 ##   attack_drone, gunship: hover over the target, shoot enemies they can see
 ##   strike_jet: a strafing run along the line from the caller to the target
+##   bomber: a heavy run, a wide carpet of bombs (wrecks camps)
+##   mortar: a salvo of shells on the target after a short flight
+##   emp_drone: hovers over the target; enemy turrets, flak and tank guns
+##     under it go quiet
+##   medevac: a rotorcraft over the target heals its side below
+##   recon_sat: every enemy on the field shown for a while (not shootable)
+##   nations' own: hive (a big swarm, Aurora), aegis_drone (shields its
+##     side below, Meridian), nightwing (a jet flak can't see, Vesper),
+##     howitzer (heavy shells, Halden), besides swarm, raptor, bastion
 ##   crawler, tank: a machine arrives by the caller (a vehicle you can drive);
 ##     the tank's gun fires on enemies in range, driven or not
 ## Extraction machines (your rover: the hauler, a crawler, a tank) matter at
@@ -27,18 +36,31 @@ const UNITS := {
 	"strike_jet": {"delay": 180, "length": 90.0, "width": 7.0, "damage": 75.0, "height": 40.0, "hp": 120.0},
 	"raptor": {"delay": 150, "length": 90.0, "width": 7.0, "damage": 60.0, "height": 36.0, "hp": 110.0, "passes": 2,
 			"between": 150},
+	"bomber": {"delay": 240, "length": 70.0, "width": 14.0, "damage": 110.0, "height": 48.0, "hp": 220.0},
+	"nightwing": {"delay": 120, "length": 80.0, "width": 8.0, "damage": 70.0, "height": 34.0, "hp": 90.0, "stealth": true},
+	"mortar": {"delay": 150, "shells": 6, "every": 20, "spread": 9.0, "blast": 5.0, "damage": 38.0},
+	"howitzer": {"delay": 210, "shells": 8, "every": 18, "spread": 11.0, "blast": 7.0, "damage": 55.0},
+	"emp_drone": {"ticks": 1200, "radius": 35.0, "height": 20.0, "hp": 55.0},
+	"medevac": {"ticks": 1200, "radius": 12.0, "every": 60, "heal": 10.0, "height": 14.0, "hp": 110.0},
+	"aegis_drone": {"ticks": 1500, "radius": 16.0, "every": 60, "shield": 14.0, "height": 15.0, "hp": 140.0},
+	"hive": {"ticks": 1500, "radius": 30.0, "every": 20, "damage": 3.5, "height": 14.0, "hp": 30.0, "count": 6},
+	"recon_sat": {"ticks": 900},
 	"tank": {"radius": 34.0, "every": 24, "damage": 11.0},
 	"bastion": {"radius": 36.0, "every": 22, "damage": 13.0, "air_range": 55.0, "air_damage": 14.0},
 }
-const AIR := ["scout_drone", "attack_drone", "swarm", "gunship", "strike_jet", "raptor"]
-const JETS := ["strike_jet", "raptor"]
+const AIR := ["scout_drone", "attack_drone", "swarm", "gunship", "strike_jet", "raptor", "bomber", "nightwing", "emp_drone",
+		"medevac", "aegis_drone", "hive"]
+const JETS := ["strike_jet", "raptor", "bomber", "nightwing"]
+## Shells: units that fire from far off (nothing to shoot down).
+const ARTILLERY := ["mortar", "howitzer"]
 const LEVEL_BONUS := 0.15
 ## War machines' health (the hauler is your rover: it can't be destroyed);
 ## a nation's doctrine scales it (NationArsenal "hp").
 const MACHINE_HP := {"crawler": 600.0, "tank": 900.0, "bastion": 1300.0}
 ## How big a target each is for a shot (a sphere's radius, metres).
 const HIT_RADIUS := {"scout_drone": 1.0, "attack_drone": 1.3, "swarm": 1.1, "gunship": 3.5, "strike_jet": 4.0,
-		"raptor": 4.0, "machine": 2.6}
+		"raptor": 4.0, "machine": 2.6, "bomber": 5.5, "nightwing": 3.5, "emp_drone": 1.2, "medevac": 3.0, "aegis_drone": 1.6,
+		"hive": 0.9}
 ## Rival AI hunters in a war bring a small army (an attack drone and their
 ## nation's own unit, or a strike jet) and call a unit in on the nearest
 ## enemy now and then.
@@ -109,7 +131,7 @@ func call_unit(world: SimWorld, hunt: HuntRules, id: int, unit: String, target: 
 	var lv := int(rosters[id][unit][1])
 	rosters[id][unit][0] = left(id, unit) - 1
 	var u: Dictionary = used.get(id, {})
-	u[unit] = int(u.get(unit, 0)) + (1 if unit in AIR else 0)
+	u[unit] = int(u.get(unit, 0)) + (1 if Career.UNITS.get(unit, {}).get("spent", false) else 0)
 	used[id] = u
 	if not NationArsenal.allowed(NationArsenal.of(hunt, id), unit):
 		return false  # another nation's
@@ -173,7 +195,38 @@ func step(world: SimWorld, hunt: HuntRules) -> void:
 				if (tick - c.start_tick) % int(info.every) == 0:
 					_fire(world, hunt, c.owner, position_of(c, tick), float(info.radius) + float(info.height),
 							float(info.damage) * boost)
-			"strike_jet", "raptor":
+			"emp_drone":
+				pass  # its work is jammed(): the defences under it ask
+			"medevac", "aegis_drone":
+				if (tick - c.start_tick) % int(info.every) == 0:
+					for id: int in world.players:
+						var o: SimPlayer = world.players[id]
+						if o.state.alive and not _enemy(hunt, c.owner, id) and o.state.position.distance_to(c.at) <= float(info.radius):
+							if info.has("heal"):
+								o.state.health = minf(o.state.health + float(info.heal) * boost, Balance.PLAYER.max_health)
+							if info.has("shield"):
+								o.state.shield = minf(o.state.shield + float(info.shield) * boost, Balance.PLAYER.max_shield)
+			"recon_sat":
+				if (tick - c.start_tick) % 60 == 0:
+					for id: int in world.players:
+						if world.players[id].state.alive and _enemy(hunt, c.owner, id) and not hunt._aux(id):
+							hunt.revealed_until[id] = maxi(int(hunt.revealed_until.get(id, 0)), tick + 120)
+			"mortar", "howitzer":
+				var k: int = tick - c.start_tick
+				if k % int(info.every) == 0 and k / int(info.every) < int(info.shells):
+					var r := RandomNumberGenerator.new()
+					r.seed = hash([c.owner, c.start_tick, k])
+					var a := r.randf() * TAU
+					var at: Vector3 = c.at + Vector3(cos(a), 0.0, sin(a)) * r.randf() * float(info.spread)
+					blast(world, hunt, c.owner, at, float(info.blast), float(info.damage) * boost, c.unit)
+				if k >= int(info.every) * int(info.shells):
+					calls.erase(c)
+				continue
+			"hive":
+				if (tick - c.start_tick) % int(info.every) == 0:
+					_fire(world, hunt, c.owner, position_of(c, tick), float(info.radius) + float(info.height),
+							float(info.damage) * boost)
+			"strike_jet", "raptor", "bomber", "nightwing":
 				_strafe(world, hunt, c, info, boost)
 				c.passes -= 1
 				if c.passes <= 0:
@@ -192,6 +245,8 @@ func step(world: SimWorld, hunt: HuntRules) -> void:
 		var nation := NationArsenal.of(hunt, int(mm[0]))
 		var dmg := float(info.damage) * (1.0 + LEVEL_BONUS * int(mm[2])) * NationArsenal.mod(nation, "tank", "damage")
 		var v: SimVehicle = world.vehicles[vi]
+		if jammed(world, hunt, int(mm[0]), v.position):
+			continue
 		if tick % int(info.every) == 0:
 			_fire(world, hunt, int(mm[0]), v.position + Vector3(0, 2.4, 0), float(info.radius), dmg)
 		if mm[1] == "bastion" and tick % int(info.every) == int(info.every) / 2:
@@ -209,7 +264,7 @@ func position_of(c: Call, tick: int) -> Vector3:
 		var u := clampf(1.0 - float(c.start_tick - tick) / float(info.delay), 0.0, 1.0)
 		return (c.at - dir * 260.0).lerp(c.at, u) + Vector3(0, float(info.height), 0)
 	var t := float(tick) / 60.0 + c.offset
-	var r := 12.0 if c.unit == "gunship" else 6.0
+	var r := 12.0 if c.unit == "gunship" else (3.0 if c.unit in ["medevac", "aegis_drone"] else 6.0)
 	return c.at + Vector3(cos(t * 0.6) * r, float(info.height), sin(t * 0.6) * r)
 
 
@@ -220,7 +275,8 @@ func shoot_air(world: SimWorld, hunt: HuntRules, owner: int, from: Vector3, reac
 	var best_d := reach
 	var tick := world.tick
 	for c in calls:
-		if not (c.unit in AIR) or not _enemy(hunt, owner, c.owner) or tick < c.start_tick - int(UNITS[c.unit].get("delay", 0)):
+		if not (c.unit in AIR) or not _enemy(hunt, owner, c.owner) or tick < c.start_tick - int(UNITS[c.unit].get("delay", 0)) \
+				or UNITS[c.unit].get("stealth", false):
 			continue
 		var d := position_of(c, tick).distance_to(from)
 		if d < best_d:
@@ -262,6 +318,32 @@ func _strafe(world: SimWorld, hunt: HuntRules, c: Call, info: Dictionary, boost:
 			hunt.war.builds.on_blast(world, hunt, c.owner, a.lerp(b, k / 4.0), float(info.width), float(info.damage) * boost * 0.5)
 	world._emit("hj:%d:%d" % [c.owner, world.tick], "hunt", {"action": "jet_strike", "player": c.owner,
 			"position": c.at, "treasure": 0, "kind": -1, "from": a, "to": b})
+
+
+## A shell (or bomb) lands at `at`: enemies within `radius` take `damage`
+## (less further out), and their aircraft, machines and buildings too.
+func blast(world: SimWorld, hunt: HuntRules, owner: int, at: Vector3, radius: float, damage: float, what: String) -> void:
+	for id: int in world.players:
+		var o: SimPlayer = world.players[id]
+		if not o.state.alive or not _enemy(hunt, owner, id):
+			continue
+		var d := o.state.position.distance_to(at)
+		if d < radius:
+			world._damage(o, owner if world.players.has(owner) else 0, damage * (1.0 - 0.5 * d / radius), false,
+					Weapons.by_id(&"pulse_rifle"), world.tick)
+	on_blast(world, hunt, owner, at, radius, damage)
+	world._emit("hsh:%d:%d:%d" % [owner, int(at.x * 10.0), world.tick], "hunt", {"action": "shell_hit", "player": owner,
+			"position": at, "treasure": 0, "kind": -1, "unit": what})
+
+
+## Whether an enemy EMP drone of `owner`'s foes hovers over `at` (their
+## turrets, flak and tank guns there stay quiet).
+func jammed(world: SimWorld, hunt: HuntRules, owner: int, at: Vector3) -> bool:
+	for c in calls:
+		if c.unit == "emp_drone" and world.tick >= c.start_tick and _enemy(hunt, c.owner, owner) \
+				and Vector2(at.x - c.at.x, at.z - c.at.z).length() <= float(UNITS.emp_drone.radius) * NationArsenal.mod(c.nation, "emp_drone", "range"):
+			return true
+	return false
 
 
 ## A gun at `from`: the nearest enemy it can see within `reach`.
@@ -331,7 +413,8 @@ func _bots_call(world: SimWorld, hunt: HuntRules) -> void:
 			var n := NationArsenal.of(hunt, id)
 			var own: String = NationArsenal.ARSENALS.get(n, {}).get("unique", "")
 			var air := own if own in AIR else "strike_jet"
-			rosters[id] = {"attack_drone": [1, 0], air: [1, 0]}
+			var extra: String = ["mortar", "emp_drone", "medevac", "bomber"][id % 4]  # rivals differ
+			rosters[id] = {"attack_drone": [1, 0], air: [1, 0], extra: [1, 0]}
 		var foe: SimPlayer = null
 		var best := 120.0
 		for oid: int in world.players:

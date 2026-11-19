@@ -847,6 +847,8 @@ var _unit_nodes: Dictionary = {}  ## HuntArmy.Call -> Node3D
 func _sync_army(hunt: HuntRules, tick: int) -> void:
 	var live := {}
 	for c in hunt.army.calls:
+		if c.unit in HuntArmy.ARTILLERY or c.unit == "recon_sat":
+			continue  # fired from far off / in orbit: nothing to see overhead
 		live[c] = true
 		var node: Node3D = _unit_nodes.get(c)
 		if node == null:
@@ -854,7 +856,7 @@ func _sync_army(hunt: HuntRules, tick: int) -> void:
 			add_child(node)
 			_unit_nodes[c] = node
 		var info: Dictionary = HuntArmy.UNITS[c.unit]
-		if c.unit == "strike_jet":
+		if c.unit in HuntArmy.JETS:
 			# Flying in along its run during the run-up, low and fast.
 			var dir := c.at - c.from
 			dir.y = 0.0
@@ -866,7 +868,7 @@ func _sync_army(hunt: HuntRules, tick: int) -> void:
 		else:
 			# Circling over the target.
 			var t := float(tick) / 60.0
-			var r := 6.0 if c.unit != "gunship" else 12.0
+			var r := 12.0 if c.unit == "gunship" else (3.0 if c.unit in ["medevac", "aegis_drone"] else 6.0)
 			node.position = c.at + Vector3(cos(t * 0.6) * r, float(info.height) + sin(t * 1.3) * 0.6, sin(t * 0.6) * r)
 			node.rotation.y = -t * 0.6
 	for c in _unit_nodes.keys():
@@ -880,13 +882,31 @@ func _sync_army(hunt: HuntRules, tick: int) -> void:
 func _unit_model(unit: String) -> Node3D:
 	if unit == "gunship":
 		return Comic.kit_instance("world/skyhopper", Vector3.ZERO, 0.0, 1.3)
+	if unit == "medevac":
+		var heli := Comic.kit_instance("world/skyhopper", Vector3.ZERO, 0.0, 1.0)
+		var cross := MeshInstance3D.new()
+		cross.mesh = _box_mesh(Vector3(1.6, 0.1, 0.5))
+		cross.position = Vector3(0, 1.6, 0)
+		cross.material_override = _glow(Color(1.0, 0.25, 0.25), 1.0, 2.0)
+		heli.add_child(cross)
+		return heli
 	var root := Node3D.new()
 	var parts := []
-	if unit == "strike_jet":
-		parts = [[Vector3(1.4, 1.0, 9.0), Vector3.ZERO], [Vector3(9.0, 0.25, 2.6), Vector3(0, 0, 0.8)],
-				[Vector3(3.6, 0.2, 1.2), Vector3(0, 0.3, 4.0)], [Vector3(0.2, 1.6, 1.4), Vector3(0, 1.0, 3.9)]]
+	var glow := RIVAL
+	if unit in HuntArmy.JETS:
+		var k := 1.5 if unit == "bomber" else (0.9 if unit == "nightwing" else 1.0)
+		parts = [[Vector3(1.4, 1.0, 9.0) * k, Vector3.ZERO], [Vector3(9.0, 0.25, 2.6) * Vector3(k * (1.3 if unit == "bomber" else 1.0), 1, k), Vector3(0, 0, 0.8) * k],
+				[Vector3(3.6, 0.2, 1.2) * k, Vector3(0, 0.3, 4.0) * k], [Vector3(0.2, 1.6, 1.4) * k, Vector3(0, 1.0, 3.9) * k]]
+		if unit == "bomber":  # four engines under the wings
+			for x: float in [-4.5, -2.5, 2.5, 4.5]:
+				parts.append([Vector3(0.6, 0.6, 1.8), Vector3(x, -0.5, 0.6)])
+		glow = Color(0.45, 0.3, 1.0) if unit == "nightwing" else Color(1.0, 0.5, 0.2)
 	else:
-		var s := 0.6 if unit == "scout_drone" else 1.0
+		var s := 0.6 if unit in ["scout_drone", "hive"] else (1.2 if unit == "aegis_drone" else 1.0)
+		if unit == "emp_drone":
+			glow = Color(0.3, 0.8, 1.0)
+		elif unit == "aegis_drone":
+			glow = Color(0.35, 0.75, 1.0)
 		parts = [[Vector3(1.0, 0.4, 1.0) * s, Vector3.ZERO]]
 		for q: Vector3 in [Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, -1)]:
 			parts.append([Vector3(0.9, 0.08, 0.9) * s, q * 0.9 * s + Vector3(0, 0.25, 0) * s])
@@ -899,7 +919,15 @@ func _unit_model(unit: String) -> Node3D:
 	var light := MeshInstance3D.new()
 	light.mesh = _box_mesh(Vector3(0.3, 0.3, 0.3))
 	light.position = Vector3(0, -0.4, 0)
-	light.material_override = _glow(RIVAL if unit != "strike_jet" else Color(1.0, 0.5, 0.2), 1.0, 2.5)
+	light.material_override = _glow(glow, 1.0, 2.5)
+	if unit == "emp_drone" or unit == "aegis_drone":  # a ring round it: its field
+		var ring := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 1.6
+		torus.outer_radius = 1.8
+		ring.mesh = torus
+		ring.material_override = _glow(glow, 0.8, 2.0)
+		root.add_child(ring)
 	root.add_child(light)
 	return root
 

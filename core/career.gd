@@ -1797,9 +1797,18 @@ const UNITS := {
 	"swarm": {"rank": 3, "price": 650, "upgrades": [1200, 2400], "cp": 3, "spent": true},
 	"raptor": {"rank": 4, "price": 1600, "upgrades": [2800, 5200], "cp": 5, "spent": true},
 	"bastion": {"rank": 4, "price": 2600, "upgrades": [1800, 3600], "cp": 5, "spent": false},
+	"medevac": {"rank": 1, "price": 220, "upgrades": [400, 900], "cp": 1, "spent": true},
+	"mortar": {"rank": 1, "price": 300, "upgrades": [550, 1200], "cp": 2, "spent": true},
+	"emp_drone": {"rank": 2, "price": 450, "upgrades": [800, 1700], "cp": 2, "spent": true},
+	"recon_sat": {"rank": 3, "price": 550, "upgrades": [1000], "cp": 2, "spent": true},
+	"bomber": {"rank": 5, "price": 1900, "upgrades": [3000, 5600], "cp": 6, "spent": true},
+	"hive": {"rank": 4, "price": 1100, "upgrades": [1800, 3400], "cp": 4, "spent": true},
+	"aegis_drone": {"rank": 3, "price": 800, "upgrades": [1400, 2800], "cp": 3, "spent": true},
+	"nightwing": {"rank": 4, "price": 1500, "upgrades": [2600, 5000], "cp": 5, "spent": true},
+	"howitzer": {"rank": 4, "price": 1300, "upgrades": [2200, 4200], "cp": 4, "spent": true},
 }
-const UNIT_IDS := ["hauler", "scout_drone", "crawler", "attack_drone", "tank", "swarm", "gunship", "raptor", "bastion",
-		"strike_jet"]
+const UNIT_IDS := ["hauler", "scout_drone", "medevac", "mortar", "crawler", "attack_drone", "emp_drone", "tank", "swarm",
+		"recon_sat", "aegis_drone", "gunship", "raptor", "bastion", "hive", "nightwing", "howitzer", "strike_jet", "bomber"]
 
 
 ## Your nation's id ("" before you choose one): its doctrine prices units.
