@@ -446,6 +446,8 @@ func _physics_process(_delta: float) -> void:
 	if networked and world.hunt != null and world.tick % Sim.TICK_RATE == 0:
 		# THE HUNT online, once a second: the war and its camps to everyone;
 		# each player's own credits, army, squad and offers to them alone.
+		_send_reliable_event({"type": "hunt", "action": "field_state", "id": "hfs:%d" % world.tick, "tick": world.tick,
+				"player": 0, "treasure": 0, "kind": -1, "state": world.hunt.field_state(world)})
 		if world.hunt.war.enabled:
 			_send_reliable_event({"type": "hunt", "action": "war_state", "id": "hws:%d" % world.tick, "tick": world.tick,
 					"player": 0, "treasure": 0, "kind": -1, "state": world.hunt.war.to_state(world, world.hunt)})

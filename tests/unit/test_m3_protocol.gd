@@ -126,3 +126,35 @@ func test_private_state_mirrors_a_players_phone() -> void:
 	assert_eq(sq.members.size(), 2)
 	assert_eq(sq.strategy, "raid")
 	assert_eq(mirror.remote_ready, ["scan"])
+
+
+func test_field_state_mirrors_cargo_and_aircraft() -> void:
+	var data := {"end": 9000, "final": -1, "trap": 0,
+			"t": [[7, HuntRules.Kind.PERSONAL, 3, Vector3(4, 0, 2), 0, false, -1, 0, false]],
+			"calls": [["gunship", 3, "aurora", Vector3(10, 0, 10), Vector3(0, 0, 0), 100, 2000, 0.0, 1]]}
+	var mirror := HuntRules.new()
+	mirror.apply_field(bytes_to_var(var_to_bytes(data)))
+	assert_eq(mirror.treasures.size(), 1)
+	assert_eq(mirror.treasures[0].position, Vector3(4, 0, 2))
+	assert_eq(mirror.army.calls.size(), 1)
+	var first := mirror.army.calls[0]
+	mirror.apply_field(data)
+	assert_same(mirror.army.calls[0], first, "the same aircraft stays the same object (no flicker)")
+	data.calls = [["not_a_unit", 3, "", Vector3.ZERO, Vector3.ZERO, 0, 0, 0.0, 0]]
+	mirror.apply_field(data)
+	assert_eq(mirror.army.calls.size(), 0, "unknown units refused")
+
+
+func test_a_clients_kit_is_checked() -> void:
+	var world := SimHarness.make_world()
+	add_child_autofree(world)
+	await wait_physics_frames(1)
+	var h := HuntRules.new()
+	world.hunt = h
+	world.add_player(3, SimHarness.loadout(), "p3", false)
+	assert_true(h.request(world, 3, "bring_kit", {"army": "tank:9:1,scout_drone:2:0,nuke:5:0,raptor:1:0", "roles": "medic,wizard"}))
+	assert_eq(h.army.left(3, "tank"), HuntRules.KIT_MAX_EACH, "a few of each at most")
+	assert_eq(h.army.left(3, "scout_drone"), 0, "over the command points: left behind")
+	assert_eq(h.army.left(3, "raptor"), 0, "another nation's unique unit")
+	assert_eq(h.squad.squad_of(3).members.size(), 1, "known roles only")
+	assert_false(h.request(world, 3, "bring_kit", {"army": "tank:1:0", "roles": ""}), "once a run")

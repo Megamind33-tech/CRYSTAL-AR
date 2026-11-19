@@ -203,6 +203,7 @@ func reset(world: SimWorld) -> void:
 	economy.reset()
 	squad.reset()
 	army.reset()
+	brought.clear()
 	end_tick = 0
 	final_zone = -1
 	_announced = 0
@@ -781,7 +782,101 @@ static func value_for(t: Treasure, hunter: int) -> int:
 const REMOTE_ACTIONS := ["accept_bounty", "hire_mercenary", "merc_order", "squad_order", "squad_ability", "squad_rule",
 		"squad_spread", "call_unit", "repair_camp", "upgrade_module", "fly_to_camp", "war_ally", "war_betray", "build",
 		"squad_strategy", "dismiss_merc", "propose_alliance", "respond_alliance", "leave_alliance", "betray_alliance",
-		"buy_intel", "squad_invite", "squad_answer", "squad_leave"]
+		"buy_intel", "squad_invite", "squad_answer", "squad_leave", "bring_kit"]
+## A client's own army and squad (bring_kit) are checked against these.
+const KIT_MAX_EACH := 4
+const KIT_MAX_CP := 16  ## the top rank's command points
+
+
+## THE HUNT online: the field everyone sees (plain data): the cargo, the army
+## in the air, the pads' clock. Sent once a second.
+func field_state(world: SimWorld) -> Dictionary:
+	var ts := []
+	for t in treasures:
+		ts.append([t.id, t.kind, t.owner, t.position, t.carrier, t.banked, t.vehicle, t.available_tick, t.locked])
+	var cs := []
+	for c in army.calls:
+		cs.append([c.unit, c.owner, c.nation, c.at, c.from, c.start_tick, c.end_tick, c.offset, c.level])
+	return {"t": ts, "calls": cs, "end": end_tick, "final": final_zone, "trap": trap_rearm_tick}
+
+
+var _mirror_calls: Dictionary = {}  ## a client's mirror: "owner:start:offset" -> Call (stable for the visuals)
+
+
+## A client's mirror: the host's field (field_state). Bad data is ignored.
+func apply_field(d: Dictionary) -> void:
+	end_tick = int(d.get("end", end_tick))
+	final_zone = int(d.get("final", -1))
+	trap_rearm_tick = int(d.get("trap", 0))
+	var keep: Array[Treasure] = []
+	for e: Variant in (d.get("t", []) if d.get("t") is Array else []):
+		if not e is Array or (e as Array).size() < 9 or not e[3] is Vector3:
+			continue
+		var t := Treasure.new()
+		t.id = int(e[0])
+		t.kind = clampi(int(e[1]), 0, Kind.size() - 1)
+		t.owner = int(e[2])
+		t.position = e[3]
+		t.carrier = int(e[4])
+		t.banked = bool(e[5])
+		t.vehicle = int(e[6])
+		t.available_tick = int(e[7])
+		t.locked = bool(e[8])
+		keep.append(t)
+	treasures = keep
+	var live := {}
+	var calls: Array[HuntArmy.Call] = []
+	for e: Variant in (d.get("calls", []) if d.get("calls") is Array else []):
+		if not e is Array or (e as Array).size() < 9 or not HuntArmy.UNITS.has(str(e[0])) or not e[3] is Vector3 \
+				or not e[4] is Vector3:
+			continue
+		var key := "%d:%d:%.2f" % [int(e[1]), int(e[5]), float(e[7])]
+		var c: HuntArmy.Call = _mirror_calls.get(key)
+		if c == null:
+			c = HuntArmy.Call.new()
+		c.unit = str(e[0])
+		c.owner = int(e[1])
+		c.nation = str(e[2])
+		c.at = e[3]
+		c.from = e[4]
+		c.start_tick = int(e[5])
+		c.end_tick = int(e[6])
+		c.offset = float(e[7])
+		c.level = int(e[8])
+		live[key] = c
+		calls.append(c)
+	_mirror_calls = live
+	army.calls = calls
+
+
+## A client's own army and squad, from their career (bring_kit: "unit:count:
+## level,..." and "role,role"), checked: known units, a few of each, within
+## the top rank's command points, once a run.
+func bring_kit(world: SimWorld, id: int, army_text: String, roles_text: String) -> bool:
+	if brought.has(id) or _aux(id):
+		return false
+	brought[id] = true
+	var roster := {}
+	var cp := 0
+	for part: String in army_text.split(",", false):
+		var f := part.split(":")
+		if f.size() != 3 or not Career.UNITS.has(f[0]) or not f[1].is_valid_int() or not f[2].is_valid_int():
+			continue
+		var n := clampi(f[1].to_int(), 0, KIT_MAX_EACH)
+		var lv := clampi(f[2].to_int(), 0, (Career.UNITS[f[0]].upgrades as Array).size())
+		cp += n * int(Career.UNITS[f[0]].cp)
+		if n > 0 and cp <= KIT_MAX_CP and NationArsenal.allowed(NationArsenal.of(self, id), f[0]):
+			roster[f[0]] = [n, lv]
+	if not roster.is_empty():
+		army.deploy(id, roster)
+	var roles := Array(roles_text.split(",", false)).filter(func(r: String) -> bool: return HuntSquad.ROLES.has(r))
+	if not roles.is_empty():
+		squad.form(world, id, roles)
+	return true
+
+
+var brought: Dictionary = {}  ## online: who has brought their kit this run
+
 
 
 ## THE HUNT online: what one player's phone needs (plain data): credits,
@@ -884,6 +979,8 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 			return economy.hire(world, hunter)
 		"merc_order":
 			return economy.order(world, hunter, str(args.get("order", "")))
+		"bring_kit":
+			return bring_kit(world, hunter, str(args.get("army", "")), str(args.get("roles", "")))
 		"squad_invite":
 			return squad.invite(world, self, hunter, int(args.get("target", 0)))
 		"squad_answer":

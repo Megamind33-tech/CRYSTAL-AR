@@ -107,9 +107,16 @@ stays, and grows alongside.
       or disconnecting breaks the tie. Checked live with a host and two
       clients (`--test-squad`, dev only): invite, join, and the leader's
       HOLD orders arrived at the member, no script errors.
-   Still open online: army aircraft and cargo cases aren't drawn on
-   clients; a client's career army and squad don't come with them; aiming
-   at a hunter (`_mark`) picks nobody on a client.
+   5. **Done:** the rest of the field on clients. The host also sends the
+      cargo cases and the army in the air once a second
+      (`HuntRules.field_state`); a client's mirror is set up from the
+      battleground's own map data (pads, vault) and drives the full HUNT
+      visuals (cases, beams, pads, aircraft, flak aiming). A client brings
+      its career army and squad (`bring_kit`, once a run; the host keeps a
+      few of each unit, within the top rank's command points, no other
+      nation's unique units, known roles only). Aiming at a hunter marks
+      them on a client too. Checked live: kit accepted, a rendered client
+      shows the cargo it carries, no script errors.
 
 7. Campaign: `Career.d.territory` maps each site to a nation. The winning
    nation of a war takes the site, an AI nation takes another, and every site

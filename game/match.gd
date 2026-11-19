@@ -42,6 +42,7 @@ var _war_mirror: HuntRules
 ## The map id as announced (with a battleground for THE HUNT online).
 var _map_tag := ""
 var _test_request_sent := false  ## dev: --test-hunt-request
+var _kit_sent := false  ## online: our career army and squad went to the host
 var _test_squad := 0  ## dev: --test-squad, how far along
 var hunt_menu: HuntMenu  ## THE HUNT: the phone (jobs, crew, deals, intel)
 var hunt_hud: HuntHud  ## THE HUNT: radar, cash, wanted stars, mission text, banners
@@ -980,9 +981,9 @@ func _render_client(delta: float) -> void:
 	pickups.sync(client.items, client.spot_ticks)
 	if _game_mode() == GameMode.CTF:
 		flag_visuals.sync(client.flags, _flag_bases, _flag_carrier_at)
-	if _war_mirror != null:  # THE HUNT online: the host's war and camps
+	if _war_mirror != null:  # THE HUNT online: the host's cargo, army, war and camps
 		hunt_visuals.hunt_local_pos = s.position
-		hunt_visuals.sync_war(_war_mirror, client.local_id)
+		hunt_visuals.sync(_war_mirror, roundi(client.clock.server_time()), client.local_id, _flag_carrier_at)
 	_update_pickup_prompt(s, client.items)
 	var server_state := client.server_state if client.server_state != null else s
 	# Health, shield and death come from the server; movement and ammo are predicted.
@@ -1707,14 +1708,23 @@ func _on_local_death(e: Dictionary) -> void:
 
 
 func _on_hunt_event(e: Dictionary, me: int) -> void:
-	if e.get("action") in ["war_state", "you_state"]:
+	if e.get("action") in ["war_state", "you_state", "field_state"]:
 		if server == null and e.get("state") is Dictionary:
 			if _war_mirror == null:
+				# The battleground's own data (pads, vault, spots): the client
+				# loaded the same site; the host sends what changes.
 				_war_mirror = HuntRules.new()
+				if world_gameplay != null and world_gameplay.has_method("hunt_data"):
+					_war_mirror.configure(world_gameplay.hunt_data(), 0)
 			if e.action == "war_state":
 				_war_mirror.war.apply_state(e.state)
+			elif e.action == "field_state":
+				_war_mirror.apply_field(e.state)
 			else:
 				_war_mirror.apply_private(me, e.state)
+				if not _kit_sent:
+					_kit_sent = true
+					_send_kit()
 				# Dev: two headless clients make a squad of people (--test-squad).
 				if Platform.user_args.has("--test-squad"):
 					_test_squad_step(me)
@@ -2144,6 +2154,50 @@ func _nearest_human() -> int:
 	return best
 
 
+## Online: our career army and squad (what the host's run would bring for
+## us offline), sent once; the host checks them (HuntRules.bring_kit).
+func _send_kit() -> void:
+	var c := Profile.career()
+	var parts := PackedStringArray()
+	for unit: String in c.army_deploy():
+		var v: Array = c.army_deploy()[unit]
+		parts.append("%s:%d:%d" % [unit, int(v[0]), int(v[1])])
+	var roles := ",".join(PackedStringArray(c.squad_deploy()))
+	Profile.save()  # the squad's pay left the wallet
+	Log.i("match", "online: bringing army %s, squad [%s]" % [",".join(parts), roles])
+	hunt_menu.request.call("bring_kit", {"army": ",".join(parts), "roles": roles})
+
+
+## Online, a client's mark: the hunter nearest the line we aim along, from
+## the players we can see.
+func _mark_remote() -> int:
+	var me := _local_player()
+	if me == null:
+		return 0
+	var eye := me.state.position + Vector3(0, 1.6, 0)
+	var dir := Basis.from_euler(Vector3(input.look_pitch, input.look_yaw, 0.0)) * Vector3.FORWARD
+	var best := 0
+	var best_off := 3.0
+	var nearest := 0
+	var nearest_d := INF
+	var h := _war_mirror
+	for id: int in _remote_cache:
+		var st: PlayerSimState = _remote_cache[id]
+		if id == local_id() or st == null or not st.alive or (h != null and h.squad.same_side(local_id(), id)):
+			continue
+		var to := st.position + Vector3(0, 1.0, 0) - eye
+		var along := to.dot(dir)
+		if along > 0.0:
+			var off := (to - dir * along).length()
+			if off < best_off:
+				best_off = off
+				best = id
+		if to.length() < nearest_d:
+			nearest_d = to.length()
+			nearest = id
+	return best if best != 0 else nearest
+
+
 ## The person leading our squad (online), else 0.
 func _my_human_leader() -> int:
 	var h: HuntRules = server.world.hunt if server != null else _war_mirror
@@ -2185,6 +2239,8 @@ func _bring_army() -> void:
 ## metres of it, in front), else the nearest hunter.
 func _mark() -> int:
 	var p: SimPlayer = server.world.players.get(local_id()) if server != null else null
+	if p == null and server == null:
+		return _mark_remote()
 	if p == null:
 		return 0
 	var eye := p.state.position + Vector3(0, 1.6, 0)
