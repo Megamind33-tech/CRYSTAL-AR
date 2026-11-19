@@ -97,3 +97,32 @@ func test_site_tagged_maps() -> void:
 	assert_eq(Maps.base("city@crater"), "city")
 	assert_eq(Maps.site_of("city@crater"), "crater")
 	assert_eq(Maps.site_of("station"), "")
+
+
+func test_hunt_requests_are_checked() -> void:
+	var ok := Protocol.decode_hunt_request(Protocol.encode_hunt_request("call_unit", {"unit": "tank", "target": Vector3(1, 2, 3)}))
+	assert_eq(ok.action, "call_unit")
+	assert_eq(ok.args.unit, "tank")
+	assert_eq(ok.args.target, Vector3(1, 2, 3))
+	assert_true(Protocol.decode_hunt_request(Protocol.encode_hunt_request("quit_game", {})).is_empty(), "unknown actions refused")
+	var junk := Protocol.decode_hunt_request(Protocol.encode_hunt_request("build", {"module": "walls", "x": [1, 2], 5: "y"}))
+	assert_eq(junk.args, {"module": "walls"}, "only plain values under string keys")
+
+
+func test_private_state_mirrors_a_players_phone() -> void:
+	var host := HuntRules.new()
+	host.economy.credits[3] = 450
+	host.army.rosters[3] = {"tank": [2, 1]}
+	host.social.allies[3] = 4
+	var data := var_to_bytes({"credits": 450, "merc_cost": 200, "army": {"tank": [2, 1]}, "ally": 4, "dissolving": false,
+			"merc_order": 1, "squad": {"rule": 2, "spread": 1, "strategy": "raid", "roles": ["gunner", "medic"], "ready": ["scan"]}})
+	var mirror := HuntRules.new()
+	mirror.apply_private(3, bytes_to_var(data))
+	assert_eq(mirror.economy.credits[3], 450)
+	assert_eq(mirror.army.left(3, "tank"), 2)
+	assert_eq(mirror.social.allies[3], 4)
+	assert_true(mirror.economy.contracts.has(3))
+	var sq := mirror.squad.squad_of(3)
+	assert_eq(sq.members.size(), 2)
+	assert_eq(sq.strategy, "raid")
+	assert_eq(mirror.remote_ready, ["scan"])

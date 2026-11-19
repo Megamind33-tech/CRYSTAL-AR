@@ -41,6 +41,7 @@ var hunt_visuals := HuntVisuals.new()  ## THE HUNT: treasures, beams, extraction
 var _war_mirror: HuntRules
 ## The map id as announced (with a battleground for THE HUNT online).
 var _map_tag := ""
+var _test_request_sent := false  ## dev: --test-hunt-request
 var hunt_menu: HuntMenu  ## THE HUNT: the phone (jobs, crew, deals, intel)
 var hunt_hud: HuntHud  ## THE HUNT: radar, cash, wanted stars, mission text, banners
 var city: CityMode  ## THE HUNT: Tharsis Gate (terminals, gate)
@@ -1250,6 +1251,8 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 	hunt_menu = HuntMenu.new()
 	layer.add_child(hunt_menu)
 	hunt_menu.state = func() -> Dictionary:
+		if server == null and client != null and _war_mirror != null:
+			return {"hunt": _war_mirror, "world": null, "me": client.local_id}  # online: the host's view of us
 		if server == null or server.world == null or server.world.hunt == null:
 			return {}
 		return {"hunt": server.world.hunt, "world": server.world, "me": local_id()}
@@ -1267,6 +1270,9 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 	touch.ui_blocks = hunt_menu.blocks
 	hunt_menu.request = func(action: String, args: Dictionary = {}) -> bool:
 		var st: Dictionary = hunt_menu.state.call()
+		if not st.is_empty() and st.world == null:
+			client.send_hunt_request(action, args)  # online: the host decides
+			return true
 		return not st.is_empty() and (st.hunt as HuntRules).request(st.world, st.me, action, args)
 	var econ := func() -> HuntEconomy:
 		var st: Dictionary = hunt_menu.state.call()
@@ -1323,7 +1329,7 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 					if st.is_empty():
 						return false
 					var hr: HuntRules = st.hunt
-					return hr.war.enabled and hr.war.side_of(hr, local_id()) != 100 + n and (100 + n) in hr.war.sides_in(st.world, hr) \
+					return hr.war.enabled and hr.war.side_of(hr, local_id()) != 100 + n and (100 + n) in (hr.war.sides_in(st.world, hr) if st.world != null else hr.war.side_map.values()) \
 							and not hr.war.side_allies.has(hr.war.side_of(hr, local_id())), "camp")
 	hunt_menu.add_row(func() -> String: return tr("WAR_BETRAY"),
 			func() -> void: hunt_menu.request.call("war_betray"),
@@ -1389,7 +1395,11 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 				func() -> void: hunt_menu.request.call("squad_ability", {"ability": ab, "point": _aim_point()}),
 				func() -> bool:
 					var st: Dictionary = hunt_menu.state.call()
-					return not st.is_empty() and (st.hunt as HuntRules).squad.ability_ready(st.world, local_id(), ab), "squad")
+					if st.is_empty():
+						return false
+					if st.world == null:
+						return ab in (st.hunt as HuntRules).remote_ready
+					return (st.hunt as HuntRules).squad.ability_ready(st.world, local_id(), ab), "squad")
 	for rule: String in HuntSquad.RULE_IDS:
 		hunt_menu.add_row(func() -> String: return tr("SQUAD_RULE") % tr("SQUAD_RULE_" + rule.to_upper()),
 				func() -> void: hunt_menu.request.call("squad_rule", {"rule": rule}),
@@ -1657,11 +1667,29 @@ func _on_local_death(e: Dictionary) -> void:
 
 
 func _on_hunt_event(e: Dictionary, me: int) -> void:
-	if e.get("action") == "war_state":
+	if e.get("action") in ["war_state", "you_state"]:
 		if server == null and e.get("state") is Dictionary:
 			if _war_mirror == null:
 				_war_mirror = HuntRules.new()
-			_war_mirror.war.apply_state(e.state)
+			if e.action == "war_state":
+				_war_mirror.war.apply_state(e.state)
+			else:
+				_war_mirror.apply_private(me, e.state)
+				# Dev: a headless client checks the round trip (orders reach the host).
+				if Platform.user_args.has("--test-hunt-request") and not _test_request_sent and _war_mirror.war.enabled:
+					var w := _war_mirror.war
+					var have := {}
+					for ci in w.camps.size():
+						if w.camps[ci].side == w.side_of(_war_mirror, me) and ci < w.builds.built.size():
+							for m: String in w.builds.built[ci].modules.values():
+								have[m] = true
+							have["walls"] = w.builds.built[ci].walls
+					for m: String in ["walls", "med_bay", "comms", "barracks", "refinery", "turret"]:
+						if not have.get(m, false) and int(_war_mirror.economy.credits.get(me, 0)) >= int(HuntCamps.MODULES[m].cost):
+							_test_request_sent = true
+							Log.i("match", "test: asking the host to build %s (%d credits)" % [m, _war_mirror.economy.credits[me]])
+							hunt_menu.request.call("build", {"module": m})
+							break
 		return
 	var who := _display_name(e.player) if e.player != 0 else ""
 	var color := HuntVisuals.GRAND if e.kind == HuntRules.Kind.GRAND else (HuntVisuals.ALARM if e.kind == HuntRules.Kind.PROOF \
@@ -2076,12 +2104,14 @@ func _mark() -> int:
 
 ## Where you aim, on the ground or a wall (the army's targets).
 func _aim_point() -> Vector3:
-	var p: SimPlayer = server.world.players.get(local_id()) if server != null else null
+	var p: SimPlayer = _local_player()
 	if p == null:
 		return Vector3.ZERO
 	var eye := p.state.position + Vector3(0, 1.6, 0)
 	var dir := Basis.from_euler(Vector3(input.look_pitch, input.look_yaw, 0.0)) * Vector3.FORWARD
-	var hit := server.world._ray(eye, eye + dir * 250.0)
+	var hit := server.world._ray(eye, eye + dir * 250.0) if server != null else \
+			world_gameplay.get_world_3d().direct_space_state.intersect_ray(
+					PhysicsRayQueryParameters3D.create(eye, eye + dir * 250.0, Sim.LAYER_WORLD))
 	return hit.position if not hit.is_empty() else eye + dir * 60.0
 
 

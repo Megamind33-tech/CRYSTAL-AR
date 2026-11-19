@@ -126,6 +126,11 @@ func send_loadout(p_primary: int) -> void:
 	transport.send(1, Protocol.encode_loadout(p_primary), Protocol.CH_CONTROL, true)
 
 
+## THE HUNT online: ask the host for something (HuntRules.request).
+func send_hunt_request(action: String, args: Dictionary) -> void:
+	transport.send(1, Protocol.encode_hunt_request(action, args), Protocol.CH_CONTROL, true)
+
+
 ## Seconds since the last packet from the server (host-loss detection,
 ## PLAN §3.5.1).
 func seconds_silent() -> float:

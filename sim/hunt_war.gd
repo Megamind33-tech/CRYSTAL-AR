@@ -89,6 +89,8 @@ var always_duel := false
 ## A client's mirror of the host's war (apply_state): hunter -> side, as the
 ## host worked it out (the client has no nations or squads of its own).
 var side_map: Dictionary = {}
+## Hunters who came in after the war began (online) -> the side they joined.
+var joined: Dictionary = {}
 
 
 func configure(map: Dictionary) -> void:
@@ -109,6 +111,7 @@ func start(world: SimWorld, hunt: HuntRules) -> void:
 	territory.clear()
 	lives.clear()
 	out_sides.clear()
+	joined.clear()
 	side_allies.clear()
 	convoy_pusher = -1
 	builds.reset()
@@ -164,6 +167,8 @@ func start(world: SimWorld, hunt: HuntRules) -> void:
 func side_of(hunt: HuntRules, id: int) -> int:
 	if not side_map.is_empty():
 		return int(side_map.get(id, id))
+	if joined.has(id):
+		return int(joined[id])
 	var who := hunt.squad.leader_of(id) if hunt.squad.is_member(id) else id
 	if hunt.nations.has(who):
 		return 100 + int(hunt.nations[who])  # a nation (apart from hunter ids)
@@ -187,6 +192,7 @@ func sides_in(world: SimWorld, hunt: HuntRules) -> Array:
 func step(world: SimWorld, hunt: HuntRules, ids: Array, interacting: Dictionary) -> void:
 	if not enabled or winner_side >= 0:
 		return
+	_seat_late(world, hunt, ids)
 	builds.step(world, hunt, ids)
 	match objective:
 		Objective.HOLD:
@@ -439,6 +445,37 @@ func _step_territory(world: SimWorld, hunt: HuntRules, ids: Array) -> void:
 
 
 # --- Duels and four-way wars; alliances between sides ---
+
+## Someone joined after the war began (online) and their side has no camp:
+## a free camp spot becomes theirs, else they join the side with fewest.
+func _seat_late(world: SimWorld, hunt: HuntRules, ids: Array) -> void:
+	if camps.is_empty() or world.tick % Sim.TICK_RATE != 0:
+		return
+	for id: int in ids:
+		if hunt._aux(id) or joined.has(id) or builds._camp_of(hunt, id) >= 0:
+			continue
+		if camps.size() < camp_spots.size():
+			var c := Camp.new()
+			c.side = side_of(hunt, id)
+			c.at = camp_spots[camps.size()]
+			camps.append(c)
+			builds._plots(self)
+			if objective == Objective.LAST_STANDING:
+				lives[c.side] = SIDE_LIVES
+			continue
+		var count := {}
+		for c in camps:
+			count[c.side] = 0
+		for other: int in ids:
+			var s := side_of(hunt, other)
+			if count.has(s) and not hunt._aux(other):
+				count[s] += 1
+		var best: int = camps[0].side
+		for s: int in count:
+			if count[s] < count[best]:
+				best = s
+		joined[id] = best
+
 
 # --- Online: the war's state for clients (plain data, never objects) ---
 

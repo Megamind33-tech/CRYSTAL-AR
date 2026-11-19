@@ -443,10 +443,18 @@ func _physics_process(_delta: float) -> void:
 		commands[id] = hunt_mercs[id].command_for(world.tick, world.get_player(id))
 	var t_sim := Time.get_ticks_usec()
 	world.step(commands, stalled)
-	if networked and world.hunt != null and world.hunt.war.enabled and world.tick % Sim.TICK_RATE == 0:
-		# THE HUNT online: the war and its camps, once a second, to every client.
-		_send_reliable_event({"type": "hunt", "action": "war_state", "id": "hws:%d" % world.tick, "tick": world.tick,
-				"player": 0, "treasure": 0, "kind": -1, "state": world.hunt.war.to_state(world, world.hunt)})
+	if networked and world.hunt != null and world.tick % Sim.TICK_RATE == 0:
+		# THE HUNT online, once a second: the war and its camps to everyone;
+		# each player's own credits, army, squad and offers to them alone.
+		if world.hunt.war.enabled:
+			_send_reliable_event({"type": "hunt", "action": "war_state", "id": "hws:%d" % world.tick, "tick": world.tick,
+					"player": 0, "treasure": 0, "kind": -1, "state": world.hunt.war.to_state(world, world.hunt)})
+		for c: Client in clients.values():
+			if c.loaded and not c.spectator and world.players.has(c.player_id):
+				var e := {"type": "hunt", "action": "you_state", "id": "hys:%d" % world.tick, "tick": world.tick,
+						"player": c.player_id, "treasure": 0, "kind": -1,
+						"state": world.hunt.private_state(world, c.player_id)}
+				transport.send(c.id, Protocol.encode_event_message(match_id, e), Protocol.CH_CONTROL, true)
 	last_sim_usec = Time.get_ticks_usec() - t_sim
 	var score_changed := false
 	for e in world.drain_events():
@@ -960,6 +968,15 @@ func _on_message(id: int, data: PackedByteArray) -> void:
 			else:
 				c.primary = primary
 				set_primary(c.player_id, primary)
+		Protocol.Msg.HUNT_REQUEST:
+			# THE HUNT online: the client's player asks, the rules decide
+			# (HuntRules.request checks everything, as for bots and the host).
+			var req := Protocol.decode_hunt_request(data)
+			if req.is_empty() or c.spectator or world.hunt == null or not world.players.has(c.player_id):
+				anomalies += 1
+			else:
+				var done := world.hunt.request(world, c.player_id, req.action, req.args)
+				Log.d("server", "%s asks %s %s: %s" % [c.name, req.action, req.args, "done" if done else "refused"])
 		Protocol.Msg.LOADED:
 			var loaded := Protocol.decode_loaded(data)
 			if loaded.is_empty():

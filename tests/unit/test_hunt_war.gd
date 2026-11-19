@@ -460,3 +460,23 @@ func test_campaign_territory_changes_hands_and_pays() -> void:
 	assert_eq(c.site_holder("crater"), mine, "the winner takes the site")
 	assert_gte(income, Career.SITE_INCOME, "held sites pay")
 	assert_eq(c.d.wallet, before + income)
+
+
+func test_a_late_joiner_gets_a_camp() -> void:
+	var w := HuntWar.new()
+	w.enabled = true
+	w.camp_spots.assign([Vector3(10, 0, 0), Vector3(-10, 0, 0)])
+	var c := HuntWar.Camp.new()
+	c.side = 1000
+	c.at = w.camp_spots[0]
+	w.camps.append(c)
+	var h := HuntRules.new()
+	h.war = w
+	var world := SimWorld.new()
+	add_child_autofree(world)
+	w._seat_late(world, h, [1000, 3])
+	assert_eq(w.camps.size(), 2, "a free spot becomes the newcomer's camp")
+	assert_eq(w.builds._camp_of(h, 3), 1)
+	w._seat_late(world, h, [1000, 3, 4])
+	assert_true(w.joined.has(4), "no spot left: joins a side")
+	assert_true(w.builds._camp_of(h, 4) >= 0)

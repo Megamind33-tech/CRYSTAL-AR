@@ -777,6 +777,79 @@ static func value_for(t: Treasure, hunter: int) -> int:
 ## goes through here, for humans and bots alike, and is validated here (a
 ## network client would send the same request). Returns whether it was
 ## accepted. `action`: "accept_bounty" {target}.
+## What a client may ask for over the network (Protocol.HUNT_REQUEST).
+const REMOTE_ACTIONS := ["accept_bounty", "hire_mercenary", "merc_order", "squad_order", "squad_ability", "squad_rule",
+		"squad_spread", "call_unit", "repair_camp", "upgrade_module", "fly_to_camp", "war_ally", "war_betray", "build",
+		"squad_strategy", "dismiss_merc", "propose_alliance", "respond_alliance", "leave_alliance", "betray_alliance",
+		"buy_intel"]
+
+
+## THE HUNT online: what one player's phone needs (plain data): credits,
+## army left, hired gun, squad, alliance offers, abilities ready.
+func private_state(world: SimWorld, id: int) -> Dictionary:
+	var out := {"credits": int(economy.credits.get(id, 0)), "merc_cost": economy.merc_cost,
+			"army": (army.rosters.get(id, {}) as Dictionary).duplicate(true), "ally": int(social.allies.get(id, 0)),
+			"dissolving": social.dissolving.has(id)}
+	if economy.contracts.has(id):
+		out["merc_order"] = economy.contracts[id].order
+	var offer: Dictionary = social.proposals.get(id, {})
+	if not offer.is_empty():
+		out["offer_from"] = int(offer.from)
+	var sq := squad.squad_of(id)
+	if sq != null:
+		var roles := []
+		for m in sq.members:
+			roles.append(m.role)
+		var ready := []
+		for ab: String in HuntSquad.ABILITY_IDS:
+			if squad.ability_ready(world, id, ab):
+				ready.append(ab)
+		out["squad"] = {"rule": sq.rule, "spread": sq.spread, "strategy": sq.strategy, "roles": roles, "ready": ready}
+	return out
+
+
+## A client's mirror: becomes `id`'s view (private_state). Bad data ignored.
+func apply_private(id: int, d: Dictionary) -> void:
+	economy.credits[id] = int(d.get("credits", 0))
+	economy.merc_cost = int(d.get("merc_cost", HuntEconomy.MERC_COST))
+	army.rosters[id] = d.get("army", {}) if d.get("army") is Dictionary else {}
+	economy.contracts.erase(id)
+	if d.has("merc_order"):
+		var ct := HuntEconomy.Contract.new()
+		ct.employer = id
+		ct.order = int(d.merc_order)
+		economy.contracts[id] = ct
+	social.allies.erase(id)
+	if int(d.get("ally", 0)) != 0:
+		social.allies[id] = int(d.ally)
+	social.dissolving.erase(id)
+	if bool(d.get("dissolving", false)):
+		social.dissolving[id] = true
+	social.proposals.erase(id)
+	if d.has("offer_from"):
+		social.proposals[id] = {"from": int(d.offer_from), "expires": 1 << 30}
+	squad.squads.erase(id)
+	remote_ready = []
+	if d.get("squad") is Dictionary:
+		var q: Dictionary = d.squad
+		var sq := HuntSquad.Squad.new()
+		sq.leader = id
+		sq.rule = int(q.get("rule", 1))
+		sq.spread = int(q.get("spread", 0))
+		sq.strategy = str(q.get("strategy", ""))
+		for r: Variant in (q.get("roles", []) as Array):
+			var m := HuntSquad.Member.new()
+			m.role = str(r)
+			m.leader = id
+			sq.members.append(m)
+		squad.squads[id] = sq
+		remote_ready = q.get("ready", []) if q.get("ready") is Array else []
+
+
+## A client's mirror: the squad abilities ready (apply_private).
+var remote_ready: Array = []
+
+
 func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}) -> bool:
 	if not world.players.has(hunter):
 		return false

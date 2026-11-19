@@ -85,8 +85,19 @@ stays, and grows alongside.
       same one. Checked live: a client at Rustwood got 175 updates in three
       minutes (a king war, 4 camps, 6 buildings), no script errors.
       Not mirrored yet: army units in the air, flak aiming, fog of war.
-   3. Clients send their orders (call units, build, squad commands) to the
-      host as requests.
+   3. **Done:** clients send their orders to the host
+      (`Protocol.Msg.HUNT_REQUEST`: an action from
+      `HuntRules.REMOTE_ACTIONS` and plain-value arguments; the host runs it
+      through `HuntRules.request`, which checks everything as it does for
+      bots). Each player also gets their own state once a second
+      (`private_state`: credits, army left, hired gun, squad, alliance
+      offers, abilities ready), so their phone menu enables the right rows.
+      Someone joining mid-war gets a free camp spot, or joins the side with
+      the fewest players. Checked live: a client asked to build walls, the
+      host built them (`--test-hunt-request`, dev only).
+      Limits: a client's own army and squad don't come with them yet (they
+      only have what the host's run gives them), and `_mark` (aim at a
+      hunter) returns nobody on a client.
    4. Human players join a squad.
 7. Campaign: `Career.d.territory` maps each site to a nation. The winning
    nation of a war takes the site, an AI nation takes another, and every site

@@ -13,10 +13,10 @@ const DEFAULT_PORT := 47710
 const DEFAULT_WEB_PORT := 47711
 const MAX_PEERS := 16
 
-enum Msg { CMD = 10, PING = 11, PONG = 12, SNAPSHOT = 13, WELCOME = 20, PHASE = 21, ROSTER = 22, EVENT = 23, LOADED = 24, NOTICE = 25, RESULTS = 26, LOADOUT = 27, LOBBY = 28, START = 29, TEAM_PICK = 30 }
+enum Msg { CMD = 10, PING = 11, PONG = 12, SNAPSHOT = 13, WELCOME = 20, PHASE = 21, ROSTER = 22, EVENT = 23, LOADED = 24, NOTICE = 25, RESULTS = 26, LOADOUT = 27, LOBBY = 28, START = 29, TEAM_PICK = 30, HUNT_REQUEST = 31 }
 ## NOTICE codes: host lifecycle hints (PLAN §3.5.1, best effort).
 enum Notice { HOST_PAUSED = 1, HOST_RESUMED = 2, RETURN_TO_LOBBY = 3, SERVER_SHUTDOWN = 4, KICKED = 5 }
-const CLIENT_MESSAGES := [Msg.CMD, Msg.PING, Msg.PONG, Msg.LOADED, Msg.LOADOUT]
+const CLIENT_MESSAGES := [Msg.CMD, Msg.PING, Msg.PONG, Msg.LOADED, Msg.LOADOUT, Msg.HUNT_REQUEST]
 
 ## Logical channels (PLAN §3.3.3).
 const CH_GAME := 0  ## unreliable: commands, snapshots, pings
@@ -298,6 +298,36 @@ static func decode_loadout(data: PackedByteArray) -> int:
 	var type := r.u8()
 	var primary := r.u8()
 	return primary if r.ok and r.remaining() == 0 and type == Msg.LOADOUT and primary < Loadouts.PRIMARIES.size() else -1
+
+
+## THE HUNT online: a client's request (HuntRules.request: an action from
+## HuntRules.REMOTE_ACTIONS and its arguments, plain values only).
+static func encode_hunt_request(action: String, args: Dictionary) -> PackedByteArray:
+	var data := var_to_bytes(args)
+	return Wire.Writer.new().u8(Msg.HUNT_REQUEST).str8(action).u16(data.size()).bytes(data).data()
+
+
+## {"action", "args"}, or {} for anything malformed, unknown or oversized.
+static func decode_hunt_request(data: PackedByteArray) -> Dictionary:
+	var r := Wire.Reader.new(data)
+	var type := r.u8()
+	var action := r.str8(32)
+	var n := r.u16()
+	if not r.ok or type != Msg.HUNT_REQUEST or not action in HuntRules.REMOTE_ACTIONS or n < 4 or n > 512:
+		return {}
+	var raw := r.raw(n)
+	if not r.ok or r.remaining() != 0 or (raw.decode_u32(0) & 0xFFFF) != TYPE_DICTIONARY:
+		return {}
+	var v: Variant = bytes_to_var(raw)  # refuses objects
+	if not v is Dictionary:
+		return {}
+	var args := {}
+	for k: Variant in v:
+		var x: Variant = v[k]
+		if k is String and (x is int or x is float or x is bool or x is String or x is Vector3) \
+				and not (x is float and not is_finite(x)) and not (x is Vector3 and not (x as Vector3).is_finite()):
+			args[k] = x
+	return {"action": action, "args": args}
 
 
 static func encode_loaded(match_id: int) -> PackedByteArray:
