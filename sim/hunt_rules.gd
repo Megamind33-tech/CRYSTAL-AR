@@ -781,7 +781,7 @@ static func value_for(t: Treasure, hunter: int) -> int:
 const REMOTE_ACTIONS := ["accept_bounty", "hire_mercenary", "merc_order", "squad_order", "squad_ability", "squad_rule",
 		"squad_spread", "call_unit", "repair_camp", "upgrade_module", "fly_to_camp", "war_ally", "war_betray", "build",
 		"squad_strategy", "dismiss_merc", "propose_alliance", "respond_alliance", "leave_alliance", "betray_alliance",
-		"buy_intel"]
+		"buy_intel", "squad_invite", "squad_answer", "squad_leave"]
 
 
 ## THE HUNT online: what one player's phone needs (plain data): credits,
@@ -795,6 +795,18 @@ func private_state(world: SimWorld, id: int) -> Dictionary:
 	var offer: Dictionary = social.proposals.get(id, {})
 	if not offer.is_empty():
 		out["offer_from"] = int(offer.from)
+	var lead := squad.human_leader(id)
+	if lead != 0:
+		out["leader"] = lead
+		var call: Dictionary = squad.calls.get(lead, {})
+		if not call.is_empty():
+			out["call"] = call
+	var mates := squad.human_members(id)
+	if not mates.is_empty():
+		out["mates"] = mates
+	var inv: Dictionary = squad.invites.get(id, {})
+	if not inv.is_empty():
+		out["invite_from"] = int(inv.from)
 	var sq := squad.squad_of(id)
 	if sq != null:
 		var roles := []
@@ -829,6 +841,18 @@ func apply_private(id: int, d: Dictionary) -> void:
 	if d.has("offer_from"):
 		social.proposals[id] = {"from": int(d.offer_from), "expires": 1 << 30}
 	squad.squads.erase(id)
+	squad.invites.erase(id)
+	if d.has("invite_from"):
+		squad.invites[id] = {"from": int(d.invite_from), "expires": 1 << 30}
+	for m: int in squad.humans.keys():
+		if squad.humans[m] == id or m == id:
+			squad.humans.erase(m)
+	if d.has("leader"):
+		squad.humans[id] = int(d.leader)
+		if d.get("call") is Dictionary:
+			squad.calls[int(d.leader)] = d.call
+	for m: Variant in (d.get("mates", []) if d.get("mates") is Array else []):
+		squad.humans[int(m)] = id
 	remote_ready = []
 	if d.get("squad") is Dictionary:
 		var q: Dictionary = d.squad
@@ -860,6 +884,12 @@ func request(world: SimWorld, hunter: int, action: String, args: Dictionary = {}
 			return economy.hire(world, hunter)
 		"merc_order":
 			return economy.order(world, hunter, str(args.get("order", "")))
+		"squad_invite":
+			return squad.invite(world, self, hunter, int(args.get("target", 0)))
+		"squad_answer":
+			return squad.answer(world, self, hunter, bool(args.get("accept", false)))
+		"squad_leave":
+			return squad.leave(world, self, hunter)
 		"squad_order":
 			return squad.order(world, hunter, str(args.get("order", "")), str(args.get("role", "")), int(args.get("target", 0)),
 					args.get("point", Vector3.INF))

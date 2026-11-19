@@ -42,6 +42,7 @@ var _war_mirror: HuntRules
 ## The map id as announced (with a battleground for THE HUNT online).
 var _map_tag := ""
 var _test_request_sent := false  ## dev: --test-hunt-request
+var _test_squad := 0  ## dev: --test-squad, how far along
 var hunt_menu: HuntMenu  ## THE HUNT: the phone (jobs, crew, deals, intel)
 var hunt_hud: HuntHud  ## THE HUNT: radar, cash, wanted stars, mission text, banners
 var city: CityMode  ## THE HUNT: Tharsis Gate (terminals, gate)
@@ -1375,7 +1376,10 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 	for order: String in HuntSquad.ORDER_IDS:
 		hunt_menu.add_row(func() -> String: return tr("SQUAD_ALL") % tr("SQUAD_ORDER_" + order.to_upper()),
 				func() -> void: hunt_menu.request.call("squad_order", {"order": order, "target": _mark(), "point": _aim_point()}),
-				func() -> bool: return my_squad.call() != null, "squad")
+				func() -> bool:
+					var st: Dictionary = hunt_menu.state.call()
+					return my_squad.call() != null or (not st.is_empty() \
+							and not (st.hunt as HuntRules).squad.human_members(local_id()).is_empty()), "squad")
 	for role: String in HuntSquad.ROLE_IDS:
 		for order: String in ["follow", "hold", "move", "fetch", "attack"]:
 			hunt_menu.add_row(func() -> String: return tr("SQUAD_ONE") % [tr("SQUAD_ROLE_" + role.to_upper()),
@@ -1390,6 +1394,34 @@ func _build_hunt_menu(layer: CanvasLayer) -> void:
 							if m.role == role:
 								return true
 						return false, "squad")
+	# Squads of people (online): invite the hunter nearest you, answer an
+	# invitation, leave.
+	hunt_menu.add_row(func() -> String:
+				var to := _nearest_human()
+				return tr("SQUAD_INVITE") % _display_name(to) if to != 0 else tr("SQUAD_INVITE_NONE"),
+			func() -> void: hunt_menu.request.call("squad_invite", {"target": _nearest_human()}),
+			func() -> bool:
+				var st: Dictionary = hunt_menu.state.call()
+				return not st.is_empty() and _nearest_human() != 0 \
+						and (st.hunt as HuntRules).squad.human_leader(local_id()) == 0, "squad")
+	for accept: bool in [true, false]:
+		hunt_menu.add_row(func() -> String:
+					var st: Dictionary = hunt_menu.state.call()
+					var inv: Dictionary = (st.hunt as HuntRules).squad.invites.get(local_id(), {}) if not st.is_empty() else {}
+					var from := _display_name(int(inv.from)) if not inv.is_empty() else "—"
+					return tr("SQUAD_JOIN" if accept else "SQUAD_DECLINE") % from,
+				func() -> void: hunt_menu.request.call("squad_answer", {"accept": accept}),
+				func() -> bool:
+					var st: Dictionary = hunt_menu.state.call()
+					return not st.is_empty() and (st.hunt as HuntRules).squad.invites.has(local_id()), "squad")
+	hunt_menu.add_row(func() -> String: return tr("SQUAD_LEAVE"),
+			func() -> void: hunt_menu.request.call("squad_leave"),
+			func() -> bool:
+				var st: Dictionary = hunt_menu.state.call()
+				if st.is_empty():
+					return false
+				var sq: HuntSquad = (st.hunt as HuntRules).squad
+				return sq.human_leader(local_id()) != 0 or not sq.human_members(local_id()).is_empty(), "squad")
 	for ab: String in HuntSquad.ABILITY_IDS:
 		hunt_menu.add_row(func() -> String: return tr("SQUAD_ABILITY_" + ab.to_upper()),
 				func() -> void: hunt_menu.request.call("squad_ability", {"ability": ab, "point": _aim_point()}),
@@ -1480,14 +1512,22 @@ func _intel_text(kind: String) -> String:
 
 
 ## The nearest other hunter we can see (not a mercenary), for proposals.
-func _nearest_hunter() -> int:
-	if server == null or server.world.hunt == null:
+## `reach`: how far to look (squad invitations: anywhere).
+func _nearest_hunter(reach: float = 30.0) -> int:
+	if (server == null and _war_mirror == null) or (server != null and server.world.hunt == null):
 		return 0
-	var h := server.world.hunt
 	var me := local_id()
 	var at := _position_of(me)
 	var best := 0
-	var best_d := 30.0
+	var best_d := reach
+	if server == null:  # online: from what the host shows us
+		for id: int in _remote_cache:
+			var pos := _position_of(id)
+			if id != me and pos != Vector3.INF and at.distance_to(pos) < best_d:
+				best_d = at.distance_to(pos)
+				best = id
+		return best
+	var h := server.world.hunt
 	for id: int in server.world.players:
 		var p: SimPlayer = server.world.players[id]
 		if id == me or not p.state.alive or h.economy.is_merc(id):
@@ -1675,6 +1715,9 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 				_war_mirror.war.apply_state(e.state)
 			else:
 				_war_mirror.apply_private(me, e.state)
+				# Dev: two headless clients make a squad of people (--test-squad).
+				if Platform.user_args.has("--test-squad"):
+					_test_squad_step(me)
 				# Dev: a headless client checks the round trip (orders reach the host).
 				if Platform.user_args.has("--test-hunt-request") and not _test_request_sent and _war_mirror.war.enabled:
 					var w := _war_mirror.war
@@ -1769,7 +1812,23 @@ func _on_hunt_event(e: Dictionary, me: int) -> void:
 			_kill_feed.add_note("", tr("HUNT_FEED_LAST_EXTRACTION"), UiStyle.WARN)
 			audio.play_ui("shield_break")
 			_hunt_banner("HUNT_BANNER_LAST", tr("HUNT_BANNER_LAST_SUB"), UiStyle.WARN)
+		"squad_invite", "squad_joined", "squad_declined", "squad_left":
+			var them := int(e.get("target", 0))
+			if them == me or e.player == me:
+				var other := _display_name(int(e.player) if them == me else them)
+				var key: String = {"squad_invite": "SQUAD_FEED_INVITE", "squad_joined": "SQUAD_FEED_JOINED",
+						"squad_declined": "SQUAD_FEED_DECLINED", "squad_left": "SQUAD_FEED_LEFT"}[e.action]
+				if e.action == "squad_invite" and them == me:
+					_hunt_banner("SQUAD_INVITED", tr("SQUAD_INVITED_SUB") % other, HuntHud.ALLY)
+				_kill_feed.add_note(other, tr(key), HuntHud.ALLY, true)
+			return
 		"squad_formed", "squad_order", "squad_rule", "squad_spread", "squad_strategy", "squad_down", "squad_spotted":
+			if e.action == "squad_order" and e.player != me and _my_human_leader() == int(e.player) and str(e.get("role", "")) == "":
+				# A person leads us: their order, for us to carry out.
+				var order_name := tr("SQUAD_ORDER_" + str(e.order).to_upper())
+				hud.show_caption(tr("SQUAD_LEADER_ORDERS") % [_display_name(int(e.player)), order_name])
+				_kill_feed.add_note(_display_name(int(e.player)), tr("SQUAD_LEADER_ORDERS_FEED") % order_name, HuntHud.ALLY, true)
+				return
 			if e.player == me:
 				var line := ""
 				match e.action:
@@ -2044,6 +2103,51 @@ func _bring_companion() -> void:
 func h_side_is_mine(side: int) -> bool:
 	var h: HuntRules = server.world.hunt if server != null else null
 	return h != null and h.war.side_of(h, local_id()) == side
+
+
+## Dev (--test-squad): invite whoever is nearest; accept an invitation; the
+## leader then orders HOLD.
+func _test_squad_step(me: int) -> void:
+	var sq := _war_mirror.squad
+	_test_squad += 1
+	if sq.invites.has(me) and sq.human_leader(me) == 0:
+		Log.i("match", "test squad: joining %d" % int(sq.invites[me].from))
+		hunt_menu.request.call("squad_answer", {"accept": true})
+	elif not sq.human_members(me).is_empty() and _test_squad % 5 == 0:
+		Log.i("match", "test squad: leading %s, ordering hold" % [sq.human_members(me)])
+		hunt_menu.request.call("squad_order", {"order": "hold", "point": _aim_point()})
+	elif _test_squad == 3 and me % 2 == 0 and sq.human_leader(me) == 0:
+		var to := 0  # the other test client: the newest person in the match
+		for r: Dictionary in client.roster:
+			if not r.get("bot", false) and int(r.id) != me and int(r.id) > to:
+				to = int(r.id)
+		Log.i("match", "test squad: inviting %d" % to)
+		hunt_menu.request.call("squad_invite", {"target": to})
+
+
+## The nearest other person (not a bot) in the match: squad invitations.
+## Positions are known only for players near us; anyone else counts as far.
+func _nearest_human() -> int:
+	var roster: Array = server.roster() if server != null else client.roster
+	var best := 0
+	var best_d := INF
+	var at := _position_of(local_id())
+	for r: Dictionary in roster:
+		var id := int(r.get("id", -1))
+		if id == local_id() or id <= 0 or r.get("bot", false):
+			continue
+		var pos := _position_of(id)
+		var d := at.distance_to(pos) if pos != Vector3.INF else 1e9
+		if best == 0 or d < best_d:
+			best_d = d
+			best = id
+	return best
+
+
+## The person leading our squad (online), else 0.
+func _my_human_leader() -> int:
+	var h: HuntRules = server.world.hunt if server != null else _war_mirror
+	return h.squad.human_leader(local_id()) if h != null else 0
 
 
 ## Whether `id` fights on your side (false on a client: the war is host-side).

@@ -149,3 +149,21 @@ func test_marks_moves_plans_and_abilities() -> void:
 	world.teleport(world.players[RIVAL], lead.state.position + Vector3(20, 0.05, 0))
 	assert_true(h.request(world, LEADER, "squad_ability", {"ability": "scan"}))
 	assert_true(h.is_revealed(RIVAL, world.tick), "the scan shows the rival")
+
+
+func test_people_make_a_squad() -> void:
+	var w := world
+	var p := w.add_player(7, SimHarness.loadout(), "p7", false)
+	SimHarness.place(p, Vector3(8, 0.05, 5), 0.0)
+	assert_true(h.request(w, LEADER, "squad_invite", {"target": 7}))
+	assert_false(h.friendly(LEADER, 7), "not before they accept")
+	assert_true(h.request(w, 7, "squad_answer", {"accept": true}))
+	assert_eq(h.squad.human_leader(7), LEADER)
+	assert_true(h.friendly(LEADER, 7), "squad mates never hurt each other")
+	assert_false(h.friendly(7, RIVAL))
+	assert_true(h.request(w, LEADER, "squad_order", {"order": "hold", "point": Vector3(1, 0, 1)}), "a leader of people orders")
+	assert_eq(h.squad.calls[LEADER].order, "hold")
+	assert_eq(h.private_state(w, 7).get("leader"), LEADER, "the member's phone knows its leader")
+	assert_false(h.request(w, 7, "squad_answer", {"accept": true}), "no invitation left")
+	assert_true(h.request(w, 7, "squad_leave"))
+	assert_false(h.friendly(LEADER, 7))

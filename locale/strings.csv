@@ -1425,3 +1425,16 @@ SITE_NORTH_DUNES,the north dunes
 SITE_ANVIL,the Anvil's top
 SITE_WRECK_FIELD,the wreck field
 SITE_DEEP_FURROW,Deep Furrow
+SQUAD_INVITE,Invite %s to your squad
+SQUAD_INVITE_NONE,Invite to squad (nobody near)
+SQUAD_JOIN,Join %s's squad
+SQUAD_DECLINE,Turn down %s
+SQUAD_LEAVE,Leave the squad
+SQUAD_FEED_INVITE,asks you to join their squad
+SQUAD_FEED_JOINED,is in the squad
+SQUAD_FEED_DECLINED,turned the squad down
+SQUAD_FEED_LEFT,left the squad
+SQUAD_INVITED,Squad invitation
+SQUAD_INVITED_SUB,%s wants you in their squad: answer on your phone
+SQUAD_LEADER_ORDERS,%s orders: %s
+SQUAD_LEADER_ORDERS_FEED,orders: %s

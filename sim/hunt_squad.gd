@@ -78,6 +78,14 @@ var by_id: Dictionary = {}  ## teammate net id -> Member
 ## Server work queues (the simulation can't create bodies itself).
 var pending: Array[Member] = []  ## teammates waiting for a body
 var pending_dismissals: Array[int] = []  ## teammate ids to remove
+## Online: human players in another human's squad. They play themselves; the
+## leader's orders reach them as instructions (`calls`), they never hurt
+## each other, and in a war they fight on the leader's side.
+var humans: Dictionary = {}  ## member id -> leader id
+var invites: Dictionary = {}  ## invited id -> {"from": leader, "expires": tick}
+var calls: Dictionary = {}  ## leader id -> {"order", "point", "target", "tick"}: the last order given
+const INVITE_SECONDS := 30
+const MAX_HUMANS := 3
 
 
 func reset() -> void:
@@ -86,6 +94,9 @@ func reset() -> void:
 	squads.clear()
 	by_id.clear()
 	pending.clear()
+	humans.clear()
+	invites.clear()
+	calls.clear()
 
 
 func is_member(id: int) -> bool:
@@ -103,6 +114,11 @@ func squad_of(leader: int) -> Squad:
 
 ## Leader and teammates, and teammates of one squad, never hurt each other.
 func same_side(a: int, b: int) -> bool:
+	if humans.has(a) or humans.has(b):
+		var la := int(humans.get(a, a))
+		var lb := int(humans.get(b, b))
+		if la == lb:
+			return true
 	var la := leader_of(a) if is_member(a) else a
 	var lb := leader_of(b) if is_member(b) else b
 	return la != 0 and la == lb and (is_member(a) or is_member(b))
@@ -142,10 +158,10 @@ func order(world: SimWorld, leader: int, order_id: String, role: String = "", ta
 		point := Vector3.INF) -> bool:
 	var sq: Squad = squads.get(leader)
 	var o := ORDER_IDS.find(order_id)
-	if sq == null or o < 0:
+	if o < 0 or (sq == null and not humans.values().has(leader)):
 		return false
 	var any := false
-	for m in sq.members:
+	for m in (sq.members if sq != null else []):
 		if not role.is_empty() and m.role != role:
 			continue
 		_set_order(world, m, o, target)
@@ -156,6 +172,12 @@ func order(world: SimWorld, leader: int, order_id: String, role: String = "", ta
 		any = true
 	if any:
 		sq.strategy = ""  # a hand-given order: no plan any more
+	if role.is_empty() and humans.values().has(leader):
+		# Human members: the order as an instruction (they choose to follow).
+		calls[leader] = {"order": order_id, "point": point if point != Vector3.INF else Vector3.ZERO, "target": target,
+				"tick": world.tick}
+		any = true
+	if any:
 		_emit(world, leader, "squad_order", {"order": order_id, "role": role})
 	return any
 
@@ -214,6 +236,8 @@ func set_strategy(world: SimWorld, leader: int, strategy_id: String, places: Dic
 ## and caches: work_bonus.)
 func step(world: SimWorld, hunt: HuntRules) -> void:
 	var tick := world.tick
+	if not humans.is_empty() or not invites.is_empty():
+		_prune_humans(world, hunt)
 	for leader: int in squads:
 		var sq: Squad = squads[leader]
 		var lead: SimPlayer = world.players.get(leader)
@@ -315,6 +339,75 @@ func _nearest_rival(world: SimWorld, hunt: HuntRules, leader: int, from: Vector3
 			best_d = d
 			best = id
 	return best
+
+
+# --- Online: human squad members ---
+
+## The human squad `id` is in (its leader), else 0.
+func human_leader(id: int) -> int:
+	return int(humans.get(id, 0))
+
+
+## The humans in `leader`'s squad.
+func human_members(leader: int) -> Array:
+	return humans.keys().filter(func(id: int) -> bool: return humans[id] == leader)
+
+
+## `leader` asks `target` (another hunter, not in a squad) to join.
+func invite(world: SimWorld, hunt: HuntRules, leader: int, target: int) -> bool:
+	if leader == target or not world.players.has(target) or hunt._aux(target) or hunt._aux(leader) \
+			or humans.has(target) or humans.has(leader) or not human_members(target).is_empty() \
+			or human_members(leader).size() >= MAX_HUMANS:
+		return false
+	invites[target] = {"from": leader, "expires": world.tick + INVITE_SECONDS * Sim.TICK_RATE}
+	_emit(world, leader, "squad_invite", {"target": target})
+	return true
+
+
+## `id` answers its invitation.
+func answer(world: SimWorld, hunt: HuntRules, id: int, accept: bool) -> bool:
+	var inv: Dictionary = invites.get(id, {})
+	invites.erase(id)
+	if inv.is_empty() or world.tick > int(inv.expires) or not world.players.has(int(inv.from)):
+		return false
+	var leader := int(inv.from)
+	if not accept:
+		_emit(world, leader, "squad_declined", {"target": id})
+		return true
+	if humans.has(leader) or human_members(leader).size() >= MAX_HUMANS:
+		return false
+	humans[id] = leader
+	if hunt.war.enabled:
+		hunt.war.joined[id] = hunt.war.side_of(hunt, leader)  # the leader's side, camp and all
+	_emit(world, leader, "squad_joined", {"target": id})
+	return true
+
+
+## `id` leaves its human squad (or, a leader, lets everyone go).
+func leave(world: SimWorld, hunt: HuntRules, id: int) -> bool:
+	var leader := int(humans.get(id, 0))
+	var gone := [id] if leader != 0 else human_members(id)
+	if gone.is_empty():
+		return false
+	for m: int in gone:
+		var lead := int(humans[m])
+		humans.erase(m)
+		hunt.war.joined.erase(m)
+		_emit(world, lead, "squad_left", {"target": m})
+	return true
+
+
+## Leavers and the departed out of the human squads; old invitations dropped.
+func _prune_humans(world: SimWorld, hunt: HuntRules) -> void:
+	for m: int in humans.keys():
+		if not world.players.has(m) or not world.players.has(int(humans[m])):
+			var lead := int(humans[m])
+			humans.erase(m)
+			hunt.war.joined.erase(m)
+			calls.erase(lead)
+	for t: int in invites.keys():
+		if world.tick > int(invites[t].expires):
+			invites.erase(t)
 
 
 func _emit(world: SimWorld, leader: int, action: String, extra: Dictionary) -> void:

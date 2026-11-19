@@ -98,7 +98,19 @@ stays, and grows alongside.
       Limits: a client's own army and squad don't come with them yet (they
       only have what the host's run gives them), and `_mark` (aim at a
       hunter) returns nobody on a client.
-   4. Human players join a squad.
+   4. **Done:** squads of people. From the phone's squad tab you invite
+      the nearest person in the match; they join or turn it down (30 s).
+      Squad mates never hurt each other and, in a war, fight on the leader's
+      side and camp. A leader's squad orders (and plans) reach the human
+      members as an instruction on screen and in the feed, while AI
+      teammates obey them as before. Up to 3 people with one leader; leaving
+      or disconnecting breaks the tie. Checked live with a host and two
+      clients (`--test-squad`, dev only): invite, join, and the leader's
+      HOLD orders arrived at the member, no script errors.
+   Still open online: army aircraft and cargo cases aren't drawn on
+   clients; a client's career army and squad don't come with them; aiming
+   at a hunter (`_mark`) picks nobody on a client.
+
 7. Campaign: `Career.d.territory` maps each site to a nation. The winning
    nation of a war takes the site, an AI nation takes another, and every site
    your nation holds pays $80 a run. Shown at the army depot. **Done.**
