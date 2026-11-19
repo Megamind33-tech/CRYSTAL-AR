@@ -2,7 +2,9 @@
 # in the outpost kit's comic style: bevelled panels in named flat colours
 # (the game draws them with Comic.kit_material and an ink outline).
 #   blender -b -P tools/blender/build_army_kit.py -- art/environment/army
-# Each unit is one .glb, nose along -Z in the game (Blender +Y), centred.
+# Each unit is one .glb, nose along -Z in the game (Blender +Y), centred;
+# ground units and defences stand on the origin, and the parts that turn
+# (turret heads, gun cradles, the radar dish) are their own pieces.
 import bpy, bmesh, math, sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 import build_outpost_kit as K  # noqa: E402
@@ -228,5 +230,161 @@ def nightwing():
     finish("nightwing")
 
 
-for build in (attack_drone, scout_drone, emp_drone, aegis_drone, swarm_drone, strike_jet, raptor, bomber, nightwing):
+# --- Ground: tracks, tanks, the crawler ---
+
+def track(x, length, h, w, mat="dark"):
+    """A tank track along Y at side x: a rounded belt, wheels showing, a skirt."""
+    rb("belt", (w, length, h), (x, 0, h * 0.5), mat, bevel=h * 0.35)
+    for k in range(6):
+        y = -length * 0.4 + k * length * 0.8 / 5
+        cyl("road_wheel", h * 0.32, w * 1.06, (x, y, h * 0.42), "gunmetal", verts=10, rot=(0, R(90), 0))
+        cyl("hub", h * 0.12, w * 1.1, (x, y, h * 0.42), "trim", verts=6, rot=(0, R(90), 0))
+    for k in range(14):  # tread cleats
+        y = -length * 0.46 + k * length * 0.92 / 13
+        rb("cleat", (w * 1.02, 0.08, 0.06), (x, y, h + 0.01), "dark", bevel=0.0)
+
+
+def tank():
+    reset()
+    for s in (-1, 1):
+        track(0.95 * s, 4.6, 0.8, 0.55)
+        rb("skirt", (0.12, 4.2, 0.45), (1.27 * s, 0, 0.75), "olive", bevel=0.03)
+    rb("hull", (1.8, 4.4, 0.6), (0, 0, 1.05), "olive", bevel=0.12, taper=(0.9, 0.92))
+    rb("glacis", (1.7, 1.0, 0.4), (0, 2.0, 0.95), "olive", bevel=0.1, rot=(R(-20), 0, 0))
+    rb("engine_deck", (1.4, 1.0, 0.18), (0, -1.6, 1.42), "gunmetal", bevel=0.04)
+    for x in (-0.4, 0.0, 0.4):
+        rb("grille", (0.25, 0.9, 0.05), (x, -1.6, 1.53), "dark", bevel=0.0)
+    rb("stripe", (1.82, 0.25, 0.62), (0, 1.3, 1.05), "trim", bevel=0.02)
+    for x in (-0.65, 0.65):
+        rb("light", (0.22, 0.08, 0.14), (x, 2.48, 1.1), "light", bevel=0.02)
+    finish("tank")
+
+
+def tank_turret():
+    reset()  # origin: the turret ring (it turns about it)
+    rb("turret", (1.5, 1.9, 0.7), (0, -0.1, 0.35), "olive", bevel=0.18, taper=(0.75, 0.85))
+    rb("mantlet", (0.7, 0.4, 0.5), (0, 0.95, 0.35), "gunmetal", bevel=0.08)
+    cyl("gun", 0.1, 2.6, (0, 2.3, 0.38), "gunmetal", verts=10, rot=(R(90), 0, 0))
+    cyl("muzzle", 0.16, 0.35, (0, 3.6, 0.38), "dark", verts=10, rot=(R(90), 0, 0))
+    cyl("bore_evac", 0.14, 0.4, (0, 2.0, 0.38), "dark", verts=10, rot=(R(90), 0, 0))
+    cyl("hatch", 0.28, 0.1, (0.35, -0.4, 0.75), "gunmetal", verts=10)
+    cyl("hmg", 0.04, 0.8, (-0.4, 0.1, 0.95), "dark", verts=6, rot=(R(90), 0, 0))
+    rb("hmg_mount", (0.18, 0.25, 0.2), (-0.4, -0.25, 0.82), "gunmetal", bevel=0.02)
+    rb("stowage", (0.25, 1.0, 0.35), (-0.78, -0.4, 0.3), "sand", bevel=0.05)
+    cyl("antenna", 0.012, 1.4, (0.55, -0.85, 1.4), "dark", verts=6)
+    rb("stripe", (1.52, 0.2, 0.2), (0, -0.4, 0.6), "trim", bevel=0.02)
+    finish("tank_turret")
+
+
+def crawler():
+    reset()
+    for s in (-1, 1):
+        track(1.05 * s, 6.0, 0.95, 0.65)
+    rb("chassis", (1.9, 5.6, 0.5), (0, 0, 1.15), "gunmetal", bevel=0.08)
+    rb("cab", (1.9, 1.4, 1.3), (0, 2.1, 2.0), "trim", bevel=0.15, taper=(0.9, 0.85))
+    rb("windscreen", (1.6, 0.1, 0.55), (0, 2.82, 2.25), "glass", bevel=0.03, rot=(R(-15), 0, 0))
+    rb("hopper", (2.2, 3.0, 1.4), (0, -0.8, 2.1), "olive", bevel=0.12, taper=(1.1, 1.05))
+    for y in (-2.0, -0.8, 0.4):
+        rb("rib", (2.3, 0.15, 1.2), (y * 0 + 0, y, 2.15), "gunmetal", bevel=0.03)
+    rb("load", (1.9, 2.6, 0.4), (0, -0.8, 2.85), "rust", bevel=0.12)
+    # The drill: a cone on an arm at the front, ringed with teeth.
+    rb("arm", (0.5, 1.4, 0.5), (0, 3.3, 1.1), "gunmetal", bevel=0.06)
+    cone("drill", 0.65, 0.05, 1.5, (0, 4.6, 1.0), "trim", verts=10, rot=(R(-90), 0, 0))
+    for k in range(3):
+        ring("tooth_ring", 0.5 - k * 0.14, 0.05, (0, 4.15 + k * 0.38, 1.0), "dark", rot=(R(90), 0, 0))
+    for x in (-0.7, 0.7):
+        rb("beacon", (0.15, 0.15, 0.2), (x, 1.5, 2.75), "orange", bevel=0.03)
+    cyl("exhaust", 0.1, 1.0, (0.8, 1.2, 2.8), "dark", verts=8)
+    finish("crawler")
+
+
+# --- Camp defences: a base, and the parts that turn (exported apart) ---
+
+def turret_base():
+    reset()
+    rb("bunker", (2.4, 2.4, 1.9), (0, 0, 0.95), "hull", bevel=0.25, taper=(0.82, 0.82))
+    rb("slit", (2.0, 0.1, 0.25), (0, 1.17, 1.35), "dark", bevel=0.0)
+    for s in (-1, 1):
+        rb("buttress", (0.5, 2.6, 0.9), (1.2 * s, 0, 0.45), "rust", bevel=0.1)
+    cyl("ring", 0.85, 0.25, (0, 0, 2.0), "gunmetal", verts=16)
+    rb("stripe", (2.42, 0.3, 0.3), (0, 0, 1.5), "trim", bevel=0.02)
+    finish("turret_base")
+
+
+def turret_head():
+    reset()  # origin on the ring
+    rb("housing", (1.4, 1.5, 0.75), (0, 0, 0.38), "gunmetal", bevel=0.18, taper=(0.8, 0.85))
+    rb("visor", (0.8, 0.1, 0.18), (0, 0.72, 0.5), "red", bevel=0.02)
+    for x in (-0.32, 0.32):
+        cyl("barrel", 0.08, 1.6, (x, 1.4, 0.35), "dark", verts=8, rot=(R(90), 0, 0))
+        cyl("shroud", 0.13, 0.6, (x, 0.95, 0.35), "gunmetal", verts=8, rot=(R(90), 0, 0))
+    rb("ammo", (0.4, 0.6, 0.45), (0.8, -0.2, 0.3), "olive", bevel=0.05)
+    cyl("sensor", 0.06, 0.6, (-0.45, -0.4, 0.95), "dark", verts=6)
+    ball("sensor_eye", 0.1, (-0.45, -0.4, 1.28), "red", segs=8)
+    finish("turret_head")
+
+
+def flak_base(aegis):
+    reset()
+    k = 1.35 if aegis else 1.0
+    cyl("pad", 1.8 * k, 0.3, (0, 0, 0.15), "gunmetal", verts=14)
+    for b in range(12):  # sandbags round the pit
+        a = math.tau * b / 12
+        rb("bag", (0.9 * k, 0.5 * k, 0.45 * k), (math.cos(a) * 1.6 * k, math.sin(a) * 1.6 * k, 0.5 * k), "sand",
+           bevel=0.15 * k, rot=(0, 0, a + R(90)))
+    cone("column", 0.55 * k, 0.38 * k, 1.2 * k, (0, 0, 0.9 * k), "hull", verts=12)
+    for q in ((1.9, 0.9), (2.0, -0.3)):
+        rb("crate", (0.7 * k, 0.5 * k, 0.5 * k), (q[0] * k, q[1] * k, 0.25 * k), "olive", bevel=0.05)
+        rb("crate_band", (0.72 * k, 0.1, 0.52 * k), (q[0] * k, q[1] * k, 0.25 * k), "trim", bevel=0.0)
+    if aegis:
+        cyl("mast", 0.1, 2.3, (-1.6 * k, -1.2 * k, 1.15), "gunmetal", verts=8)
+        rb("console", (0.8, 0.5, 0.9), (1.2 * k, -1.6 * k, 0.45), "blue", bevel=0.08)
+    finish("aegis_base" if aegis else "flak_base")
+
+
+def flak_head(aegis):
+    reset()  # origin: the head's pivot
+    k = 1.35 if aegis else 1.0
+    rb("body", (1.6 * k, 1.3 * k, 0.9 * k), (0, 0, 0), "hull" if not aegis else "white", bevel=0.18 * k, taper=(0.85, 0.85))
+    rb("stripe", (1.62 * k, 1.32 * k, 0.18 * k), (0, 0, 0.2 * k), "trim" if not aegis else "blue", bevel=0.02)
+    rb("sight", (0.3 * k, 0.4 * k, 0.3 * k), (0.55 * k, 0.3 * k, 0.55 * k), "gunmetal", bevel=0.05)
+    ball("sight_lens", 0.08 * k, (0.55 * k, 0.52 * k, 0.58 * k), "glass", segs=8)
+    if aegis:
+        for s in (-1, 1):  # armour skirts
+            rb("skirt", (0.14 * k, 1.4 * k, 0.7 * k), (0.88 * s * k, 0, -0.15 * k), "blue", bevel=0.04)
+        rb("pod", (0.9 * k, 1.1 * k, 0.7 * k), (0, -0.1 * k, 0.78 * k), "white", bevel=0.1)
+        for t in range(6):
+            cyl("tube", 0.1 * k, 0.12, ((t % 3 - 1) * 0.27 * k, 0.48 * k, 0.78 * k + (t // 3 - 0.5) * 0.28 * k),
+                "dark", verts=8, rot=(R(90), 0, 0))
+            cone("tip", 0.08 * k, 0.0, 0.18, ((t % 3 - 1) * 0.27 * k, 0.6 * k, 0.78 * k + (t // 3 - 0.5) * 0.28 * k),
+                 "red", verts=8, rot=(R(-90), 0, 0))
+    finish("aegis_head" if aegis else "flak_head")
+
+
+def flak_guns(aegis):
+    reset()  # origin: the cradle's pivot; barrels forward
+    k = 1.35 if aegis else 1.0
+    rb("cradle", (1.2 * k, 0.5 * k, 0.6 * k), (0, 0, 0), "gunmetal", bevel=0.08)
+    for q in ((-0.45, 0.2), (0.45, 0.2), (-0.45, -0.15), (0.45, -0.15)):
+        cyl("barrel", 0.08 * k, 2.6 * k, (q[0] * k, 1.3 * k, q[1] * k), "dark", verts=8, rot=(R(90), 0, 0))
+        cyl("jacket", 0.12 * k, 0.8 * k, (q[0] * k, 0.5 * k, q[1] * k), "gunmetal", verts=8, rot=(R(90), 0, 0))
+        cone("flash", 0.08 * k, 0.15 * k, 0.32 * k, (q[0] * k, 2.68 * k, q[1] * k), "gunmetal", verts=8, rot=(R(-90), 0, 0))
+    finish("aegis_guns" if aegis else "flak_guns")
+
+
+def aegis_dish():
+    reset()  # origin: the top of the mast
+    cyl("hub", 0.15, 0.3, (0, 0, 0.1), "gunmetal", verts=8)
+    cone("dish", 0.95, 0.2, 0.35, (0, 0.15, 0.55), "white", verts=16, rot=(R(-65), 0, 0))
+    cyl("feed", 0.03, 0.7, (0, 0.5, 0.75), "dark", verts=6, rot=(R(-65), 0, 0))
+    ball("emitter", 0.08, (0, 0.75, 0.88), "blue", segs=8)
+    finish("aegis_dish")
+
+
+for build in (attack_drone, scout_drone, emp_drone, aegis_drone, swarm_drone, strike_jet, raptor, bomber, nightwing,
+              tank, tank_turret, crawler, turret_base, turret_head, aegis_dish):
     build()
+for aegis in (False, True):
+    flak_base(aegis)
+    flak_head(aegis)
+    flak_guns(aegis)

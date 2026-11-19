@@ -28,9 +28,9 @@ const MODELS := [
 			"half": Vector2(2.6, 3.4), "kit": "world/skyhopper", "fly": "vtol"},
 	# The army's machines (HuntArmy: deployed in wars, not sold as rides).
 	{"name": "Extraction crawler", "max": 13.0, "rev": 4.0, "accel": 5.0, "turn": 1.0, "slots": 40, "price": 0,
-			"half": Vector2(1.35, 3.2), "kit": "world/hauler", "army": true},
+			"half": Vector2(1.35, 3.2), "kit": "army/crawler", "army": true},
 	{"name": "Tank", "max": 15.0, "rev": 5.0, "accel": 6.0, "turn": 1.1, "slots": 2, "price": 0,
-			"half": Vector2(1.2, 2.2), "kit": "world/rover", "army": true},
+			"half": Vector2(1.2, 2.2), "kit": "army/tank", "army": true},
 ]
 const CRAWLER := 4
 const TANK := 5

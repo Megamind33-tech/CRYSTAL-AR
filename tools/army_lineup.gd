@@ -23,9 +23,29 @@ func _ready() -> void:
 			n.material_override = Comic.kit_material(0.008)
 		n.rotation_degrees.x = 25
 		add_child(n)
+	if OS.get_cmdline_user_args().has("--ground"):
+		for c in get_children():
+			if c is MeshInstance3D:
+				c.queue_free()
+		var hv := HuntVisuals.new()
+		add_child(hv)
+		var tank := Comic.kit_instance("army/tank", Vector3(-7.5, -1.5, 0), 215.0, 0.9)
+		tank.add_child(Comic.kit_instance("army/tank_turret", Vector3(0, 1.36, 0.15), 20.0))
+		add_child(tank)
+		add_child(Comic.kit_instance("army/crawler", Vector3(-2.0, -1.5, -1.5), 215.0, 0.75))
+		var t := hv._turret_model(Vector3(3.0, -1.5, 0))
+		t.rotation_degrees.y = 200
+		hv.add_child(t)
+		hv.add_child(hv._flak_model(Vector3(7.5, -1.5, 0.5), false))
+		hv.add_child(hv._flak_model(Vector3(13.0, -1.5, -1.0), true))
+		for f: Array in hv._flak:
+			(f[1] as Node3D).rotation.y = PI - 0.6
+			(f[2] as Node3D).rotation.x = 0.5
 	var cam := Camera3D.new()
-	cam.position = Vector3(0.5, 1.5, 9)
+	cam.position = Vector3(0.5, 1.5, 9) if not OS.get_cmdline_user_args().has("--ground") else Vector3(2.5, 4.5, 15)
 	cam.fov = 60
+	if OS.get_cmdline_user_args().has("--ground"):
+		cam.rotation_degrees.x = -14
 	add_child(cam)
 	cam.current = true
 	await get_tree().create_timer(1.0).timeout

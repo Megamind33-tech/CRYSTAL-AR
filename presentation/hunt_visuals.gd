@@ -695,96 +695,24 @@ var _flak: Array = []  ## [root, head (yaw), cradle (pitch), dish or null, socke
 
 func _flak_model(at: Vector3, aegis: bool) -> Node3D:
 	var k := 1.35 if aegis else 1.0
-	var steel := Comic.kit_material_paint(Color(0.42, 0.44, 0.42))
-	var dark := Comic.kit_material_paint(Color(0.2, 0.21, 0.22))
-	var sand := Comic.kit_material_paint(Color(0.55, 0.47, 0.34))
-	var accent := Comic.kit_material_paint(Color(0.85, 0.62, 0.15) if not aegis else Color(0.25, 0.7, 0.95))
+	var kind := "aegis" if aegis else "flak"
 	var root := Node3D.new()
 	root.position = at
-	var part := func(parent: Node3D, mesh: Mesh, pos: Vector3, mat: Material, rot := Vector3.ZERO) -> MeshInstance3D:
-		var mi := MeshInstance3D.new()
-		mi.mesh = mesh
-		mi.position = pos
-		mi.rotation = rot
-		mi.material_override = mat
-		parent.add_child(mi)
-		return mi
-	# The pit: a ring of sandbags round a concrete pad.
-	var pad := CylinderMesh.new()
-	pad.top_radius = 1.7 * k
-	pad.bottom_radius = 1.8 * k
-	pad.height = 0.3
-	pad.radial_segments = 12
-	part.call(root, pad, Vector3(0, 0.15, 0), dark)
-	for b in 10:
-		var a := TAU * b / 10.0
-		var bag := BoxMesh.new()
-		bag.size = Vector3(0.9, 0.45, 0.5) * k
-		part.call(root, bag, Vector3(cos(a), 0.0, sin(a)) * 1.55 * k + Vector3(0, 0.45 * k, 0), sand, Vector3(0, -a, 0))
-	# The mount and the turning head.
-	var col := CylinderMesh.new()
-	col.top_radius = 0.35 * k
-	col.bottom_radius = 0.5 * k
-	col.height = 1.2 * k
-	part.call(root, col, Vector3(0, 0.9 * k, 0), steel)
-	var head := Node3D.new()
+	root.add_child(Comic.kit_instance("army/%s_base" % kind, Vector3.ZERO, 0.0))
+	var head := Node3D.new()  # turns to the target (_aim_flak)
 	head.position = Vector3(0, 1.6 * k, 0)
 	root.add_child(head)
-	var body := BoxMesh.new()
-	body.size = Vector3(1.6, 0.9, 1.3) * k
-	part.call(head, body, Vector3.ZERO, steel)
-	var stripe := BoxMesh.new()
-	stripe.size = Vector3(1.62, 0.18, 1.32) * k
-	part.call(head, stripe, Vector3(0, 0.2 * k, 0), accent)
-	var cradle := Node3D.new()
+	head.add_child(Comic.kit_instance("army/%s_head" % kind, Vector3.ZERO, 0.0))
+	var cradle := Node3D.new()  # lifts the guns
 	cradle.position = Vector3(0, 0.2 * k, -0.2 * k)
 	head.add_child(cradle)
-	for q: Vector2 in [Vector2(-0.45, 0.2), Vector2(0.45, 0.2), Vector2(-0.45, -0.15), Vector2(0.45, -0.15)]:
-		var barrel := CylinderMesh.new()
-		barrel.top_radius = 0.07 * k
-		barrel.bottom_radius = 0.09 * k
-		barrel.height = 2.6 * k
-		barrel.radial_segments = 8
-		part.call(cradle, barrel, Vector3(q.x * k, q.y * k, -1.3 * k), dark, Vector3(-PI * 0.5, 0, 0))
-		var flash := CylinderMesh.new()
-		flash.top_radius = 0.13 * k
-		flash.bottom_radius = 0.08 * k
-		flash.height = 0.3 * k
-		part.call(cradle, flash, Vector3(q.x * k, q.y * k, -2.65 * k), steel, Vector3(-PI * 0.5, 0, 0))
-	# Ammo crates by the pit.
-	for q: Vector3 in [Vector3(1.9, 0, 0.9), Vector3(2.0, 0, -0.3)]:
-		var crate := BoxMesh.new()
-		crate.size = Vector3(0.7, 0.5, 0.5) * k
-		part.call(root, crate, q * k + Vector3(0, 0.25 * k, 0), accent)
+	cradle.add_child(Comic.kit_instance("army/%s_guns" % kind, Vector3.ZERO, 0.0))
 	var dish_pivot: Node3D = null
 	if aegis:
-		for side in [-1.0, 1.0]:  # armour skirts
-			var skirt := BoxMesh.new()
-			skirt.size = Vector3(0.12, 0.7, 1.4) * k
-			part.call(head, skirt, Vector3(side * 0.86 * k, -0.15 * k, 0), steel)
-		var pod := BoxMesh.new()
-		pod.size = Vector3(0.9, 0.7, 1.1) * k
-		var pod_mi: MeshInstance3D = part.call(head, pod, Vector3(0, 0.75 * k, 0.1 * k), steel)
-		for t in 6:
-			var tube := CylinderMesh.new()
-			tube.top_radius = 0.1 * k
-			tube.bottom_radius = 0.1 * k
-			tube.height = 0.1 * k
-			part.call(pod_mi, tube, Vector3((float(t % 3) - 1.0) * 0.27 * k, (float(t / 3) - 0.5) * 0.28 * k, -0.56 * k), dark,
-					Vector3(-PI * 0.5, 0, 0))
-		var mast := CylinderMesh.new()
-		mast.top_radius = 0.08
-		mast.bottom_radius = 0.12
-		mast.height = 2.2
-		part.call(root, mast, Vector3(-1.6 * k, 1.1, 1.2 * k), steel)
-		dish_pivot = Node3D.new()
+		dish_pivot = Node3D.new()  # the radar turns
 		dish_pivot.position = Vector3(-1.6 * k, 2.3, 1.2 * k)
 		root.add_child(dish_pivot)
-		var dish := CylinderMesh.new()
-		dish.top_radius = 0.9
-		dish.bottom_radius = 0.2
-		dish.height = 0.35
-		part.call(dish_pivot, dish, Vector3(0, 0.1, 0), accent, Vector3(-1.1, 0, 0))
+		dish_pivot.add_child(Comic.kit_instance("army/aegis_dish", Vector3.ZERO, 0.0))
 	_flak.append([root, head, cradle, dish_pivot, at])
 	return root
 
@@ -820,22 +748,10 @@ func _aim_flak(hunt: HuntRules, tick: int, local_id: int, delta: float) -> void:
 func _turret_model(at: Vector3) -> Node3D:
 	var root := Node3D.new()
 	root.position = at
-	var base := MeshInstance3D.new()
-	base.mesh = _box_mesh(Vector3(2.2, 2.2, 2.2))
-	base.position.y = 1.1
-	base.material_override = _metal()
-	root.add_child(base)
-	var head := MeshInstance3D.new()
-	head.mesh = _box_mesh(Vector3(1.4, 0.8, 1.4))
-	head.position.y = 2.6
-	head.material_override = _glow(RIVAL, 1.0, 0.6)
+	root.add_child(Comic.kit_instance("army/turret_base", Vector3.ZERO, 0.0))
+	var head := Comic.kit_instance("army/turret_head", Vector3(0, 2.12, 0), 0.0)
+	head.name = "Head"
 	root.add_child(head)
-	for sx in [-0.3, 0.3]:
-		var barrel := MeshInstance3D.new()
-		barrel.mesh = _box_mesh(Vector3(0.16, 0.16, 1.6))
-		barrel.position = Vector3(sx, 0.0, -1.1)
-		barrel.material_override = _metal()
-		head.add_child(barrel)
 	return root
 
 

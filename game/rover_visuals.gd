@@ -89,6 +89,7 @@ func _process(delta: float) -> void:
 		mi.basis = mi.basis.orthonormalized().slerp(target, minf(delta * 10.0, 1.0)) if mi.position != Vector3.ZERO else target
 		mi.position = Vector3(at.x, WorldTerrain.surface(at.x, at.z), at.z)
 		_animate(i, v, mi, delta)
+		_aim_turret(v, mi, m, delta)
 
 
 ## An aircraft: where it is (in the air: no ground under it), nose up when
@@ -115,6 +116,20 @@ func _fly_pose(i: int, v: SimVehicle, mi: MeshInstance3D, at: Vector3, world: Si
 	_dust[i].emitting = false
 
 
+## A tank's turret: where its driver looks (you, driving it), else a slow
+## watchful sweep.
+func _aim_turret(v: SimVehicle, mi: MeshInstance3D, m: Node, delta: float) -> void:
+	if v.model != VehicleSim.TANK:
+		return
+	var turret := mi.get_node_or_null("Armour/Turret") as Node3D
+	if turret == null:
+		return
+	var want := turret.rotation.y + delta * 0.25
+	if v.driver == ServerSession.LOCAL_PLAYER_ID:
+		want = wrapf(float(m.input.look_yaw) - v.yaw, -PI, PI)
+	turret.rotation.y = lerp_angle(turret.rotation.y, want, minf(delta * 4.0, 1.0))
+
+
 ## The body without wheels, and a pivot per wheel (the mesh under it, its
 ## hub at the pivot), for model `kit`.
 ## The army's machines (HuntArmy) dressed for war: a tank gets a turret
@@ -124,29 +139,15 @@ func _armour(i: int, model: int) -> void:
 	var old := mi.get_node_or_null("Armour")
 	if old != null:
 		old.queue_free()
-	if model != VehicleSim.TANK and model != VehicleSim.CRAWLER:
-		return
+	if model != VehicleSim.TANK:
+		return  # the crawler's body is its own model (army/crawler)
+	# The tank's turret: its own piece on the hull's ring, so it can turn.
 	var root := Node3D.new()
 	root.name = "Armour"
 	mi.add_child(root)
-	var dark := Comic.kit_material_paint(Color(0.26, 0.28, 0.24))
-	var add := func(size: Vector3, at: Vector3) -> MeshInstance3D:
-		var box := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = size
-		box.mesh = bm
-		box.position = at
-		box.material_override = dark
-		root.add_child(box)
-		return box
-	if model == VehicleSim.TANK:
-		add.call(Vector3(2.5, 0.5, 4.2), Vector3(0, 1.0, 0))  # armour over the hull
-		var turret: MeshInstance3D = add.call(Vector3(1.6, 0.8, 1.8), Vector3(0, 1.65, 0.2))
-		add.call(Vector3(0.22, 0.22, 2.6), Vector3(0, 1.75, -1.9))  # the gun
-		turret.name = "Turret"
-	else:
-		add.call(Vector3(2.7, 0.35, 5.6), Vector3(0, 1.9, 0))  # plating
-		add.call(Vector3(0.9, 0.9, 1.4), Vector3(0, 0.9, -3.6))  # the drill head
+	var turret := Comic.kit_instance("army/tank_turret", Vector3(0, 1.36, 0.15), 0.0)
+	turret.name = "Turret"
+	root.add_child(turret)
 
 
 func _build(i: int, kit: String) -> void:
